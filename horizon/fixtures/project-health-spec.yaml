@@ -1,0 +1,45 @@
+project_id: project-health-intelligence
+version: spec-v1
+lifecycle_weeks: 12
+weeks:
+  - week: 1
+    milestone: Problem framing and repository setup
+    tasks: [Confirm users, create repository, define success measures]
+    acceptance_criteria: [A written problem statement is reviewed]
+    required_artifacts: [README.md]
+  - week: 2
+    milestone: Evidence contract and first vertical slice
+    tasks: [Define CI evidence schema, ship the first API slice]
+    acceptance_criteria: [A pull request runs tests and emits evidence]
+    required_artifacts: [ci-evidence.json]
+  - week: 3
+    milestone: Explainable early signal
+    tasks: [Add deterministic retrieval, cite every non-clear signal]
+    acceptance_criteria: [A week-3 assessment includes inspectable citations]
+    required_artifacts: [assessment.json]
+  - week: 4
+    milestone: Dashboard integration
+    tasks: [Persist assessments and expose weekly tasks]
+    acceptance_criteria: [Dashboard can read the latest project assessment]
+    required_artifacts: [API integration test]
+  - week: 5
+    tasks: [Add project fixtures and test malformed evidence]
+  - week: 6
+    tasks: [Harden auth and privacy checks]
+  - week: 7
+    tasks: [Run live local stack validation]
+  - week: 8
+    milestone: Midpoint readiness review
+    tasks: [Review coverage, deployment readiness, and scope drift]
+    acceptance_criteria: [Midpoint review has a recorded assessment]
+  - week: 9
+    tasks: [Close remaining acceptance gaps]
+  - week: 10
+    tasks: [Run regression and deployment checks]
+  - week: 11
+    tasks: [Prepare release documentation]
+  - week: 12
+    milestone: Three-month handoff
+    tasks: [Publish final evidence and handoff notes]
+    acceptance_criteria: [All release acceptance criteria have evidence]
+    required_artifacts: [Handoff notes]

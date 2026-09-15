@@ -1,0 +1,2 @@
+# Install the backend and optional local pipeline dependencies together.
+.[pipeline]

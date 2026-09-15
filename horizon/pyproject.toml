@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "app-dev-horizon"
+version = "0.1.0"
+description = "Privacy-preserving backend foundation for App Dev Horizon."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1.0",
+  "pydantic>=2.8,<3.0",
+  "pydantic-settings>=2.4,<3.0",
+  "aiosqlite>=0.20,<1.0",
+  "httpx>=0.27,<1.0",
+  "PyYAML>=6.0,<7.0",
+  "uvicorn[standard]>=0.30,<1.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=9.0.3,<10.0",
+  "pytest-asyncio>=1.0,<2.0",
+  "ruff>=0.15,<1.0",
+]
+llm = [
+  "google-genai>=2.0,<3.0",
+]
+
+pipeline = [
+  "pypdf>=6.0,<7.0",
+  "psycopg[binary]>=3.2,<4.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["F"]
+ignore = ["F401"]

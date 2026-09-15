@@ -1,0 +1,142 @@
+name: Weekly data refresh
+
+# Pulls recent activity from Gitea and scores the week that just closed.
+#
+# ─── CURRENTLY DISABLED ────────────────────────────────────────────────────
+# Scheduled runs are gated on the repository variable PHI_REFRESH_ENABLED.
+# Until it is set to the string `true` (Repo → Settings → Actions → Variables)
+# every scheduled firing is skipped without dispatching to a runner.
+# Manual runs via the "Run workflow" button bypass the gate, so the pipeline
+# can be smoke-tested while the schedule stays off.
+# ───────────────────────────────────────────────────────────────────────────
+#
+# Two scheduling notes:
+#
+# 1. Gitea's cron parser (robfig/cron) honours a CRON_TZ= prefix, so Eastern
+#    time is expressed directly and DST is handled for us.  If this Gitea
+#    build ignores the prefix it falls back to 23:59 UTC Sunday, which is why
+#    the week-anchoring below is written to be correct either way.
+# 2. `generate_weekly_snapshots` defaults week_start to the Monday of the
+#    *current* UTC week.  Fired just after the week closes that is the new,
+#    empty week — so the completed week would never be scored.  This workflow
+#    always passes --week-start explicitly.
+#
+# Scheduled triggers only fire for workflows on the default branch, and only
+# while Actions is enabled for the repository.
+
+on:
+  schedule:
+    - cron: "CRON_TZ=America/New_York 59 23 * * 0"
+  workflow_dispatch:
+    inputs:
+      week_start:
+        description: "ISO date of the Monday to score. Blank = the week that just ended."
+        required: false
+        type: string
+      lookback_days:
+        description: "Days of recent history for the Gitea pull."
+        required: false
+        default: "14"
+        type: string
+
+concurrency:
+  # A long backfill and a scheduled run writing the same append-only
+  # collections at once is the one way to get duplicate activity rows.
+  group: phi-weekly-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    # The gate. Scheduled runs no-op until PHI_REFRESH_ENABLED is set to
+    # `true`; manual dispatches always run.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.PHI_REFRESH_ENABLED == 'true' }}
+
+    # Whatever label your act_runner registered with.
+    runs-on: ${{ vars.PHI_RUNNER_LABEL || 'ubuntu-latest' }}
+    timeout-minutes: 30
+
+    env:
+      PHI_API_BASE: ${{ vars.PHI_API_BASE }}
+      PHI_ADMIN_SYNC_TOKEN: ${{ secrets.PHI_ADMIN_SYNC_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install .
+
+      - name: Resolve the week to score
+        id: week
+        shell: bash
+        env:
+          REQUESTED_WEEK: ${{ github.event.inputs.week_start }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REQUESTED_WEEK:-}" ]; then
+            WEEK="$REQUESTED_WEEK"
+          else
+            # The ISO week containing "six hours ago".  Firing at 04:59 UTC
+            # Monday (23:59 EST) and at 23:59 UTC Sunday both resolve to the
+            # Mon–Sun week that has just finished.
+            WEEK=$(python -c "from datetime import datetime, timedelta, timezone; a = datetime.now(timezone.utc) - timedelta(hours=6); print(a.date() - timedelta(days=a.weekday()))")
+          fi
+          echo "week_start=$WEEK" >> "$GITHUB_OUTPUT"
+          echo "Scoring the week beginning $WEEK (runner UTC time: $(date -u +'%F %T'))"
+
+      - name: Pull recent activity from Gitea
+        shell: bash
+        env:
+          LOOKBACK: ${{ github.event.inputs.lookback_days || '14' }}
+        run: |
+          set -euo pipefail
+          python scripts/trigger_refresh.py nightly --lookback-days "$LOOKBACK" | tee nightly-report.json
+
+      - name: Score the completed week
+        shell: bash
+        env:
+          WEEK_START: ${{ steps.week.outputs.week_start }}
+        run: |
+          set -euo pipefail
+          python scripts/trigger_refresh.py weekly --week-start "$WEEK_START" | tee weekly-report.json
+
+      - name: Summarise
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### Weekly refresh"
+            echo ""
+            echo "Week scored: \`${{ steps.week.outputs.week_start }}\`"
+            echo ""
+            for report in nightly-report.json weekly-report.json; do
+              [ -f "$report" ] || continue
+              echo "<details><summary>$report</summary>"
+              echo ""
+              echo '```json'
+              cat "$report"
+              echo '```'
+              echo ""
+              echo "</details>"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Artifact upload needs [actions].ARTIFACT storage configured on the
+      # Gitea server; the step summary above carries the same reports, so a
+      # server without it should not fail the run.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: weekly-refresh-reports
+          path: |
+            nightly-report.json
+            weekly-report.json
+          retention-days: 30

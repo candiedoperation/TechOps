@@ -1,0 +1,155 @@
+{
+  "name": "horizon",
+  "projectType": "application",
+  "sourceRoot": "horizon",
+  "implicitDependencies": [
+    "pplsdk-py"
+  ],
+  "tags": [
+    "scope:horizon"
+  ],
+  "targets": {
+    "install-deps": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python3 -m venv .venv && .venv/bin/python -m pip install -e '.[test,pipeline]' && .venv/bin/python -m pip install -e ../peopleportal/sdk/python/src",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "generate-sdk": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "pplsdk-py:generate"
+      ],
+      "options": {
+        "command": "true",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python3 -m compileall -q backend scripts run_pipeline.py build_member_profiles.py load_postgres.py && npm run check",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": ".venv/bin/ruff check backend scripts tests run_pipeline.py build_member_profiles.py load_postgres.py",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": ".venv/bin/python -m pytest -q",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test-frontend": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npm test",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "check": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "build",
+        "test",
+        "test-frontend",
+        "lint"
+      ],
+      "options": {
+        "command": "true",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "docker:build": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "build",
+        "^build"
+      ],
+      "options": {
+        "command": "docker build -f horizon/Dockerfile.monorepo -t horizon .",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "docker:run": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "docker:build"
+      ],
+      "options": {
+        "command": "docker run {args} horizon",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": ".venv/bin/python scripts/serve_local.py --port 4173 --bind 127.0.0.1",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "serve-api": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "PHI_ENV_FILE='' PHI_ENVIRONMENT=local PHI_SQLITE_PATH=:memory: .venv/bin/python -m uvicorn backend.main:app --reload --port 8000",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "nightly": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": ".venv/bin/python scripts/run_jobs.py nightly",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "weekly": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": ".venv/bin/python scripts/run_jobs.py weekly",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "backfill": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": ".venv/bin/python scripts/run_jobs.py backfill",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "pipeline": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": ".venv/bin/python run_pipeline.py",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

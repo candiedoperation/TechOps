@@ -1,0 +1,8 @@
+[
+  {"name": "week-2-clear", "expected_status": "clear", "expected_week": 2, "commit_sha": "fixture-clear", "changed_files": ["app.py"], "tests_total": 12, "tests_passed": 12, "tests_failed": 0, "coverage_pct": 85, "deploy_status": "passed", "milestone_refs": ["week-2"], "acceptance_criteria_refs": ["A pull request runs tests and emits evidence"]},
+  {"name": "week-3-watch", "expected_status": "watch", "expected_week": 3, "commit_sha": "fixture-watch", "changed_files": ["app.py"], "tests_total": 12, "tests_passed": 12, "tests_failed": 0, "coverage_pct": 85, "deploy_status": "passed"},
+  {"name": "week-4-at-risk", "expected_status": "at_risk", "expected_week": 4, "commit_sha": "fixture-risk", "changed_files": ["app.py", "new-scope.md"], "tests_total": 12, "tests_passed": 8, "tests_failed": 4, "coverage_pct": 45, "deploy_status": "failed", "scope_change_count": 5},
+  {"name": "week-8-insufficient", "expected_status": "insufficient_data", "expected_week": 8, "commit_sha": "fixture-insufficient"},
+  {"name": "week-12-handoff-clear", "expected_status": "clear", "expected_week": 12, "commit_sha": "fixture-handoff", "changed_files": ["handoff.md"], "tests_total": 18, "tests_passed": 18, "tests_failed": 0, "coverage_pct": 86, "deploy_status": "passed", "milestone_refs": ["three-month-handoff"], "acceptance_criteria_refs": ["All release acceptance criteria have evidence"], "artifact_refs": ["Handoff notes"], "docs_updated": true},
+  {"name": "week-12-planned-pause", "expected_status": "planned_pause", "expected_week": 12, "commit_sha": "fixture-pause", "planned_pause": true}
+]

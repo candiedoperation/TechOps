@@ -1,0 +1,12 @@
+{
+  "name": "app-dev-horizon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Horizon evidence and project review workspace",
+  "scripts": {
+    "start": "python3 scripts/serve_local.py --port 4173 --bind 127.0.0.1",
+    "dev": "python3 scripts/serve_local.py --port 4173 --bind 127.0.0.1",
+    "test": "node --test tests/frontend.test.cjs",
+    "check": "node --check app.js && node --check profiles/app.js && node --check analytics/app.js && node --check assets/operator-session.js"
+  }
+}

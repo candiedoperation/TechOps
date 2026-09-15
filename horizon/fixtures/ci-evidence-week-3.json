@@ -1,0 +1,18 @@
+{
+  "project_id": "project-health-intelligence",
+  "commit_sha": "fixture-week-3",
+  "branch": "main",
+  "changed_files": ["backend/ci_agent.py", "tests/test_ci_agent.py"],
+  "tests_total": 42,
+  "tests_passed": 42,
+  "tests_failed": 0,
+  "coverage_pct": 82,
+  "check_results": [{"name": "unit-tests", "status": "passed"}],
+  "deploy_status": "passed",
+  "milestone_refs": ["week-3"],
+  "acceptance_criteria_refs": ["A week-3 assessment includes inspectable citations"],
+  "artifact_refs": ["assessment.json"],
+  "docs_updated": true,
+  "expected_week": 3,
+  "observed_at": "2026-08-12T12:00:00Z"
+}

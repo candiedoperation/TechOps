@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.DS_Store
+.live-test-token
+goodreturns.json
+.env
+.env.*
+!.env.example
+data/
+
+# Reviewed alias mappings contain members' personal commit email addresses.
+# Kept local: this repo is public, and these are third parties' contact details.
+identity-aliases.json
+
+# Claude Code local state: scheduled-task locks and worktree copies of this repo.
+.claude/

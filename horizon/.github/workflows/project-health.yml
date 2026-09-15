@@ -1,0 +1,45 @@
+name: Project health assessment
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  assess:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_HEALTH_WEEK: "${{ vars.PROJECT_HEALTH_WEEK || '3' }}"
+      FAIL_ON_PROJECT_HEALTH_RISK: "${{ vars.FAIL_ON_PROJECT_HEALTH_RISK || 'false' }}"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e '.[test,pipeline]'
+      - name: Tests and static checks
+        run: |
+          python -m pytest -q
+          ruff check backend scripts tests run_pipeline.py build_member_profiles.py load_postgres.py
+          npm run check
+          npm test
+
+      - name: Run deterministic project-health agent
+        run: |
+          args=(--project-id project-health-intelligence --spec fixtures/project-health-spec.yaml --evidence fixtures/ci-evidence-week-3.json --week "$PROJECT_HEALTH_WEEK" --output project-health-assessment.json)
+          if [ "$FAIL_ON_PROJECT_HEALTH_RISK" = "true" ]; then args+=(--fail-on-risk); fi
+          python scripts/run_ci_assessment.py "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: project-health-assessment
+          path: project-health-assessment.json
+      - name: Optionally ingest into dashboard
+        if: ${{ vars.PROJECT_HEALTH_INGEST_URL != '' }}
+        env:
+          PROJECT_HEALTH_INGEST_URL: ${{ vars.PROJECT_HEALTH_INGEST_URL }}
+          PHI_AGENT_INGEST_TOKEN: ${{ secrets.PHI_AGENT_INGEST_TOKEN }}
+        run: |
+          if [ -z "$PHI_AGENT_INGEST_TOKEN" ]; then
+            echo "Dashboard ingest skipped: PHI_AGENT_INGEST_TOKEN is not configured."
+            exit 0
+          fi
+          python scripts/run_ci_assessment.py --project-id project-health-intelligence --spec fixtures/project-health-spec.yaml --evidence fixtures/ci-evidence-week-3.json --week "$PROJECT_HEALTH_WEEK" --output /tmp/project-health-assessment.json --ingest-url "$PROJECT_HEALTH_INGEST_URL" --token "$PHI_AGENT_INGEST_TOKEN"

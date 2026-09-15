@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#063e92" />
+    <title>App Dev Horizon</title>
+    <link rel="icon" href="assets/adc-256.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      // Deploy behind the same-origin API proxy, or supply PHI_API_BASE before this script.
+      window.PHI_API_BASE = window.PHI_API_BASE || (location.protocol === 'file:'
+        ? 'http://127.0.0.1:8000' : location.origin);
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Primary navigation">
+        <button class="brand-lockup" type="button" data-view="overview" aria-label="Go to Overview">
+          <img class="brand-mark" src="assets/adc-256.png" width="28" height="28" alt="App Dev Club" />
+          <div>
+            <div class="brand-name">App Dev Horizon</div>
+            <div class="brand-caption">INTELLIGENCE</div>
+          </div>
+        </button>
+
+        <nav class="primary-nav">
+          <button class="nav-item" data-view="projects"><span class="nav-icon" data-icon="folder"></span><span>Projects</span></button>
+          <button class="nav-item" data-view="insights"><span class="nav-icon" data-icon="trend"></span><span>Insights</span></button>
+          <button class="nav-item" data-view="recruiting"><span class="nav-icon" data-icon="sparkle"></span><span>Members</span></button>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <div id="app-view" class="view-container"></div>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"><span class="toast-check" data-icon="check"></span><span id="toast-message">Feedback recorded</span></div>
+    <div class="modal-backdrop" id="modal-backdrop" hidden>
+      <section class="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedback-title">
+        <button class="modal-close" id="modal-close" aria-label="Close feedback dialog">×</button>
+        <div class="modal-icon" data-icon="message"></div>
+        <span class="eyebrow">Context</span>
+        <h2 id="feedback-title">Add context to this warning</h2>
+        <p id="feedback-project-name"></p>
+        <div class="feedback-options" id="feedback-options">
+          <button data-feedback="risk_confirmed"><span data-icon="check-circle"></span>Risk confirmed</button>
+          <button data-feedback="expected_cycle"><span data-icon="calendar"></span>Expected cycle</button>
+          <button data-feedback="data_quality"><span data-icon="triangle"></span>Data quality issue</button>
+          <button data-feedback="planned_pause"><span data-icon="pause"></span>Planned pause</button>
+        </div>
+        <label class="modal-label" for="feedback-note">Optional note</label>
+        <textarea id="feedback-note" rows="3" placeholder="Optional note"></textarea>
+        <div class="modal-actions"><button class="secondary-button" id="modal-cancel">Cancel</button><button class="primary-button" id="modal-save">Save <span>→</span></button></div>
+      </section>
+    </div>
+
+    <script src="app.js?v=evidence-review-4"></script>
+  </body>
+</html>

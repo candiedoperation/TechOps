@@ -1,0 +1,147 @@
+{
+  "users": [
+    {
+      "pk": "1101",
+      "username": "priya-n",
+      "name": "Priya N",
+      "email": "priya.n@example.invalid",
+      "is_active": true,
+      "attributes": {
+        "alumniAccount": false,
+        "major": "Computer Science",
+        "expectedGrad": "2027-05",
+        "phoneNumber": "",
+        "roles": {"team-appdev": "Project Lead"}
+      }
+    },
+    {
+      "pk": "1102",
+      "username": "alex-r",
+      "name": "Alex Rivera",
+      "email": "alex.rivera@example.invalid",
+      "is_active": true,
+      "attributes": {
+        "alumniAccount": false,
+        "major": "Computer Science",
+        "expectedGrad": "2027-05",
+        "phoneNumber": "",
+        "roles": {"team-appdev": "Software Engineer"}
+      }
+    },
+    {
+      "pk": "1103",
+      "username": "sam-d",
+      "name": "Sam Delgado",
+      "email": "sam.delgado@example.invalid",
+      "is_active": true,
+      "attributes": {
+        "alumniAccount": false,
+        "major": "Computer Science",
+        "expectedGrad": "2028-05",
+        "phoneNumber": "",
+        "roles": {"team-appdev": "Software Engineer"}
+      }
+    },
+    {
+      "pk": "1104",
+      "username": "jordan-k",
+      "name": "Jordan Kim",
+      "email": "jordan.kim@example.invalid",
+      "is_active": true,
+      "attributes": {
+        "alumniAccount": false,
+        "major": "Computer Science",
+        "expectedGrad": "2028-05",
+        "phoneNumber": "",
+        "roles": {"team-appdev": "Software Engineer"}
+      }
+    },
+    {
+      "pk": "1105",
+      "username": "casey-w",
+      "name": "Casey Wu",
+      "email": "casey.wu@example.invalid",
+      "is_active": true,
+      "attributes": {
+        "alumniAccount": false,
+        "major": "Information Science",
+        "expectedGrad": "2028-05",
+        "phoneNumber": "",
+        "roles": {"team-appdev": "Software Engineer"}
+      }
+    },
+    {
+      "pk": "1106",
+      "username": "riley-p",
+      "name": "Riley Park",
+      "email": "riley.park@example.invalid",
+      "is_active": true,
+      "attributes": {
+        "alumniAccount": false,
+        "major": "Computer Science",
+        "expectedGrad": "2029-05",
+        "phoneNumber": "",
+        "roles": {"team-appdev": "Software Engineer"}
+      }
+    }
+  ],
+  "groups": [
+    {
+      "pk": "team-appdev",
+      "name": "appdev",
+      "parent": null,
+      "children": ["team-appdev-leadership", "team-appdev-engineering"],
+      "user_pks": ["1101", "1102", "1103", "1104", "1105", "1106"],
+      "attributes": {
+        "friendlyName": "Member Portal",
+        "teamType": "PROJECT",
+        "seasonType": "FALL",
+        "seasonYear": 2026,
+        "teamStartDate": "2026-01-05",
+        "teamEndDate": "2026-12-31",
+        "peoplePortalCreation": true,
+        "description": "Local end-to-end Project Health fixture team.",
+        "rootTeamSettings": {},
+        "bindlePermissions": {}
+      }
+    },
+    {
+      "pk": "team-appdev-leadership",
+      "name": "appdevLeadership",
+      "parent": "team-appdev",
+      "children": [],
+      "user_pks": ["1101"],
+      "attributes": {
+        "friendlyName": "Leadership",
+        "teamType": "CORPORATE",
+        "seasonType": "FALL",
+        "seasonYear": 2026,
+        "teamStartDate": "2026-01-05",
+        "teamEndDate": "2026-12-31",
+        "peoplePortalCreation": true,
+        "description": "Project leads.",
+        "rootTeamSettings": {},
+        "bindlePermissions": {}
+      }
+    },
+    {
+      "pk": "team-appdev-engineering",
+      "name": "appdevEngineering",
+      "parent": "team-appdev",
+      "children": [],
+      "user_pks": ["1101", "1102", "1103", "1104", "1105", "1106"],
+      "attributes": {
+        "friendlyName": "Engineering",
+        "teamType": "CORPORATE",
+        "seasonType": "FALL",
+        "seasonYear": 2026,
+        "teamStartDate": "2026-01-05",
+        "teamEndDate": "2026-12-31",
+        "peoplePortalCreation": true,
+        "description": "Project contributors.",
+        "rootTeamSettings": {},
+        "bindlePermissions": {}
+      }
+    }
+  ]
+}

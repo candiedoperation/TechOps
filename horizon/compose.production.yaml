@@ -1,0 +1,47 @@
+name: horizon
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: horizon/Dockerfile.monorepo
+    restart: unless-stopped
+    environment:
+      PHI_ENVIRONMENT: production
+      PHI_SQLITE_PATH: /var/lib/horizon/horizon.db
+      PHI_API_TOKENS: ${PHI_API_TOKENS:?Set named operator tokens as a JSON object}
+      PHI_ADMIN_SYNC_TOKEN: ${PHI_ADMIN_SYNC_TOKEN:?Set a separate source ingest secret}
+      PHI_AGENT_INGEST_TOKEN: ${PHI_AGENT_INGEST_TOKEN:-}
+      PHI_ARTIFACT_ROOT: /app/data/horizon
+      # Optional qualitative analysis. It remains disabled unless explicitly
+      # enabled and supplied a Gemini key in the deployment environment.
+      PHI_LLM_ENABLED: ${PHI_LLM_ENABLED:-false}
+      PHI_GEMINI_API_KEY: ${PHI_GEMINI_API_KEY:-}
+      PHI_GEMINI_MODEL: ${PHI_GEMINI_MODEL:-gemini-2.5-flash}
+      PHI_LLM_ASSESSMENT_MODEL: ${PHI_LLM_ASSESSMENT_MODEL:-}
+      PHI_LLM_DECOMPOSITION_MODEL: ${PHI_LLM_DECOMPOSITION_MODEL:-}
+      PHI_LLM_SIGNAL_MODEL: ${PHI_LLM_SIGNAL_MODEL:-}
+      PHI_LLM_RECRUITING_MODEL: ${PHI_LLM_RECRUITING_MODEL:-}
+      PHI_LLM_CUMULATIVE_MODEL: ${PHI_LLM_CUMULATIVE_MODEL:-}
+    volumes:
+      - horizon-state:/var/lib/horizon
+      - ./data/horizon:/app/data/horizon:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+  web:
+    build:
+      context: ..
+      dockerfile: horizon/Dockerfile.monorepo
+    command: ["python", "scripts/serve_local.py", "--bind", "0.0.0.0", "--port", "4173", "--backend", "http://api:8000"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4173:4173"
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  horizon-state:

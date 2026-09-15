@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Horizon · Member Profiles</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script>
+    if (new URLSearchParams(location.search).get('embedded') === '1') {
+      document.documentElement.classList.add('embedded');
+    }
+  </script>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">HORIZON / GITEA ANALYTICS DASHBOARD</p>
+        <h1>Horizon member profiles</h1>
+        <p class="subtitle">A pooled, source-linked view of People Portal membership, applications, résumés, and Gitea engineering activity, including unlinked contributor identities.</p>
+      </div>
+      <div class="hero-actions">
+        <nav class="platform-nav" aria-label="Horizon views">
+          <a class="button" href="../analytics/">Gitea analytics</a>
+          <a class="button primary current" href="./" aria-current="page">Member profiles</a>
+        </nav>
+        <span id="scope-pill" class="pill muted">Loading data…</span>
+        <button id="refresh-button" class="button primary" type="button">Refresh data</button>
+      </div>
+    </header>
+
+    <section id="warning-banner" class="warning-banner" role="status" hidden></section>
+
+    <section id="summary-cards" class="summary-grid" aria-label="Summary metrics"></section>
+
+    <section class="toolbar" aria-label="Dashboard controls">
+      <label class="search-field">
+        <span>Find a member</span>
+        <input id="member-search" type="search" placeholder="Name, login, or email" autocomplete="off">
+      </label>
+      <label>
+        <span>Organization</span>
+        <select id="organization-filter">
+          <option value="all">All organizations</option>
+        </select>
+      </label>
+      <label>
+        <span>Sort members by</span>
+        <select id="member-sort">
+          <option value="name">Name</option>
+          <option value="applications">Applications</option>
+          <option value="commits">Commits</option>
+          <option value="pulls_merged">Merged PRs</option>
+          <option value="reviews_submitted">Reviews</option>
+          <option value="issues_opened">Issues</option>
+          <option value="active_days">Active days</option>
+        </select>
+      </label>
+      <div class="toolbar-links">
+        <a href="../data/horizon/latest/analytics.json">Open JSON</a>
+        <a href="../data/horizon/latest/member-profiles.json">Open profiles</a>
+        <a href="../data/horizon/latest/member-analytics.md">Open Markdown</a>
+        <a href="../analytics/">Gitea analytics</a>
+      </div>
+    </section>
+
+    <nav class="tabs" aria-label="Analytics views">
+      <button class="tab active" data-view="members" type="button">Members</button>
+      <button class="tab" data-view="repositories" type="button">Repositories</button>
+      <button class="tab" data-view="organizations" type="button">Organizations</button>
+    </nav>
+
+    <section id="panel-members" class="panel active" aria-labelledby="members-tab">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">MEMBER ACTIVITY</p>
+          <h2>Member and contributor overview</h2>
+        </div>
+        <span id="member-count" class="result-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Roles / application teams</th>
+              <th>Applications</th>
+              <th>Hired</th>
+              <th>Notes</th>
+              <th>Résumés</th>
+              <th>Commits</th>
+              <th>Merged PRs</th>
+              <th>Reviews</th>
+              <th>Issues</th>
+              <th>Active days</th>
+            </tr>
+          </thead>
+          <tbody id="member-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-repositories" class="panel" aria-labelledby="repositories-tab">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">REPOSITORY INVENTORY</p>
+          <h2>Project activity</h2>
+        </div>
+        <span id="repository-count" class="result-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Repository</th>
+              <th>Organization</th>
+              <th>Default branch</th>
+              <th>Branches</th>
+              <th>Commits</th>
+              <th>PRs</th>
+              <th>Merged</th>
+              <th>Issues</th>
+              <th>Links</th>
+            </tr>
+          </thead>
+          <tbody id="repository-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="panel-organizations" class="panel" aria-labelledby="organizations-tab">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">ORGANIZATION ROLLUP</p>
+          <h2>Teams and projects</h2>
+        </div>
+        <span id="organization-count" class="result-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Organization</th>
+              <th>Roster</th>
+              <th>Active members</th>
+              <th>Repositories</th>
+              <th>Branches</th>
+              <th>Commits</th>
+              <th>PRs</th>
+              <th>Merged</th>
+              <th>Issues</th>
+              <th>Blame lines</th>
+            </tr>
+          </thead>
+          <tbody id="organization-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span id="status-message">Waiting for analytics.json…</span>
+      <span id="scope-note">Horizon profiles are descriptive source records, not a performance score.</span>
+    </footer>
+  </main>
+
+  <dialog id="member-dialog">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">MEMBER DETAIL</p>
+        <h2 id="dialog-member-name">Member</h2>
+      </div>
+      <button id="close-dialog" class="icon-button" type="button" aria-label="Close member details">×</button>
+    </div>
+    <div id="dialog-content"></div>
+  </dialog>
+
+  <div id="error-state" class="error-state" hidden>
+    <h2>Analytics data is not available yet</h2>
+    <p>Run the Gitea pipeline and member-profile build, then refresh this page.</p>
+    <code>python3 run_pipeline.py --default-branch-only</code>
+  </div>
+
+  <script src="../assets/operator-session.js" defer></script>
+  <script src="./app.js" defer></script>
+</body>
+</html>

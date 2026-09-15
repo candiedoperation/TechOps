@@ -1,0 +1,173 @@
+name: project-health-live-test
+
+services:
+  authentik-stub:
+    image: python:3.12-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["python", "authentik_oidc_stub.py", "--port", "9000", "--bind", "0.0.0.0"]
+    environment:
+      AUTHENTIK_STUB_TOKEN: local-authentik-token
+    volumes:
+      - ./tools/authentik_oidc_stub.py:/app/authentik_oidc_stub.py:ro
+      - ./tools/authentik_oidc_fixture.json:/app/authentik_oidc_fixture.json:ro
+    ports:
+      - "127.0.0.1:9443:9000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/health', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27018:27017"
+    volumes:
+      - project-health-mongodb:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  gitea:
+    image: gitea/gitea:1.26.4
+    restart: unless-stopped
+    environment:
+      USER_UID: 1000
+      USER_GID: 1000
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__repository__DEFAULT_BRANCH: main
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__server__DOMAIN: localhost
+      # Allow Git clone/fetch/push over the HTTPS Git transport.
+      GITEA__repository__DISABLE_HTTP_GIT: "false"
+      GITEA__server__ROOT_URL: http://localhost:10000/
+      GITEA__service__DISABLE_REGISTRATION: "true"
+    ports:
+      - "127.0.0.1:10000:3000"
+      - "127.0.0.1:222:22"
+    volumes:
+      - project-health-gitea:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  people-portal-server:
+    build:
+      context: ../peopleportal/server
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      # This service is an isolated local fixture. Production boot requires
+      # real OIDC/Authentik settings; the fixture supplies a runtime-only
+      # Authentik/OIDC stub instead.
+      NODE_ENV: development
+      PEOPLEPORTAL_BASE_URL: http://localhost:3100
+      PEOPLEPORTAL_AUTHENTIK_ENDPOINT: http://authentik-stub:9000
+      PEOPLEPORTAL_AUTHENTIK_TOKEN: local-authentik-token
+      PEOPLEPORTAL_OIDC_DSCVURL: http://authentik-stub:9000/application/o/people-portal/.well-known/openid-configuration
+      PEOPLEPORTAL_OIDC_CLIENTID: people-portal-local
+      PEOPLEPORTAL_OIDC_CLIENTSECRET: people-portal-local-secret
+      PEOPLEPORTAL_LOCAL_MOCK: "true"
+      PEOPLEPORTAL_MONGO_URL: mongodb://mongodb:27017/people_portal_local
+      PEOPLEPORTAL_TOKEN_SECRET: local-session-secret-not-for-production
+      PEOPLEPORTAL_SERVICE_TOKEN: project-health-local-service-token
+      PEOPLEPORTAL_GITEA_ENDPOINT: http://gitea:3000
+      # The seed writes a read-only token to .live-test-token. Pass it through
+      # PHI_LIVE_GITEA_TOKEN when recreating this service after the seed.
+      PEOPLEPORTAL_GITEA_TOKEN: ${PHI_LIVE_GITEA_TOKEN:-local-mock-token}
+      PEOPLEPORTAL_SLACK_BOT_TOKEN: xoxb-local-mock-token
+      PEOPLEPORTAL_SLACK_INVITE_URL: http://localhost/mock-slack-invite
+      AWS_REGION: us-east-1
+      AWS_ORG_ROOT_ID: r-localmock
+      AWS_NONPROD_OU_ID: ou-localmock
+      AWS_MANAGEMENT_ACCOUNT_ID: "000000000000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      authentik-stub:
+        condition: service_healthy
+      gitea:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3100:3000"
+    healthcheck:
+      # The Node image has no wget and People Portal exposes its public
+      # Swagger document as the boot/readiness probe.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/docs/swagger.json').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  project-health-api:
+    command: ["python", "scripts/container_entrypoint.py"]
+    volumes:
+      - project-health-sqlite:/var/lib/horizon
+      # Keep the standalone analytics/profile views on the same local
+      # pipeline artifacts as the API.  This is deliberately isolated from
+      # the repository's existing data/horizon contents.
+      - ./data/horizon/live-test:/app/data/horizon:ro
+    build:
+      context: ..
+      dockerfile: horizon/Dockerfile.monorepo
+    restart: unless-stopped
+    environment:
+      PHI_ENVIRONMENT: local
+      PHI_SEED_DEMO_DATA: "false"
+      PHI_LLM_ENABLED: "${PHI_LLM_ENABLED:-true}"
+      PHI_GEMINI_API_KEY: "${PHI_GEMINI_API_KEY:-}"
+      PHI_GEMINI_MODEL: "${PHI_GEMINI_MODEL:-gemini-2.5-flash}"
+      PHI_SQLITE_PATH: /var/lib/horizon/horizon.db
+      PHI_GITEA_URL: http://gitea:3000
+      PHI_GITEA_ORG: appdev
+      PHI_GITEA_TOKEN_FILE: /run/secrets/gitea_api_token
+      PHI_PEOPLE_PORTAL_URL: http://people-portal-server:3000
+      PHI_PEOPLE_PORTAL_API_TOKEN: project-health-local-service-token
+      PHI_ADMIN_SYNC_TOKEN: project-health-local-admin-token
+      PHI_AGENT_INGEST_TOKEN: project-health-local-agent-token
+      PHI_AGGREGATION_FLOOR: "5"
+      PHI_BACKFILL_WEEKS: "10"
+      PHI_UPSTREAM_TIMEOUT_SECONDS: "120"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      gitea:
+        condition: service_healthy
+      people-portal-server:
+        condition: service_healthy
+    secrets:
+      - gitea_api_token
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  project-health-dashboard:
+    image: python:3.12-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["python", "scripts/serve_local.py", "--port", "4173", "--bind", "0.0.0.0", "--backend", "http://project-health-api:8000"]
+    volumes:
+      - ./:/app:ro
+    depends_on:
+      project-health-api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4173:4173"
+
+volumes:
+  project-health-sqlite:
+  project-health-mongodb:
+  project-health-gitea:
+
+secrets:
+  gitea_api_token:
+    file: ./.live-test-token

@@ -1,4 +1,0 @@
-# Development dependencies
--e ../../peopleportal/sdk/python/src
-fastapi[standard]
-uvicorn

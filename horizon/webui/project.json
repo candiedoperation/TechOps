@@ -1,0 +1,80 @@
+{
+  "name": "horizonui",
+  "projectType": "application",
+  "sourceRoot": "horizon/webui/src",
+  "tags": [
+    "scope:horizon"
+  ],
+  "targets": {
+    "install-deps": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npm install",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "tsc -b && vite build",
+        "cwd": "{projectRoot}"
+      },
+      "outputs": [
+        "{projectRoot}/dist"
+      ]
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "vite",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "build"
+      ],
+      "options": {
+        "command": "vite preview",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "eslint .",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "vitest run",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test-watch": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "vitest",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}
