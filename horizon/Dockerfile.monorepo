@@ -1,0 +1,10 @@
+FROM python:3.12-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1 PHI_ENV_FILE="" PHI_ENVIRONMENT=production
+WORKDIR /app
+COPY horizon/pyproject.toml horizon/requirements.lock ./
+COPY horizon/backend ./backend
+RUN pip install --no-cache-dir -c requirements.lock . \
+    && useradd --create-home --uid 10001 horizon
+USER horizon
+EXPOSE 8000
+CMD ["sh", "-c", "exec python -m uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

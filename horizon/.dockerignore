@@ -1,0 +1,7 @@
+*
+!pyproject.toml
+!requirements.lock
+!backend/
+!backend/*.py
+**/__pycache__
+**/*.pyc
