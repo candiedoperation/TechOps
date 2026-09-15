@@ -20,7 +20,7 @@
         "pplserver:build"
       ],
       "options": {
-        "command": "docker run --rm -v $PWD:/local openapitools/openapi-generator-cli generate -i /local/peopleportal/server/dist/swagger.json -g typescript-axios -o /local/peopleportal/sdk/ts/src",
+        "command": "docker run --rm -v \"$PWD:/local\" openapitools/openapi-generator-cli generate -i /local/peopleportal/server/dist/swagger.json -g typescript-axios -o /local/peopleportal/sdk/ts/src",
         "cwd": "{workspaceRoot}"
       },
       "outputs": [

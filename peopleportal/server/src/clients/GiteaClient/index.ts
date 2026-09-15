@@ -392,6 +392,31 @@ export class GiteaClient implements SharedResourceClient {
         return response.data as GiteaRepository[]
     }
 
+    /**
+     * Returns the repositories currently visible under a Gitea organization.
+     * Kept as a narrow public read method for People Portal's project catalog;
+     * provisioning and archival remain internal to this client.
+     */
+    public async getOrganizationRepositories(orgName: string): Promise<GiteaRepository[]> {
+        return this.getOrgRepositories(orgName);
+    }
+
+    /**
+     * Returns the users currently visible under a Gitea organization.
+     * Kept as a narrow public read method for People Portal's project catalog;
+     * membership provisioning remains internal to this client.
+     */
+    public async getOrganizationMembers(orgName: string): Promise<GiteaAPIUserDefinition[]> {
+        var RequestConfig: any = {
+            ...this.GiteaBaseConfig,
+            method: 'get',
+            url: `/api/v1/orgs/${encodeURIComponent(orgName)}/members`,
+        }
+
+        const response = await axios.request(RequestConfig)
+        return response.data as GiteaAPIUserDefinition[]
+    }
+
     private async addTeamMember(teamId: number, username: string) {
         var RequestConfig: any = {
             ...this.GiteaBaseConfig,

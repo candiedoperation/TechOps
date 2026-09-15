@@ -4,11 +4,13 @@
 import type { TsoaRoute } from '@tsoa/runtime';
 import {  fetchMiddlewares, ExpressTemplateService } from '@tsoa/runtime';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-import { PlatformController } from './controllers/PlatformController';
+import { OrgController } from './controllers/OrgController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { BindleController } from './controllers/BindleController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-import { OrgController } from './controllers/OrgController';
+import { ProjectCatalogController } from './controllers/ProjectCatalogController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { PlatformController } from './controllers/PlatformController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { MeetingsController } from './controllers/MeetingsController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
@@ -29,31 +31,6 @@ const expressAuthenticationRecasted = expressAuthentication as (req: ExRequest, 
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 
 const models: TsoaRoute.Models = {
-    "PlatformLicenseResponse": {
-        "dataType": "refObject",
-        "properties": {
-            "licenseText": {"dataType":"string","required":true},
-            "dependencies": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"version":{"dataType":"string","required":true},"name":{"dataType":"string","required":true}}},"required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "BindlePermission": {
-        "dataType": "refObject",
-        "properties": {
-            "friendlyName": {"dataType":"string","required":true},
-            "description": {"dataType":"string","required":true},
-        },
-        "additionalProperties": false,
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-    "BindlePermissionMap": {
-        "dataType": "refObject",
-        "properties": {
-        },
-        "additionalProperties": {"ref":"BindlePermission"},
-    },
-    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "PaginationDefinition": {
         "dataType": "refObject",
         "properties": {
@@ -512,6 +489,169 @@ const models: TsoaRoute.Models = {
             "description": {"dataType":"string","validators":{"minLength":{"value":1}}},
             "teamStartDate": {"dataType":"string"},
             "teamEndDate": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BindlePermission": {
+        "dataType": "refObject",
+        "properties": {
+            "friendlyName": {"dataType":"string","required":true},
+            "description": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BindlePermissionMap": {
+        "dataType": "refObject",
+        "properties": {
+        },
+        "additionalProperties": {"ref":"BindlePermission"},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogOwningTeam": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "slug": {"dataType":"string","required":true},
+            "displayName": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogGiteaIdentity": {
+        "dataType": "refObject",
+        "properties": {
+            "provider": {"dataType":"enum","enums":["gitea"],"required":true},
+            "providerId": {"dataType":"string","required":true},
+            "username": {"dataType":"string","required":true},
+            "email": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogLeadReference": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string"},
+            "provider": {"dataType":"enum","enums":["authentik"],"required":true},
+            "providerId": {"dataType":"string"},
+            "username": {"dataType":"string","required":true},
+            "name": {"dataType":"string","required":true},
+            "email": {"dataType":"string"},
+            "role": {"dataType":"string","required":true},
+            "gitea": {"ref":"ProjectCatalogGiteaIdentity"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogRepositorySnapshotStatus": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["verified"]},{"dataType":"enum","enums":["unconfigured"]},{"dataType":"enum","enums":["unavailable"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogRepository": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"double","required":true},
+            "slug": {"dataType":"string","required":true},
+            "fullName": {"dataType":"string","required":true},
+            "url": {"dataType":"string"},
+            "archived": {"dataType":"boolean","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogGitSource": {
+        "dataType": "refObject",
+        "properties": {
+            "provider": {"dataType":"enum","enums":["gitea"],"required":true},
+            "organization": {"dataType":"string","required":true},
+            "organizationSource": {"dataType":"enum","enums":["people-portal-team-name"],"required":true},
+            "repositorySnapshot": {"ref":"ProjectCatalogRepositorySnapshotStatus","required":true},
+            "memberSnapshot": {"ref":"ProjectCatalogRepositorySnapshotStatus","required":true},
+            "repositories": {"dataType":"array","array":{"dataType":"refObject","ref":"ProjectCatalogRepository"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogSowMetadata": {
+        "dataType": "refObject",
+        "properties": {
+            "reference": {"dataType":"string"},
+            "title": {"dataType":"string"},
+            "effectiveFrom": {"dataType":"string"},
+            "effectiveTo": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogRevision": {
+        "dataType": "refObject",
+        "properties": {
+            "value": {"dataType":"string","required":true},
+            "effectiveFrom": {"dataType":"string"},
+            "effectiveTo": {"dataType":"string"},
+            "observedAt": {"dataType":"datetime","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogEntry": {
+        "dataType": "refObject",
+        "properties": {
+            "id": {"dataType":"string","required":true},
+            "slug": {"dataType":"string","required":true},
+            "displayName": {"dataType":"string","required":true},
+            "owningTeam": {"ref":"ProjectCatalogOwningTeam","required":true},
+            "leads": {"dataType":"array","array":{"dataType":"refObject","ref":"ProjectCatalogLeadReference"},"required":true},
+            "gitea": {"ref":"ProjectCatalogGitSource","required":true},
+            "sow": {"ref":"ProjectCatalogSowMetadata"},
+            "revision": {"ref":"ProjectCatalogRevision","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogIdentityIssueCode": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["missing-email"]},{"dataType":"enum","enums":["duplicate-email"]},{"dataType":"enum","enums":["missing-provider-id"]},{"dataType":"enum","enums":["duplicate-provider-id"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogIdentityIssue": {
+        "dataType": "refObject",
+        "properties": {
+            "code": {"ref":"ProjectCatalogIdentityIssueCode","required":true},
+            "provider": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["authentik"]},{"dataType":"enum","enums":["gitea"]}],"required":true},
+            "projectIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "personIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "email": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ProjectCatalogResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "observedAt": {"dataType":"datetime","required":true},
+            "projects": {"dataType":"array","array":{"dataType":"refObject","ref":"ProjectCatalogEntry"},"required":true},
+            "identityIssues": {"dataType":"array","array":{"dataType":"refObject","ref":"ProjectCatalogIdentityIssue"},"required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "APIProjectCatalogOptions": {
+        "dataType": "refObject",
+        "properties": {
+            "includeArchived": {"dataType":"boolean"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "PlatformLicenseResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "licenseText": {"dataType":"string","required":true},
+            "dependencies": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"version":{"dataType":"string","required":true},"name":{"dataType":"string","required":true}}},"required":true},
         },
         "additionalProperties": false,
     },
@@ -1166,65 +1306,6 @@ export function RegisterRoutes(app: Router) {
 
 
     
-        const argsPlatformController_getPlatformLicense: Record<string, TsoaRoute.ParameterSchema> = {
-        };
-        app.get('/api/platform/license',
-            authenticateMiddleware([{"oidc":[]}]),
-            ...(fetchMiddlewares<RequestHandler>(PlatformController)),
-            ...(fetchMiddlewares<RequestHandler>(PlatformController.prototype.getPlatformLicense)),
-
-            async function PlatformController_getPlatformLicense(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsPlatformController_getPlatformLicense, request, response });
-
-                const controller = new PlatformController();
-
-              await templateService.apiHandler({
-                methodName: 'getPlatformLicense',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: 200,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-        const argsBindleController_getDefinitions: Record<string, TsoaRoute.ParameterSchema> = {
-        };
-        app.get('/api/bindles/definitions',
-            ...(fetchMiddlewares<RequestHandler>(BindleController)),
-            ...(fetchMiddlewares<RequestHandler>(BindleController.prototype.getDefinitions)),
-
-            async function BindleController_getDefinitions(request: ExRequest, response: ExResponse, next: any) {
-
-            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
-
-            let validatedArgs: any[] = [];
-            try {
-                validatedArgs = templateService.getValidatedArgs({ args: argsBindleController_getDefinitions, request, response });
-
-                const controller = new BindleController();
-
-              await templateService.apiHandler({
-                methodName: 'getDefinitions',
-                controller,
-                response,
-                next,
-                validatedArgs,
-                successStatus: 200,
-              });
-            } catch (err) {
-                return next(err);
-            }
-        });
-        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsOrgController_getPeople: Record<string, TsoaRoute.ParameterSchema> = {
                 options: {"in":"queries","name":"options","required":true,"ref":"GetUserListOptions"},
         };
@@ -2454,6 +2535,96 @@ export function RegisterRoutes(app: Router) {
 
               await templateService.apiHandler({
                 methodName: 'archiveTeam',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsBindleController_getDefinitions: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/api/bindles/definitions',
+            ...(fetchMiddlewares<RequestHandler>(BindleController)),
+            ...(fetchMiddlewares<RequestHandler>(BindleController.prototype.getDefinitions)),
+
+            async function BindleController_getDefinitions(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsBindleController_getDefinitions, request, response });
+
+                const controller = new BindleController();
+
+              await templateService.apiHandler({
+                methodName: 'getDefinitions',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsProjectCatalogController_getProjectCatalog: Record<string, TsoaRoute.ParameterSchema> = {
+                options: {"in":"queries","name":"options","required":true,"ref":"APIProjectCatalogOptions"},
+        };
+        app.get('/api/projects/catalog',
+            authenticateMiddleware([{"oidc":[]},{"service":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(ProjectCatalogController)),
+            ...(fetchMiddlewares<RequestHandler>(ProjectCatalogController.prototype.getProjectCatalog)),
+
+            async function ProjectCatalogController_getProjectCatalog(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsProjectCatalogController_getProjectCatalog, request, response });
+
+                const controller = new ProjectCatalogController();
+
+              await templateService.apiHandler({
+                methodName: 'getProjectCatalog',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsPlatformController_getPlatformLicense: Record<string, TsoaRoute.ParameterSchema> = {
+        };
+        app.get('/api/platform/license',
+            authenticateMiddleware([{"oidc":[]}]),
+            ...(fetchMiddlewares<RequestHandler>(PlatformController)),
+            ...(fetchMiddlewares<RequestHandler>(PlatformController.prototype.getPlatformLicense)),
+
+            async function PlatformController_getPlatformLicense(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsPlatformController_getPlatformLicense, request, response });
+
+                const controller = new PlatformController();
+
+              await templateService.apiHandler({
+                methodName: 'getPlatformLicense',
                 controller,
                 response,
                 next,

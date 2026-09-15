@@ -17,6 +17,7 @@
 */
 
 import * as express from "express";
+import { timingSafeEqual } from "crypto";
 import { AuthorizedUser, OpenIdClient } from "./clients/OpenIdClient";
 import jwt from "jsonwebtoken"
 import { BindleController } from "./controllers/BindleController";
@@ -56,6 +57,9 @@ export async function expressAuthentication(
         else if (securityName == "bindles")
             return await bindlesAuthVerify(request, scopes);
 
+        else if (securityName == "service")
+            return await serviceAuthVerify(request);
+
         else if (securityName == "events")
             return await eventsAuthVerify(request, scopes);
 
@@ -81,6 +85,39 @@ export async function expressAuthentication(
     } catch (e) {
         return Promise.reject(e)
     }
+}
+
+/**
+ * Verifies the dedicated internal service bearer used by Horizon and other
+ * internal jobs. This is deliberately not an OIDC identity: it establishes no
+ * user, no groups and no superuser authority, so a controller has to opt into
+ * it with @Security("service") instead of inheriting it from @Security("oidc").
+ *
+ * @param request Express Request Object
+ * @returns Service Authorization Status (Boolean)
+ */
+async function serviceAuthVerify(request: express.Request): Promise<boolean> {
+    const configuredServiceToken = process.env.PEOPLEPORTAL_SERVICE_TOKEN;
+    if (!configuredServiceToken)
+        return Promise.reject(new ResourceAccessError(401, "Service Authentication is Not Configured"));
+
+    const authorization = request.get("authorization");
+    if (!authorization?.startsWith("Bearer "))
+        return Promise.reject(new ResourceAccessError(401, "No Service Token Provided"));
+
+    /* Constant-time comparison. The length check short-circuits before
+       timingSafeEqual (which throws on a length mismatch) and leaks only the
+       configured length, never the secret itself. */
+    const expected = Buffer.from(configuredServiceToken);
+    const presented = Buffer.from(authorization.slice("Bearer ".length));
+    if (expected.length !== presented.length || !timingSafeEqual(expected, presented))
+        return Promise.reject(new ResourceAccessError(401, "Invalid Service Token"));
+
+    /* No session mutation on purpose. The caller is a stateless job, and
+       writing the bearer into session.accessToken would both mint a
+       cookie-backed session per request and hand a non-OIDC secret to
+       OpenIdClient on any route that forwards that field to Authentik. */
+    return Promise.resolve(true);
 }
 
 /**
