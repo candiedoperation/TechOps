@@ -1,0 +1,66 @@
+{
+  "name": "horizon-dag",
+  "projectType": "application",
+  "sourceRoot": "horizon",
+  "tags": [
+    "scope:horizon"
+  ],
+  "targets": {
+    "install-deps": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python3 -m venv .venv && .venv/bin/python -m pip install -q -e '.[test,pipeline,orchestration]'",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "python3 -m compileall -q pipeline",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": ".venv/bin/ruff check pipeline tests",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "HORIZON_ENV_FILE='' .venv/bin/python -m pytest -q",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "check": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "build",
+        "test",
+        "lint"
+      ],
+      "options": {
+        "command": "true",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "mkdir -p .dagster && DAGSTER_HOME=\"$PWD/.dagster\" .venv/bin/dagster dev -m pipeline.definitions",
+        "cwd": "{projectRoot}"
+      }
+    }
+  }
+}

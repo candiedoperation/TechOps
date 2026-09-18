@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "app-dev-horizon"
+version = "0.1.0"
+description = "Horizon data pipeline: git blame into Postgres, as a Dagster asset graph."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.8,<3.0",
+  "pydantic-settings>=2.4,<3.0",
+  "httpx>=0.27,<1.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=9.0.3,<10.0",
+  "ruff>=0.15,<1.0",
+]
+
+pipeline = [
+  "psycopg[binary]>=3.2,<4.0",
+]
+
+# Dagster is kept in its own extra so an image that only needs the library code
+# does not carry an orchestrator it never runs.
+orchestration = [
+  "dagster>=1.13,<2.0",
+  "dagster-webserver>=1.13,<2.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["F"]
+ignore = ["F401"]

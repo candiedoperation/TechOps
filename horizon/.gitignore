@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.py[cod]
+.DS_Store
+.env
+.env.*
+!.env.example
+data/
+.live-test-token
+goodreturns.json
+
+# Reviewed alias mappings contain members' personal commit email addresses.
+# Kept local: this repo is public, and these are third parties' contact details.
+identity-aliases.json
+
+# Claude Code local state: scheduled-task locks and worktree copies of this repo.
+.claude/
+
+# Dagster instance state (run history, logs) for `nx run horizon-dag:serve`.
+.dagster/
