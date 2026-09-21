@@ -7,3 +7,11 @@
 .claude/worktrees
 .claude/settings.local.json
 *.DS_Store
+peopleportal/server/.env.development
+
+# Bootstrap script outputs (contain credentials)
+peopleportal/server/scripts/.oidc
+peopleportal/server/scripts/.env
+peopleportal/server/scripts/.gitea-app-token
+peopleportal/server/scripts/.gitea-admin-pass
+peopleportal/server/.env.development*
