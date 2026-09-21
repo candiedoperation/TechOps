@@ -73,7 +73,7 @@ export const ENABLED_SHARED_RESOURCES: { [key: string]: SharedResourceClient } =
 
 /* Define Enabled Root Team Setting Resources Here */
 export const ENABLED_TEAMSETTING_RESOURCES: { [key: string]: RootTeamSettingClient } = {
-  // awsClient: new AWSClient()
+  awsClient: new AWSClient()
 }
 
 /* Define Enabled Service Teams Here */
