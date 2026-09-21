@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # CI/CD
 
-How a commit becomes a running container, for both production and staging.
+How a commit becomes a running container.
 
 :::info Monorepo, not three repos
 People Portal used to live in `PeoplePortalUI` and `PeoplePortalServer`, with a
@@ -59,48 +59,8 @@ changed in `.env` only takes effect after `up -d`, which recreates it.
 
 ## Staging
 
-Staging runs on a Coolify-managed host as a seven-container service:
-people-portal, Authentik server and worker, Postgres, Mongo, Redis and Gitea.
-Coolify owns the compose file and `.env`, regenerating both from its database on
-every deploy, so edits made directly on the box are reverted by the next one.
-
-Only `master` produces a published image, so staging builds branches locally with
-`/opt/pp-deploy/pp-build.sh`:
-
-```bash
-/opt/pp-deploy/pp-build.sh feature/my-branch   # build and deploy
-/opt/pp-deploy/pp-build.sh --no-deploy <branch>  # build only
-/opt/pp-deploy/pp-build.sh --list              # branches on the remote
-```
-
-It clones TechOps, runs the Nx build and the image build inside containers (the
-host has no Node), and tags the result `people-portal:branch-<sanitised>`, so
-several branches can sit side by side. It then points the Coolify service's
-`PP_IMAGE` at that tag and triggers a deploy.
-
-:::warning It builds what is pushed
-The script clones from GitHub. Local commits you have not pushed are invisible to
-it, and it will happily rebuild the previous commit without saying so.
-:::
-
-:::danger The token lives on the box
-Deployment reads `COOLIFY_API_TOKEN` from `/opt/pp-deploy/.coolify-env`, root-only,
-mode 600. That token controls **every** application on the Coolify instance, and
-the box is publicly reachable. It was deliberately kept off the host until the
-deploy step was folded into the script. Use `--no-deploy` if you would rather
-deploy from somewhere else.
-:::
-
-`force=true` on the deploy call is not optional: Coolify resolves `${PP_IMAGE}`
-into the compose when the service is saved, so an ordinary deploy can reuse the
-cached resolution and keep running the old image even though the variable changed.
-
-### Staging images are local only
-
-`people-portal:branch-*` tags exist solely on the staging host. They are in no
-registry. If that host loses its images, staging cannot be restored without
-re-running `pp-build.sh`. Returning to a published build means setting `PP_IMAGE`
-to `candiedoperation/people-portal:latest` and redeploying.
+Staging is up at **[appdev-corp.iancoutinho.net](https://appdev-corp.iancoutinho.net)**.
+Contact Ian for access.
 
 ## Sibling workflows
 
