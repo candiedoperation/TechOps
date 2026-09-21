@@ -23,6 +23,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
+import { useNavigate } from 'react-router-dom';
 
 interface OrgChartNode extends RawNodeDatum {
     id: string;
@@ -43,6 +44,7 @@ interface OrgChartNode extends RawNodeDatum {
 }
 
 export const OrgChartVisualization = () => {
+    const navigate = useNavigate();
     const [data, setData] = useState<OrgChartNode | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
@@ -75,6 +77,7 @@ export const OrgChartVisualization = () => {
 
         // Get the depth of the current node
         const depth = (nodeDatum as any).__rd3t?.depth ?? 0;
+
 
         // Dimensions matching "Thin card" aesthetic
         const CARD_WIDTH = 240;
@@ -196,6 +199,17 @@ export const OrgChartVisualization = () => {
                 : needsLazyLoad;
             const isExpanded = depth >= 2 ? isVerticalExpanded : !nodeDatum.__rd3t?.collapsed;
 
+            /* Per CARD, never from `node`: NodeCard renders the focused node and
+               its siblings, so the outer nodeDatum is the wrong identity for
+               every sibling. Same reason cardHeaderText reads data above.
+
+               For a team owner card `id` is the TEAM pk, because expansion uses
+               it to fetch that team's members, and the person's own pk arrives
+               as realUserPk. Reading `id` sent every owner card to the team. */
+            const personPk = (data.type === "PERSON" || data.type === "ROOT_MEMBER")
+                ? (data.attributes?.realUserPk ?? data.id)
+                : undefined;
+
             // Division cards are thinner
             const isDivision = data.type === "DIVISION";
             const cardHeight = isDivision ? 85 : CARD_HEIGHT;
@@ -211,7 +225,32 @@ export const OrgChartVisualization = () => {
                     y={isVertical ? offsetY : -(cardHeight / 2) + offsetY}
                 >
                     <div className="flex flex-col items-center">
-                        <Card className="w-full gap-2 flex flex-col overflow-hidden border shadow-sm hover:shadow-md transition-shadow" style={{ height: cardHeight }}>
+                        <Card
+                            className={cn(
+                                "w-full gap-2 flex flex-col overflow-hidden border shadow-sm hover:shadow-md transition-shadow",
+                                personPk && "cursor-pointer hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            )}
+                            style={{ height: cardHeight }}
+                            {...(personPk ? {
+                                role: "button" as const,
+                                tabIndex: 0,
+                                title: `View ${data.name}'s profile`,
+                                /* stopPropagation: react-d3-tree binds its own click
+                                   handler on the node group, which collapses or
+                                   expands. Without this, opening a profile also
+                                   toggles the subtree behind the navigation. */
+                                onClick: (e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    navigate(`/org/people/${personPk}`);
+                                },
+                                onKeyDown: (e: React.KeyboardEvent) => {
+                                    if (e.key !== "Enter" && e.key !== " ") return;
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    navigate(`/org/people/${personPk}`);
+                                },
+                            } : {})}
+                        >
 
 
                             <div style={{ paddingTop: 0 }} className={cn(

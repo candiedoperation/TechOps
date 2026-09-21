@@ -1249,6 +1249,11 @@ export class OrgController extends Controller {
                 role: "Owner",
                 email: primaryOwner.email,
                 teamContext: [rootTeamName],
+                /* id above is the TEAM pk, because expansion uses it to fetch the
+                   team's members. The card still shows a person, so carry their
+                   real pk separately or the UI has no way to link to them. Same
+                   reason as the other owner node. */
+                realUserPk: primaryOwner.pk,
                 avatar: await signAvatarUrl(primaryOwner.pk, primaryOwner.attributes.avatar)
             },
             children: subMembers,
