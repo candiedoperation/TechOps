@@ -255,7 +255,7 @@ PEOPLEPORTAL_WEBHOOK_URL=http://localhost:3000
 # Slack
 # Bot User OAuth Token (xoxb-...) and the workspace invite URL.
 # These are loaded eagerly — the server will fail to start if either is missing.
-PEOPLEPORTAL_SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+PEOPLEPORTAL_SLACK_BOT_TOKEN=<your-slack-bot-token>
 PEOPLEPORTAL_SLACK_INVITE_URL=https://join.slack.com/t/your-workspace/shared_invite/...
 
 # Node TLS (Only strictly necessary if connecting to instances with self-signed certs)
