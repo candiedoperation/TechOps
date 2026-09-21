@@ -566,7 +566,14 @@ export class AuthentikClient {
 
                     /* Filter Logic */
                     const parentPk = entry.parent ?? entry.parents?.[0] ?? null;  /* 01-19-2026 (@atheesh): Filtering Patches to support Authentik v2025.12+ */
-                    const isMatch = entry.attributes.peoplePortalCreation && ((options.subgroupsOnly) ? parentPk : !parentPk);
+                    /* Archived teams are excluded unless asked for, matching
+                       getGroupsList. Without this the org chart, the only caller,
+                       kept drawing teams that had been archived: archiveTeam
+                       stamps attributes.archivedAt and tears down the team's
+                       Slack, Gitea and AWS resources, but nothing removed the
+                       group, so it still arrived here. */
+                    const notArchived = options.includeArchived || !entry.attributes.archivedAt;
+                    const isMatch = notArchived && entry.attributes.peoplePortalCreation && ((options.subgroupsOnly) ? parentPk : !parentPk);
 
                     let parent_obj: TeamInformationBrief | undefined = undefined;
                     if (parentPk !== null && entry.parent_obj != null) {
