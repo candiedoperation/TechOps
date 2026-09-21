@@ -1602,4 +1602,68 @@ export class ATSController extends Controller {
         await RedisClient.delete(OPEN_TEAMS_CACHE_KEY);
         return updatedTeam;
     }
+
+    /**
+     * Per-team recruitment totals for the executive console, one row per active
+     * team with a count for each application stage.
+     *
+     * Teams come from the groups list, which excludes archived ones, so a team
+     * that has been archived drops off this page rather than lingering with a
+     * frozen count. Teams that have never received an application are still
+     * listed, with zeroes, because "nobody applied" is the thing an executive
+     * most wants to see.
+     *
+     * Counts are aggregated in one grouped query rather than a count per team
+     * per stage, which would be teams x stages round trips.
+     *
+     * @returns One row per active team, plus the stage keys used
+     */
+    @Get("teamstats")
+    @Tags("Recruitment Actions")
+    @SuccessResponse(200)
+    @Security("executive")
+    async getTeamRecruitmentStats() {
+        const [teamsRes, grouped] = await Promise.all([
+            this.authentikClient.getGroupsList({ limit: 500 }),
+            Application.aggregate([
+                { $group: { _id: { teamPk: "$teamPk", stage: "$stage" }, count: { $sum: 1 } } }
+            ]).exec(),
+        ]);
+
+        /* teamPk -> stage -> count */
+        const byTeam = new Map<string, Record<string, number>>();
+        for (const row of grouped as { _id: { teamPk: string, stage: string }, count: number }[]) {
+            const stages = byTeam.get(row._id.teamPk) ?? {};
+            stages[row._id.stage] = row.count;
+            byTeam.set(row._id.teamPk, stages);
+        }
+
+        const stageKeys = Object.values(ApplicationStage);
+
+        const teams = teamsRes.teams.map((team) => {
+            const stages = byTeam.get(team.pk) ?? {};
+            const counts: Record<string, number> = {};
+            let total = 0;
+
+            for (const stage of stageKeys) {
+                const n = stages[stage] ?? 0;
+                counts[stage] = n;
+                total += n;
+            }
+
+            return {
+                teamPk: team.pk,
+                name: team.friendlyName || team.name,
+                counts,
+                total,
+            };
+        });
+
+        /* Busiest first: an executive scanning this wants the teams with
+           something happening, not alphabetical order. */
+        teams.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+
+        return { stages: stageKeys, teams };
+    }
+
 }

@@ -26,6 +26,7 @@ import { DashboardTeamsList } from "@/components/fabric/DashboardTeamsList"
 import { OrgChartVisualization } from "@/components/fragments/OrgChartVisualization"
 import { OrgTeamRequestReview } from "@/components/fragments/OrgTeamRequestReview"
 import { PlatformLicenseInfo } from "@/components/fragments/PlatformLicenseInfo"
+import { ActiveTeams } from "./ActiveTeams"
 import { ArchiveTeams } from "./ArchiveTeams"
 import { TeamMeetings } from "./TeamMeetings"
 import { MeetingDetail } from "./MeetingDetail"
@@ -84,6 +85,9 @@ const translateBreadcrumbPath = (path: string) => {
 
         case "exec":
             return "Executive"
+
+        case "active-teams":
+            return "Active Teams"
 
         case "archive-teams":
             return "Archive Teams"
@@ -213,6 +217,10 @@ export const CorpDashboard = () => {
                         <Route path="/org/orgchart" element={<OrgChartVisualization />} />
                         <Route path="/community/events" element={<Events />} />
                         <Route path="/community/events/:eventId/attendance" element={<EventAttendance />} />
+                        <Route
+                            path="/exec/active-teams"
+                            element={userInfo.isExecutive ? <ActiveTeams /> : <Navigate to="/org/people" />}
+                        />
                         <Route
                             path="/exec/archive-teams"
                             element={userInfo.isExecutive ? <ArchiveTeams /> : <Navigate to="/org/people" />}

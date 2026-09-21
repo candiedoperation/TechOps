@@ -20,6 +20,7 @@ import { Link } from "react-router-dom"
 import * as React from "react"
 import {
     ArchiveIcon,
+    LayoutListIcon,
     BookOpen,
     Building2,
     CrownIcon,
@@ -96,6 +97,7 @@ const buildNavMain = (isExecutive: boolean) => {
             url: "#",
             icon: CrownIcon,
             items: [
+                { icon: LayoutListIcon, title: "Active Teams", url: "/exec/active-teams" },
                 { icon: ArchiveIcon, title: "Archive Teams", url: "/exec/archive-teams" },
             ],
         })
