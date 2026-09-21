@@ -77,12 +77,17 @@ print(json.dumps({
     "signing_key": key,
     "grant_types": ["authorization_code", "refresh_token"],
     "sub_mode": "user_username",
-    # Two entries: the login callback, and the post-logout landing page.
-    # Authentik matches post_logout_redirect_uri against this same list, so
-    # RP-initiated logout fails with "Invalid redirect URI" without the second.
+    # Two entries, and the types are not interchangeable. Authentik tags each
+    # redirect uri as "authorization" or "logout" and checks
+    # post_logout_redirect_uri only against the logout ones. Registering the
+    # landing page with the default "authorization" type is accepted by the
+    # API and then fails at logout with a bare "Bad Request / The request is
+    # otherwise malformed", which names neither the uri nor the type.
     "redirect_uris": [
-        {"matching_mode": "strict", "url": f"{base}/api/auth/redirect"},
-        {"matching_mode": "strict", "url": f"{base}/"},
+        {"matching_mode": "strict", "url": f"{base}/api/auth/redirect",
+         "redirect_uri_type": "authorization"},
+        {"matching_mode": "strict", "url": f"{base}/",
+         "redirect_uri_type": "logout"},
     ],
     "property_mappings": json.loads(std) + [scope],
 }))
