@@ -218,7 +218,14 @@ export const ATSDashboard = () => {
                 setProfile({})
                 setApplications([])
                 toast.success("Logged out successfully")
-                navigate("/apply")
+
+                /* Follow the provider's logout URL when the server supplies
+                   one, so the Authentik session ends too and the next login
+                   actually prompts. Absent means the provider offers no
+                   end_session_endpoint and the local logout is complete. */
+                const { logoutUrl } = await res.json().catch(() => ({}))
+                if (logoutUrl) window.location.href = logoutUrl
+                else navigate("/apply")
             }
         } catch (e) {
             toast.error("Failed to logout")

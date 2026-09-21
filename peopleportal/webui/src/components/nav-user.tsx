@@ -72,9 +72,19 @@ export function NavUser({
       if (!response.ok) throw new Error(response.statusText)
 
       toast.success("Logged out successfully")
-      /* A full reload, not a client-side route change: the session is gone, so
-         every cached page and fetch in memory is now stale. */
-      window.location.href = "/"
+
+      /* The server returns the provider's logout URL when the IdP supports
+         RP-initiated logout. Following it ends the Authentik session too;
+         without it the local session dies but the next login completes
+         silently against the still-live IdP session. Absent means the
+         provider has no end_session_endpoint, so a local logout is all
+         there is and going home is correct.
+
+         A full navigation either way, not a client-side route change: the
+         session is gone, so every cached page and fetch in memory is now
+         stale. */
+      const { logoutUrl } = await response.json().catch(() => ({}))
+      window.location.href = logoutUrl ?? "/"
     } catch {
       toast.error("Failed to log out. Please try again.")
     }

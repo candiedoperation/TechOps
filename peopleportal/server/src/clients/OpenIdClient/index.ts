@@ -182,4 +182,36 @@ export class OpenIdClient {
 
     return await client.fetchUserInfo(this.config, accessToken, sub)
   }
+
+  /**
+   * Builds the RP-initiated logout URL for the provider, so signing out of
+   * People Portal also ends the session at the identity provider. Without
+   * this, destroying the local session leaves the IdP session alive and the
+   * next login completes silently, which reads as "logout did nothing".
+   *
+   * Returns undefined when the provider advertises no end_session_endpoint,
+   * which is the caller's cue to fall back to a local-only logout rather
+   * than fail the request.
+   *
+   * @param idToken The id_token from the session, sent as id_token_hint so
+   *                the provider knows which session to end without prompting
+   * @returns The provider's logout URL, or undefined if unsupported
+   */
+  public static buildLogoutUrl(idToken?: string): URL | undefined {
+    if (!this.config)
+      throw new Error("OpenID Client is Uninitialized!")
+
+    if (!this.config.serverMetadata().end_session_endpoint)
+      return undefined
+
+    /* Must be registered on the provider as a redirect uri; see
+       scripts/bootstrap-authentik.sh, which registers both this and the
+       login callback. */
+    const postLogoutRedirectUri = `${process.env.PEOPLEPORTAL_BASE_URL}/`
+
+    return client.buildEndSessionUrl(this.config, {
+      post_logout_redirect_uri: postLogoutRedirectUri,
+      ...(idToken ? { id_token_hint: idToken } : {}),
+    })
+  }
 }

@@ -28,6 +28,7 @@ import { AuthentikClient } from '../clients/AuthentikClient';
 import { EmailClient } from '../clients/EmailClient';
 import { signAvatarUrl } from '../utils/avatars';
 import { executiveAuthVerify } from '../auth';
+import { describeUnknownError } from '../utils/errors';
 
 export interface CorpUserInfoResponse extends UserInfoResponse {
     avatar: string;
@@ -415,23 +416,42 @@ export class AuthController extends Controller {
     }
 
     /**
-     * Destroys the User's session, Revokes any authentication cookies and
-     * returns the status message.
-     * 
-     * **Non-Standard Behavior:**
-     * Unlike usual implementations, we do not redirect to the OpenID Connect
-     * logout URL. This is left out for future implementation.
-     * 
+     * Destroys the User's session and returns the provider's logout URL so
+     * the caller can complete RP-initiated logout.
+     *
+     * The local session is destroyed either way. `logoutUrl` is present only
+     * when the provider advertises an end_session_endpoint; the client should
+     * navigate to it when given one, and treat its absence as a completed
+     * local logout rather than an error. Ending the identity provider's
+     * session matters because otherwise the next login completes silently
+     * against the still-live IdP session, which on a shared machine looks
+     * like logout never happened.
+     *
+     * The id_token is read before the session is destroyed, since it is the
+     * id_token_hint that lets the provider end the right session without
+     * prompting the user.
+     *
      * @param req Express Request Object
-     * @returns Status Message
+     * @returns Status message, and the provider logout URL when available
      */
     @Post("logout")
     @Tags("Core Authentication")
     @SuccessResponse(200)
     async handleLogout(@Request() req: express.Request) {
+        const idToken = req.session.idToken;
+
+        let logoutUrl: string | undefined;
+        try {
+            logoutUrl = OpenIdClient.buildLogoutUrl(idToken)?.href;
+        } catch (e: unknown) {
+            /* A provider problem must not strand the user in a logged-in
+               session: fall through to the local logout below. */
+            console.error("Failed building provider logout URL:", describeUnknownError(e));
+        }
+
         return new Promise((resolve) => {
             req.session.destroy(() => {
-                resolve({ message: "Logged out successfully" });
+                resolve({ message: "Logged out successfully", logoutUrl });
             });
         });
     }
