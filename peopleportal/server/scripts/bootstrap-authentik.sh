@@ -47,7 +47,13 @@ api "$AK/api/v3/core/users/me/" >/dev/null 2>&1 || {
   echo "cannot reach Authentik at $AK, or AK_TOKEN is invalid" >&2; exit 1; }
 
 AUTH_FLOW=$(api "$AK/api/v3/flows/instances/?slug=default-provider-authorization-implicit-consent" | pick pk)
-INVAL_FLOW=$(api "$AK/api/v3/flows/instances/?slug=default-provider-invalidation-flow" | pick pk)
+# default-invalidation-flow, NOT default-provider-invalidation-flow. The
+# provider variant ships with zero stages: it ends the application session and
+# leaves the Authentik session untouched, so end-session returns cleanly, the
+# next authorize completes silently against the still-live session, and the
+# user lands straight back where they started. The non-provider flow carries
+# the user-logout stage that actually ends the Authentik session.
+INVAL_FLOW=$(api "$AK/api/v3/flows/instances/?slug=default-invalidation-flow" | pick pk)
 KEY=$(api "$AK/api/v3/crypto/certificatekeypairs/?has_key=true" | pick pk)
 
 SCOPE=$(api "$AK/api/v3/propertymappings/provider/scope/?scope_name=people_portal" | pick pk)
