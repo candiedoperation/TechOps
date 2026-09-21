@@ -65,7 +65,7 @@ export interface ServiceTeamConfig {
 /* Define Enabled Shared Resources Here */
 export const ENABLED_SHARED_RESOURCES: { [key: string]: SharedResourceClient } = {
   // appleAccountClient: new AppleAccountClient(),
-  // giteaClient: new GiteaClient(),
+  giteaClient: new GiteaClient(),
   peoplePortalClient: new PeoplePortalClient(),
   slackClient: new SlackClient(),
   discordClient: new DiscordClient(),
