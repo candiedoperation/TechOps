@@ -5,26 +5,31 @@ sidebar_position: 1
 # Local Development Guide
 
 :::info Default Ports
-The Docusaurus documentation server (`npm start` in `AppDev-CorpWiki`) is pinned to port `3001` to avoid colliding with the People Portal backend on port `3000`. If you need to change either port, update the `start` script in `CorpWiki/package.json` and the `PORT` value in your server `.env`.
+The Docusaurus documentation server (`npm start` in `corpwiki/`) is pinned to port `3001` to avoid colliding with the People Portal backend on port `3000`. If you need to change either port, update the `start` script in `corpwiki/package.json` and the `PORT` value in your server `.env`.
 :::
 
 This guide covers setting up dependencies for running the People Portal locally.
 
 ## Cloning the Repositories
 
-Before starting, clone the essential repositories to your local workspace:
+Everything lives in one repository. The separate `PeoplePortalServer`,
+`PeoplePortalUI` and `AppDev-CorpWiki` repos were folded into the **TechOps**
+monorepo and are archived history.
 
 ```bash
-# The backend server
-git clone https://github.com/candiedoperation/PeoplePortalServer.git
-
-# The frontend UI
-git clone https://github.com/candiedoperation/PeoplePortalUI.git
-
-# The documentation wiki
-# We encourage you to run this locally and continually document your work as you go!
-git clone https://github.com/candiedoperation/AppDev-CorpWiki.git
+git clone https://github.com/candiedoperation/TechOps.git
+cd TechOps
 ```
+
+The pieces you will touch:
+
+| Path | Nx project | What it is |
+|---|---|---|
+| `peopleportal/server` | `pplserver` | Express API, also serves the built UI |
+| `peopleportal/webui` | `pplui` | Vite + React frontend |
+| `corpwiki` | | This wiki |
+
+Tasks run through Nx from the repo root, never from inside a project directory.
 
 ## MongoDB Atlas
 
@@ -210,9 +215,45 @@ Launch the stack with `docker compose up -d` and navigate to `http://localhost:1
 
 Once configured, generate an administrator token within Gitea and map it to `PEOPLEPORTAL_GITEA_TOKEN`, keeping `PEOPLEPORTAL_GITEA_ENDPOINT` appropriately set to your web URL `http://localhost:10000` or comparable port.
 
+:::tip Script the rest
+`peopleportal/server/scripts/bootstrap-gitea.sh` creates the admin user, the API
+token and the OIDC auth source, and sets that source's scopes. These live only in
+Gitea's database and none of them can be created through its REST API, so a
+bearer token cannot reconcile them and the app cannot do it at startup.
+
+It auto-detects the running Gitea container and is idempotent, so re-running
+changes nothing once the instance is correct. Run `bootstrap-authentik.sh` first:
+it writes the OIDC client credentials to a gitignored `.oidc` that the Gitea
+script reads.
+
+```bash
+cd peopleportal/server/scripts
+AK_TOKEN=<authentik api token> ./bootstrap-authentik.sh http://localhost:3000
+./bootstrap-gitea.sh
+```
+
+The generated admin password and API token land beside the scripts, both
+gitignored. Put the token in `PEOPLEPORTAL_GITEA_TOKEN`.
+
+Webhooks are deliberately absent from both scripts: the server reconciles those
+itself on every start, via `GiteaClient/hooksetup.ts`.
+:::
+
+## Redis
+
+The server uses Redis as a cache. It is optional, and without it startup logs
+`PEOPLEPORTAL_REDIS_URL is unset; running without a cache` and carries on, but
+running it locally matches deployed behaviour:
+
+```bash
+docker run -d --name people-portal-redis -p 6379:6379 --restart unless-stopped redis:alpine
+```
+
+Then set `PEOPLEPORTAL_REDIS_URL=redis://localhost:6379`.
+
 ## Running the Applications Locally
 
-The People Portal is split into two repositories: the backend server (`PeoplePortalServer`) and the frontend UI (`PeoplePortalUI`). 
+Server and UI are two Nx projects in one repository, run from the repo root.
 
 ### 1. People Portal Server (Backend)
 
@@ -220,7 +261,10 @@ The backend handles all business logic, database connections, and authentication
 
 #### Environment Variables
 
-Ensure the `.env` file in the root of the **`PeoplePortalServer`** repository contains all the necessary variables. For a complete list, see the [Environment Variables](./environment-variables.md) guide.
+Configuration lives in `peopleportal/server/.env.development`, which is
+gitignored. The loader layers `.env`, then `.env.<NODE_ENV>`, then
+`.env.<NODE_ENV>.local`, and the real process environment always wins. For the
+full list see the [Environment Variables](./environment-variables.md) guide.
 
 Here is an example `.env` configuration combining what we've set up above for local testing:
 
@@ -279,13 +323,8 @@ S3_BUCKET_NAME=your-s3-bucket-name
 With your `.env` configured inside the backend repo, install the dependencies and start the local development server:
 
 ```bash
-cd PeoplePortalServer
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
+# From the repo root
+./nx run pplserver:serve
 ```
 
 The backend server should now be live at `http://localhost:3000`.
@@ -299,13 +338,13 @@ The frontend is built with Vite and React. In local development, the UI server w
 No separate `.env` file is required for local UI development. 
 
 ```bash
-cd PeoplePortalUI
+./nx run pplui:serve
+```
 
-# Install dependencies
-npm install
+Or start both at once, which is usually what you want:
 
-# Start the Vite development UI
-npm run dev
+```bash
+./nx run-many -t serve -p pplserver pplui
 ```
 
 The UI will typically start on `http://localhost:5173`. Open this URL in your web browser to view your local People Portal. With both running, the frontend will be able to utilize your backend context and dependencies!

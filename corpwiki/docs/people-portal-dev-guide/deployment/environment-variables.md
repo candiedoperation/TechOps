@@ -4,173 +4,154 @@ sidebar_position: 3
 
 # Environment Variables
 
-This section provides a comprehensive reference for all environment variables used by the People Portal Server. These variables control various aspects of the application, including authentication, database connections, third-party integrations, and cloud services.
+Every variable the People Portal server reads, grouped by what it configures.
 
-:::info
-For detailed API interactions and schema definitions, please refer to the [API Reference](https://corp.appdevlcub.com/api/docs).
+Loading is layered, lowest priority first, in `src/config/environment.ts`:
+`.env`, then `.env.<NODE_ENV>`, then `.env.<NODE_ENV>.local`. Anything already in
+the real process environment always wins, so container and CI values are never
+clobbered by a stray file.
+
+:::warning Required in production
+Outside development and test, the server refuses to start unless all of these are
+set and non-empty: `PEOPLEPORTAL_BASE_URL`, `PEOPLEPORTAL_MONGO_URL`,
+`PEOPLEPORTAL_TOKEN_SECRET`, `PEOPLEPORTAL_OIDC_DSCVURL`,
+`PEOPLEPORTAL_OIDC_CLIENTID`, `PEOPLEPORTAL_OIDC_CLIENTSECRET`,
+`PEOPLEPORTAL_AUTHENTIK_ENDPOINT`, `PEOPLEPORTAL_AUTHENTIK_TOKEN`.
+A present-but-empty value counts as missing.
 :::
 
-:::warning
-Variables handling sensitive data (secrets, tokens, passwords) should be secured using appropriate secrets management solutions in production, rather than plain text files.
+## Core
+
+| Variable | Notes |
+|---|---|
+| `NODE_ENV` | `development`, `test` or `production`. Anything else throws. Default `development` |
+| `PORT` | Listen port. Default `3000` |
+| `PEOPLEPORTAL_BASE_URL` | Public origin. Builds the OIDC redirect and post-logout URLs |
+| `PEOPLEPORTAL_WEBHOOK_URL` | Origin Gitea calls back on. Usually the same as above |
+| `PEOPLEPORTAL_MONGO_URL` | MongoDB connection string |
+| `PEOPLEPORTAL_REDIS_URL` | Cache. **Optional**: unset logs "running without a cache" and continues |
+| `PEOPLEPORTAL_TOKEN_SECRET` | Session signing secret |
+
+`PEOPLEPORTAL_TOKEN_SECRET` behaves differently by environment. In production it
+is required and the server throws without it. In development it generates an
+ephemeral one and warns, so sessions do not survive a restart.
+
+## Authentication
+
+| Variable | Notes |
+|---|---|
+| `PEOPLEPORTAL_AUTHENTIK_ENDPOINT` | Authentik base URL |
+| `PEOPLEPORTAL_AUTHENTIK_TOKEN` | Admin API token, sent as `Bearer` |
+| `PEOPLEPORTAL_OIDC_DSCVURL` | Discovery document URL |
+| `PEOPLEPORTAL_OIDC_CLIENTID` | Client id from the Authentik provider |
+| `PEOPLEPORTAL_OIDC_CLIENTSECRET` | Client secret |
+
+The app requests `openid profile email people_portal offline_access`, and reads
+`pk`, `is_superuser` and `attributes` from the custom scope. See
+[OpenID Provider Configuration](./oidc-provider-config.md) for the provider side,
+including what logout needs.
+
+## Gitea
+
+| Variable | Notes |
+|---|---|
+| `PEOPLEPORTAL_GITEA_ENDPOINT` | Gitea base URL |
+| `PEOPLEPORTAL_GITEA_TOKEN` | Admin token. Needs `write:admin` for system webhooks |
+| `PEOPLEPORTAL_GITEA_WEBHOOK_SECRET` | Shared secret. **Minimum 32 characters** |
+
+The webhook secret is not optional once Gitea is enabled. `GiteaHookSetup` builds
+the `Authorization: Bearer` header from it before creating either hook, and throws
+below 32 characters, so a short value means **zero** hooks rather than partial
+ones. Inbound webhooks are rejected with 401 unless the header matches, compared
+with `timingSafeEqual`.
+
+## Slack and Discord
+
+| Variable | Notes |
+|---|---|
+| `PEOPLEPORTAL_SLACK_BOT_TOKEN` | Bot token. `SlackClient` throws at construction if unset |
+| `PEOPLEPORTAL_SLACK_INVITE_URL` | Workspace invite link surfaced to new members |
+| `PEOPLEPORTAL_DISCORD_BOT_TOKEN` | Optional |
+| `PEOPLEPORTAL_DISCORD_SERVER_ID` | Optional |
+
+Discord degrades: with either missing, the client logs "Discord integration
+disabled" and the server starts normally. A bad token also degrades rather than
+crashing, which it used to do at import time.
+
+Slack scopes, from the nine Web API methods used: `chat:write`,
+`channels:manage`, `channels:read`, `users:read`, `users:read.email`, plus
+`groups:write` and `groups:read` for private channels. `users:read.email` is
+requested separately from `users:read` and is easy to miss.
+
+## Email
+
+| Variable | Notes |
+|---|---|
+| `PEOPLEPORTAL_SMTP_HOST` | SMTP server |
+| `PEOPLEPORTAL_SMTP_PORT` | `465` for SSL, `587` for STARTTLS |
+| `PEOPLEPORTAL_SMTP_SECURE` | `true` or `false` |
+| `PEOPLEPORTAL_SMTP_USER` | SMTP username |
+| `PEOPLEPORTAL_SMTP_PASS` | SMTP password |
+| `PEOPLEPORTAL_SMTP_DEFAULTFROM` | Default From address when a request does not set one |
+| `PEOPLEPORTAL_EMAIL_CONREROUTE` | If set, mail is intercepted instead of sent |
+
+`PEOPLEPORTAL_SMTP_DEFAULTFROM` is the From fallback, not `PEOPLEPORTAL_SMTP_USER`.
+Set `PEOPLEPORTAL_EMAIL_CONREROUTE` on any environment seeded with real member
+addresses, or onboarding mail reaches real people.
+
+## Photo check
+
+| Variable | Notes |
+|---|---|
+| `PHOTO_CHECK_ENABLED` | Off unless exactly `true` |
+| `PHOTO_CHECK_URL` | Sidecar address. Default `http://localhost:8001` |
+| `PHOTO_CHECK_FAIL_CLOSED` | `true` rejects uploads the service could not rule on |
+
+Leave `PHOTO_CHECK_ENABLED` off until the sidecar is actually running, otherwise
+every upload is waved through.
+
+## AWS
+
+| Variable | Notes |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | Server's IAM user |
+| `AWS_SECRET_ACCESS_KEY` | |
+| `AWS_REGION` | Default `us-east-1` |
+| `S3_BUCKET_NAME` | Resumes and avatars |
+| `AWS_ORG_ROOT_ID` | Organization root, `r-...` |
+| `AWS_NONPROD_OU_ID` | OU new team accounts are moved into |
+| `AWS_SUSPENDED_OU_ID` | OU archived accounts move to |
+| `AWS_MANAGEMENT_ACCOUNT_ID` | Payer account, where budgets live |
+| `AWS_ADMIN_ROLE_NAME` | Role created inside each member account. Default `AppDevNonProductionRole` |
+| `AWS_DEFAULT_BUDGET_AMOUNT` | Monthly USD limit. Default `50` |
+| `AWS_BILLING_ALERT_EMAIL` | Budget alert recipient |
+| `AWS_DENY_ALL_SCP_ID` | DenyAll SCP, `p-...` |
+| `AWS_BUDGET_ACTION_ROLE_ARN` | Role AWS Budgets assumes to apply that SCP |
+
+:::danger Three are load-bearing at import
+`AWSClient`'s constructor throws without `AWS_ORG_ROOT_ID`, `AWS_NONPROD_OU_ID`
+or `AWS_MANAGEMENT_ACCOUNT_ID`, and it is constructed at module scope. That throw
+happens before Express listens, so a deployment missing one of them does not
+disable AWS, it stops the server from booting.
 :::
 
-## General Configuration
+The rest degrade. Without `AWS_DENY_ALL_SCP_ID` or `AWS_BUDGET_ACTION_ROLE_ARN`,
+budget enforcement logs a warning and skips while provisioning still succeeds.
+Without `AWS_SUSPENDED_OU_ID`, archiving throws.
 
-These variables are fundamental to the server's operation and basic connectivity.
+`AWS_ADMIN_ROLE_NAME` both names the role created inside new accounts and names
+the role assumed for console links, so changing it breaks console access for
+accounts created under the old name.
 
-### `PEOPLEPORTAL_BASE_URL`
-The public-facing URL of the People Portal application.
-- **Usage**: Used to construct callback URLs for OAuth flows (e.g., OIDC redirects) and to generate links to resources (e.g., in emails or Gitea descriptions).
-- **Example**: `https://portal.appdevclub.com` (or `http://localhost:3000` for local dev)
+Policy documents live in `peopleportal/server/aws/`.
 
-### `PEOPLEPORTAL_MONGO_URL`
-The connection string for the MongoDB instance.
-- **Usage**: Used by Mongoose to establish a connection to the application database.
-- **Format**: Standard MongoDB URI (e.g., `mongodb+srv://user:pass@host/...`).
+## Node
 
-### `PEOPLEPORTAL_TOKEN_SECRET`
-A secret key used to sign session cookies.
-- **Usage**: Encrypts and validates session data such as user authentication state.
-- **Important**: If not provided, the server will generate a random string on startup. This will cause all existing sessions to be invalidated every time the server restarts.
-- **Recommendation**: Set this to a fixed, high-entropy random string for production environments.
+| Variable | Notes |
+|---|---|
+| `NODE_TLS_REJECT_UNAUTHORIZED` | `0` disables all TLS verification |
+| `NODE_EXTRA_CA_CERTS` | Path to an extra CA bundle |
 
-### `PORT`
-(Optional) The network port on which the server listens.
-- **Default**: `3000`
-- **Usage**: Determines the binding port for the Express application.
-
-
-
-## Authentication (Authentik)
-
-Variables required to interact with the Authentik Identity Provider for user management and verification.
-
-:::info
-The server validates the connection to the Authentik instance on startup, ensuring the API version is compatible.
-:::
-
-### `PEOPLEPORTAL_AUTHENTIK_ENDPOINT`
-The base URL of the Authentik instance.
-- **Usage**: The base path for API requests to Authentik (e.g., fetching user info, managing groups).
-- **Example**: `https://auth.appdevclub.com`
-
-### `PEOPLEPORTAL_AUTHENTIK_TOKEN`
-The API token for authenticating administrative requests to Authentik.
-- **Usage**: Used in the `Authorization` header (`Bearer <token>`) for all `AuthentikClient` requests.
-- **Permission**: Ensure this token belongs to a service account with sufficient permissions to manage users and groups.
-
-
-
-## OpenID Connect (OIDC)
-
-Configuration for the OIDC authentication flow, processing user logins via the identity provider.
-
-### `PEOPLEPORTAL_OIDC_DSCVURL`
-The OIDC Discovery URL (often ending in `.well-known/openid-configuration`).
-- **Usage**: The `OpenIdClient` fetches this URL to discover endpoints (authorization, token, userinfo) and signing keys (JWKS).
-
-### `PEOPLEPORTAL_OIDC_CLIENTID`
-The Client ID assigned to the People Portal application in the OIDC provider.
-- **Usage**: Identifies the application during the OAuth2/OIDC authorization flow and token verification.
-
-### `PEOPLEPORTAL_OIDC_CLIENTSECRET`
-The Client Secret for the application.
-- **Usage**: Used to authenticate the application to the OIDC provider when exchanging authorization codes for access tokens.
-
-
-
-## Integrations
-
-Configuration for external tools and services integrated into the People Portal.
-
-### Gitea (Version Control)
-
-### `PEOPLEPORTAL_GITEA_ENDPOINT`
-The base URL of the Gitea instance.
-- **Usage**: The API endpoint for managing repositories, organizations, and teams.
-
-### `PEOPLEPORTAL_GITEA_TOKEN`
-Administrator API token for Gitea.
-- **Usage**: Authenticates requests to create/manage organizations and sync team permissions.
-
-### Slack
-
-### `PEOPLEPORTAL_SLACK_BOT_TOKEN`
-The Bot User OAuth Token for the Slack workspace.
-- **Usage**: Used to interact with the Slack API, such as looking up users by email (`users.lookupByEmail`) to validate their presence in the workspace.
-- **Format**: Typically starts with `xoxb-`.
-- **Note**: Ensure the bot scope includes necessary permissions like `users:read.email`.
-
-### Email (SMTP)
-
-Configuration for sending transactional emails (onboarding, notifications).
-
-### `PEOPLEPORTAL_SMTP_HOST`
-The hostname of the SMTP server.
-- **Example**: `mail.privateemail.com`
-
-### `PEOPLEPORTAL_SMTP_PORT`
-The port for the SMTP server.
-- **Example**: `465` (SSL) or `587` (TLS).
-
-### `PEOPLEPORTAL_SMTP_SECURE`
-Boolean flag to enable secure connection (SSL/TLS).
-- **Values**: `true` or `false`.
-
-### `PEOPLEPORTAL_SMTP_USER`
-The username for SMTP authentication.
-- **Usage**: Also used as the default "From" address if one is not specified in the email request.
-
-### `PEOPLEPORTAL_SMTP_PASS`
-The password for the SMTP user.
-
-### `PEOPLEPORTAL_EMAIL_CONREROUTE`
-A debug flag to intercept outgoing emails.
-- **Usage**: If set (e.g., to `true`), the `EmailClient` will **not** send actual emails. Instead, it logs the email content (To, Subject, Body Preview) to the server console.
-- **Environment**: Recommended for development/staging keys to prevent accidental emails.
-
-
-
-## AWS Services
-
-Configuration for AWS SDK and resource provisioning.
-
-### Credentials
-These are standard AWS SDK credentials used for authentication.
-- **`AWS_ACCESS_KEY_ID`**: The access key for the AWS user.
-- **`AWS_SECRET_ACCESS_KEY`**: The secret key for the AWS user.
-- **`AWS_REGION`**: (Optional) The AWS region to use (default: `us-east-1`).
-
-### Organization Management
-
-### `AWS_ORG_ROOT_ID`
-The ID of the AWS Organization Root.
-- **Usage**: Used to identify the root container when searching for or moving accounts.
-
-### `AWS_NONPROD_OU_ID`
-The ID of the Organizational Unit (OU) for non-production accounts.
-- **Usage**: Newly provisioned accounts are moved to this OU.
-
-### `AWS_MANAGEMENT_ACCOUNT_ID`
-The ID of the management/payer account.
-- **Usage**: Budgets are created in this account and linked to the provisioned member accounts.
-
-### Resource configuration
-
-### `S3_BUCKET_NAME`
-The name of the S3 bucket used for storage (e.g., resumes, assets).
-- **Usage**: Used by `S3Client` to target the correct bucket for file operations.
-
-### `AWS_DEFAULT_BUDGET_AMOUNT`
-(Optional) The default monthly budget limit in USD.
-- **Usage**: Used when creating a new budget for a provisioned project account.
-- **Default**: `50`
-
-
-
-## Node.js Configuration
-
-### `NODE_TLS_REJECT_UNAUTHORIZED`
-Controls TLS certificate validation.
-- **Usage**: Setting this to `0` disables SSL certificate validation.
-- **Warning**: Do not use `0` in production environments unless necessary for internal self-signed certificates.
+Setting `NODE_TLS_REJECT_UNAUTHORIZED=0` in production is refused at startup. For
+internal or self-signed certificates use `NODE_EXTRA_CA_CERTS`, which trusts your
+CA without disabling verification globally.

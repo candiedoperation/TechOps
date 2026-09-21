@@ -2,188 +2,117 @@
 sidebar_position: 4
 ---
 
-# CI/CD Architecture
+# CI/CD
 
-This documentation provides a comprehensive guide to the **People Portal** CI/CD architecture. It covers the flow from raw source code in independent repositories to a multi-platform production image hosted on Docker Hub.
+How a commit becomes a running container, for both production and staging.
 
-People Portal utilizes a **decoupled orchestration** pattern. Instead of one massive repository, the frontend and backend are built independently, and a dedicated deployment repository coordinates the assembly of the final production Docker image.
+:::info Monorepo, not three repos
+People Portal used to live in `PeoplePortalUI` and `PeoplePortalServer`, with a
+third repo, `PeoplePortalDeploy`, assembling the image after a `repository_dispatch`
+from each. That is no longer the case. The app is now part of the **TechOps**
+monorepo and builds in one workflow. The old repositories are archived history;
+their issues were transferred to TechOps.
 
-## Pipeline Architecture
-
-The following sequence diagram illustrates how a code push to either the Frontend or Backend repository triggers the global deployment flow.
-
-```mermaid
-sequenceDiagram
-    participant Dev as Developer
-    participant UI as PeoplePortalUI (GitHub)
-    participant SRV as PeoplePortalServer (GitHub)
-    participant DEP as PeoplePortalDeploy (GitHub)
-    participant HUB as Docker Hub
-
-    Note over UI, SRV: Independent Build Stage
-    Dev->>UI: git push master
-    Dev->>SRV: git push master
-
-    par UI Pipeline
-        UI->>UI: npm install & vite build
-        UI->>UI: Upload 'ui-build' Artifact (exp. 1 day)
-        UI->>DEP: Repository Dispatch ("Deploy Request")
-    and Server Pipeline
-        SRV->>SRV: npm install & vite build
-        SRV->>SRV: Upload 'server-build' Artifact (exp. 1 day)
-        SRV->>DEP: Repository Dispatch ("Deploy Request")
-    end
-
-    Note over DEP: Orchestration Stage
-    DEP->>DEP: Trigger: "Deploy Request"
-    DEP->>UI: gh run download (ui-build)
-    DEP->>SRV: gh run download (server-build)
-    
-    Note over DEP: Multi-Platform Build
-    DEP->>DEP: Setup QEMU & Buildx
-    DEP->>DEP: Docker Build (amd64 + arm64)
-    DEP->>HUB: Docker Push (latest + SHA)
-
-```
-
-## Security & Authentication
-
-We use **Repository Secrets** instead of Environment Secrets to ensure the workflow has global access to the necessary tokens without the overhead of environment-specific protection rules or manual approval gates.
-
-### Fine-grained Personal Access Token (PAT)
-
-:::warning Token Scope
-The **Repository selection** for this token must include `PeoplePortalUI`, `PeoplePortalServer` and`PeoplePortalDeploy`
+`PeoplePortalDeploy` still exists, but only as the production VM's compose stack.
+It no longer builds anything.
 :::
 
-To allow the UI and Server repositories to "ping" the Deploy repository and for the Deploy repository to download artifacts from other private repos, you must create a Fine-grained PAT with the following scope:
+## Production
 
-| Permission | Level | Reason |
-| --- | --- | --- |
-| **Contents** | `Read & Write` | Required to trigger Repository Dispatch events and read code. |
-| **Actions** | `Read & Write` | Required to download artifacts across repositories via GitHub CLI. |
-| **Metadata** | `Read-only` | Mandatory default permission. |
+### The build
 
-### Secret Configuration
-:::tip Secrets Location
-Secrets must be added under **Settings > Secrets and variables > Actions > Repository secrets**. Do **not** create a new environment.
-:::
+`.github/workflows/deploy_peopleportal.yml` runs on pushes to `master` that touch
+`peopleportal/**`, and on manual dispatch. It is one job:
 
-**In `PeoplePortalUI` & `PeoplePortalServer`:**
+1. Checkout, Node 20
+2. `./nx run-many -t build -p pplserver pplui` — server and UI build together,
+   because the server serves the UI's `dist` from a single container
+3. QEMU + Buildx, then `docker/build-push-action` for `linux/amd64` and
+   `linux/arm64`
 
-* `PEOPLEPORTAL_DEPLOY_TOKEN`: The Fine-grained PAT.
+The image is pushed to Docker Hub as `candiedoperation/people-portal:latest` and
+`candiedoperation/people-portal:<sha>`. A concurrency group, `deploy-peopleportal`,
+serialises runs without cancelling one in progress.
 
-**In `PeoplePortalDeploy`:**
+Two platforms because the servers are x86 and most of the team is on Apple
+silicon, so the same tag has to run in both places.
 
-* `PEOPLEPORTAL_DEPLOY_TOKEN`: The same Fine-grained PAT.
-* `DOCKERHUB_USERNAME`: Your Docker Hub account username.
-* `DOCKERHUB_TOKEN`: A Docker Hub Access Token (generated in Docker Hub account settings).
+### The release
 
-## Independent Build Repositories
+Production is a two-container Compose stack on its own VM, in
+`~/PeoplePortalDeploy`: the app, and Traefik terminating TLS via Let's Encrypt and
+routing on `Host(${DOMAIN_NAME})`. Config comes from `.env` beside the compose
+file.
 
-Both the [PeoplePortalUI](https://github.com/candiedoperation/PeoplePortalUI) and [PeoplePortalServer](https://github.com/candiedoperation/PeoplePortalServer) repositories function as independent build units.
-
-### Build & Artifact Upload
-
-The code is built using Node 23. The compiled `dist` folder and package manifests are uploaded as a GitHub artifact.
-
-```yaml
-      - name: Upload Server Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: server-build # Or ui-build for the UI repo
-          path: |
-            dist/
-            package*.json
-          retention-days: 1
-
-```
-
-:::info Artifact Retention
-We set `retention-days: 1`. This reduces storage costs and security surface area, as these artifacts are ephemeral "handoff" files only needed long enough for the Deploy repo to ingest them.
-:::
-
-### Notify Deploy (Repository Dispatch)
-
-Once the artifact is safe on GitHub's servers, the workflow "pings" the deployment repository. We use the custom event types `People Portal UI Deploy Request` and `People Portal Server Deploy Request`. The following is a trigger example from the server's workflow:
+Pushing the image does **not** deploy it. To pick up a new build:
 
 ```bash
-curl -L \
-  -X POST \
-  -H "Accept: application/vnd.github+json" \
-  -H "Authorization: Bearer ${{ secrets.PEOPLEPORTAL_DEPLOY_TOKEN }}" \
-  -H "X-GitHub-Api-Version: 2022-11-28" \
-  [https://api.github.com/repos/candiedoperation/PeoplePortalDeploy/dispatches](https://api.github.com/repos/candiedoperation/PeoplePortalDeploy/dispatches) \
-  -d '{"event_type": "People Portal UI Deploy Request", "client_payload": {"repo": "server", "sha": "${{ github.sha }}"}}'
-
+cd ~/PeoplePortalDeploy
+sudo docker compose pull app
+sudo docker compose up -d app
 ```
 
-## The Orchestrator (`PeoplePortalDeploy`)
-
-The [PeoplePortalDeploy](https://github.com/candiedoperation/PeoplePortalDeploy) repo coordinates the assembly of the final product.
-
-### Concurrency & Debouncing
-
-Since a push to the UI and a push to the Server might happen simultaneously, we use a concurrency group. This "debounces" the deployment by cancelling any older build that is still in progress when a new one arrives.
-
-```yaml
-concurrency:
-  group: deploy-orchestration
-  cancel-in-progress: true 
-
-```
-
-### Multi-Platform Support (amd64/arm64)
-
-To ensure the image runs on standard cloud servers (Intel/AMD) as well as modern developer machines (Mac M1/M2/M3), we build for two platforms simultaneously using QEMU emulation.
-
-```yaml
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      # ...
-      - name: Build and Push
-        uses: docker/build-push-action@v5
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: |
-            candiedoperation/people-portal:latest
-            candiedoperation/people-portal:${{ github.event.client_payload.sha || github.sha }}
-
-```
-
-### Dockerfile Logic & Optimization
-
-The Dockerfile is structured to create a production-ready environment by nesting the UI directly inside the Server's distribution folder.
-
-1. **Assembly:** It downloads the `server-build` and `ui-build` artifacts.
-2. **Nesting:** It creates a `dist/ui` folder inside the server root and copies the frontend there.
-3. **Internal Install:** It runs `npm install --omit=dev` inside the Alpine Linux container.
-
-:::tip Native Binaries
-By running `npm install` inside the container rather than copying `node_modules` from the GitHub runner, we ensure that native binaries (like database drivers) are compiled specifically for the target Linux OS, preventing "wrong architecture" errors.
+:::warning `.env` is read at container creation
+`docker restart` reuses the existing container and its environment. Anything you
+changed in `.env` only takes effect after `up -d`, which recreates it.
 :::
 
-## Final Deployment
+## Staging
 
-The final multi-platform image is published to 
-**[Docker Hub](https://hub.docker.com/r/candiedoperation/people-portal)**
+Staging runs on a Coolify-managed host as a seven-container service:
+people-portal, Authentik server and worker, Postgres, Mongo, Redis and Gitea.
+Coolify owns the compose file and `.env`, regenerating both from its database on
+every deploy, so edits made directly on the box are reverted by the next one.
 
-### Tagging Strategy
-
-* `latest`: Points to the most recent successful build from either repo's `master` branch.
-* `{SHA}`: The specific commit hash from the triggering repository, allowing for granular version tracking and rollbacks.
-
-### Environment Variables
-
-For a detailed list of variables required to run the final container (database strings, API keys, etc.), please refer to the [Environment Variables Guide](https://wiki.appdevclub.com/people-portal-dev-guide/deployment/environment-variables).
-
-To run the full stack locally, configure the environment variables and run:
+Only `master` produces a published image, so staging builds branches locally with
+`/opt/pp-deploy/pp-build.sh`:
 
 ```bash
-docker pull candiedoperation/people-portal:latest
-docker run -p 3000:3000 candiedoperation/people-portal:latest
-
+/opt/pp-deploy/pp-build.sh feature/my-branch   # build and deploy
+/opt/pp-deploy/pp-build.sh --no-deploy <branch>  # build only
+/opt/pp-deploy/pp-build.sh --list              # branches on the remote
 ```
+
+It clones TechOps, runs the Nx build and the image build inside containers (the
+host has no Node), and tags the result `people-portal:branch-<sanitised>`, so
+several branches can sit side by side. It then points the Coolify service's
+`PP_IMAGE` at that tag and triggers a deploy.
+
+:::warning It builds what is pushed
+The script clones from GitHub. Local commits you have not pushed are invisible to
+it, and it will happily rebuild the previous commit without saying so.
+:::
+
+:::danger The token lives on the box
+Deployment reads `COOLIFY_API_TOKEN` from `/opt/pp-deploy/.coolify-env`, root-only,
+mode 600. That token controls **every** application on the Coolify instance, and
+the box is publicly reachable. It was deliberately kept off the host until the
+deploy step was folded into the script. Use `--no-deploy` if you would rather
+deploy from somewhere else.
+:::
+
+`force=true` on the deploy call is not optional: Coolify resolves `${PP_IMAGE}`
+into the compose when the service is saved, so an ordinary deploy can reuse the
+cached resolution and keep running the old image even though the variable changed.
+
+### Staging images are local only
+
+`people-portal:branch-*` tags exist solely on the staging host. They are in no
+registry. If that host loses its images, staging cannot be restored without
+re-running `pp-build.sh`. Returning to a published build means setting `PP_IMAGE`
+to `candiedoperation/people-portal:latest` and redeploying.
+
+## Sibling workflows
+
+`deploy_landingv3.yml` and `deploy_corpwiki.yml` cover the other projects in the
+monorepo. Each is scoped by path, so a change under `peopleportal/` will not
+rebuild the wiki and vice versa.
+
+## Secrets
+
+The build workflow needs `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` as repository
+secrets. Repository rather than environment secrets, so the workflow runs without
+manual approval gates.
+
+For what the container itself needs at runtime, see
+[Environment Variables](./environment-variables.md).
