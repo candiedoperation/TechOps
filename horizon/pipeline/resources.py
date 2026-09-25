@@ -6,7 +6,7 @@ what lets assets return records instead of tempdir paths.
 
 ``GiteaClient`` and ``GitWorkspace`` are implemented here as of PR 2;
 ``PostgresResource`` is still configuration surface only and gains behaviour in
-PR 4.
+the follow-up database integration PR.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ import httpx
 from dagster import ConfigurableResource
 
 from .config import PipelineConfigError, PipelineSettings, get_pipeline_settings
+from .storage import SQLiteResource
 
 # The blame invocation, in one place because two things depend on it agreeing:
 # the flags git is run with, and the header line written above each captured
@@ -356,4 +357,5 @@ def build_resources(
         ),
         "workspace": GitWorkspace(),
         "postgres": PostgresResource(database_url=resolved.database_url),
+        "sqlite": SQLiteResource(database_path=resolved.sqlite_path),
     }
