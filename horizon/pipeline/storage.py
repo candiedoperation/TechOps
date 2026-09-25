@@ -1,51 +1,45 @@
-"""Storage boundary for the interim ownership analytics tables."""
+"""Postgres storage boundary for the Horizon ownership feature tables."""
 
 from __future__ import annotations
 
-import sqlite3
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 
+import psycopg
 from dagster import ConfigurableResource
 
+from .config import PipelineConfigError
 from .ownership import FileOwnership, MemberOwnership, MemberRepositoryOwnership
 
 
-class SQLiteResource(ConfigurableResource):
-    """Transactional SQLite backend for the first ownership implementation.
+class PostgresResource(ConfigurableResource):
+    """Transactional Postgres backend for the L4 ownership assets.
 
-    The assets depend on these write methods rather than on SQL statements.
-    When the data volume outgrows SQLite, the resource can be replaced by a
-    Postgres implementation with the same methods and the metric assets stay
-    unchanged.
+    The connection URL is supplied at runtime. The legacy deployment variable
+    ``GITEA_ANALYTICS_DATABASE_URL`` is accepted by ``PipelineSettings`` and is
+    intentionally never written into the repository.
     """
 
-    database_path: str = "data/horizon.sqlite3"
+    database_url: str | None = None
 
     @contextmanager
-    def connect(self) -> Iterator[sqlite3.Connection]:
-        target = self.database_path
-        if target != ":memory:":
-            Path(target).expanduser().parent.mkdir(parents=True, exist_ok=True)
+    def connect(self) -> Iterator[psycopg.Connection]:
+        """Open one transaction and commit only after the caller succeeds."""
 
-        connection = sqlite3.connect(target)
-        connection.execute("PRAGMA foreign_keys = ON")
-        try:
+        with psycopg.connect(self._require_database_url()) as connection:
             yield connection
-        except BaseException:
-            connection.rollback()
-            raise
-        else:
-            connection.commit()
-        finally:
-            connection.close()
 
     def ensure_schema(self) -> None:
+        """Create the feature tables if they do not exist yet."""
+
+        statements = (Path(__file__).parent / "schema.sql").read_text()
         with self.connect() as connection:
-            connection.executescript(
-                (Path(__file__).parent / "schema.sqlite.sql").read_text()
-            )
+            # Dagster can initialize several Postgres-backed assets in parallel.
+            # Serialize the DDL so concurrent CREATE TABLE IF NOT EXISTS calls
+            # cannot race inside PostgreSQL's type catalog.
+            connection.execute("SELECT pg_advisory_xact_lock(735814159)")
+            connection.execute(statements)
 
     def write_file_ownership(
         self, run_id: str, rows: Sequence[FileOwnership]
@@ -66,16 +60,24 @@ class SQLiteResource(ConfigurableResource):
         ]
         self.ensure_schema()
         with self.connect() as connection:
-            connection.executemany(
-                """
-                INSERT OR REPLACE INTO file_ownership (
-                    run_id, organization, repository, file_path,
-                    author_name, author_email, surviving_lines, file_lines,
-                    ownership_share
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                values,
-            )
+            with connection.cursor() as cursor:
+                cursor.executemany(
+                    """
+                    INSERT INTO horizon_gt_features.file_ownership (
+                        run_id, organization, repository, file_path,
+                        author_name, author_email, surviving_lines, file_lines,
+                        ownership_share
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (
+                        run_id, organization, repository, file_path,
+                        author_name, author_email
+                    ) DO UPDATE SET
+                        surviving_lines = EXCLUDED.surviving_lines,
+                        file_lines = EXCLUDED.file_lines,
+                        ownership_share = EXCLUDED.ownership_share
+                    """,
+                    values,
+                )
         return len(values)
 
     def write_member_repository_ownership(
@@ -99,16 +101,26 @@ class SQLiteResource(ConfigurableResource):
         ]
         self.ensure_schema()
         with self.connect() as connection:
-            connection.executemany(
-                """
-                INSERT OR REPLACE INTO member_repository_ownership (
-                    run_id, organization, repository, author_name, author_email,
-                    surviving_lines, repository_lines, ownership_share,
-                    files_owned, majority_owned_files, rank
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                values,
-            )
+            with connection.cursor() as cursor:
+                cursor.executemany(
+                    """
+                    INSERT INTO horizon_gt_features.member_repository_ownership (
+                        run_id, organization, repository, author_name, author_email,
+                        surviving_lines, repository_lines, ownership_share,
+                        files_owned, majority_owned_files, rank
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (
+                        run_id, organization, repository, author_name, author_email
+                    ) DO UPDATE SET
+                        surviving_lines = EXCLUDED.surviving_lines,
+                        repository_lines = EXCLUDED.repository_lines,
+                        ownership_share = EXCLUDED.ownership_share,
+                        files_owned = EXCLUDED.files_owned,
+                        majority_owned_files = EXCLUDED.majority_owned_files,
+                        rank = EXCLUDED.rank
+                    """,
+                    values,
+                )
         return len(values)
 
     def write_member_ownership(
@@ -131,14 +143,32 @@ class SQLiteResource(ConfigurableResource):
         ]
         self.ensure_schema()
         with self.connect() as connection:
-            connection.executemany(
-                """
-                INSERT OR REPLACE INTO member_ownership (
-                    run_id, organization, author_name, author_email,
-                    surviving_lines, surviving_commits, files_owned,
-                    repositories, majority_owned_files, average_file_share
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                values,
-            )
+            with connection.cursor() as cursor:
+                cursor.executemany(
+                    """
+                    INSERT INTO horizon_gt_features.member_ownership (
+                        run_id, organization, author_name, author_email,
+                        surviving_lines, surviving_commits, files_owned,
+                        repositories, majority_owned_files, average_file_share
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (
+                        run_id, organization, author_name, author_email
+                    ) DO UPDATE SET
+                        surviving_lines = EXCLUDED.surviving_lines,
+                        surviving_commits = EXCLUDED.surviving_commits,
+                        files_owned = EXCLUDED.files_owned,
+                        repositories = EXCLUDED.repositories,
+                        majority_owned_files = EXCLUDED.majority_owned_files,
+                        average_file_share = EXCLUDED.average_file_share
+                    """,
+                    values,
+                )
         return len(values)
+
+    def _require_database_url(self) -> str:
+        if not (self.database_url or "").strip():
+            raise PipelineConfigError(
+                "HORIZON_DATABASE_URL is not set. Set it to the legacy Horizon "
+                "Supabase Postgres URL before materializing the feature assets."
+            )
+        return self.database_url.strip()

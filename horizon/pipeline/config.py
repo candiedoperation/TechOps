@@ -61,13 +61,12 @@ class PipelineSettings(BaseSettings):
     database_url: str | None = Field(
         default=None,
         repr=False,
-        validation_alias=AliasChoices("HORIZON_DATABASE_URL", "DATABASE_URL"),
-        description="libpq URL for the Postgres holding the horizon schema.",
-    )
-    sqlite_path: str = Field(
-        default="data/horizon.sqlite3",
-        validation_alias=AliasChoices("HORIZON_SQLITE_PATH"),
-        description="Interim SQLite path for ownership analytics.",
+        validation_alias=AliasChoices(
+            "HORIZON_DATABASE_URL",
+            "GITEA_ANALYTICS_DATABASE_URL",
+            "DATABASE_URL",
+        ),
+        description="Postgres URL for the Horizon ownership feature store.",
     )
 
     def require_gitea_url(self) -> str:

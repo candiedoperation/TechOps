@@ -16,7 +16,7 @@ from ..ownership import (
     calculate_member_ownership,
     calculate_member_repository_ownership,
 )
-from ..storage import SQLiteResource
+from ..storage import PostgresResource
 
 
 FILE_OWNERSHIP_SCHEMA = table_schema_from(
@@ -87,7 +87,7 @@ def _feature_metadata(table: str, rows: list, schema, **counts):
 
 @asset(
     group_name="l4_features",
-    kinds={"python", "sqlite"},
+    kinds={"python", "postgres"},
     description=(
         "Calculates surviving-line ownership for every current file and author. "
         "The share is the author's surviving lines divided by the file's total "
@@ -104,10 +104,10 @@ def _feature_metadata(table: str, rows: list, schema, **counts):
 def file_ownership(
     context: AssetExecutionContext,
     blame_records: list[BlameRecord],
-    sqlite: SQLiteResource,
+    postgres: PostgresResource,
 ) -> list[FileOwnership]:
     rows = calculate_file_ownership(blame_records)
-    sqlite.write_file_ownership(context.run.run_id, rows)
+    postgres.write_file_ownership(context.run.run_id, rows)
     context.add_output_metadata(
         _feature_metadata(
             "file_ownership",
@@ -122,7 +122,7 @@ def file_ownership(
 
 @asset(
     group_name="l4_features",
-    kinds={"python", "sqlite"},
+    kinds={"python", "postgres"},
     description=(
         "Aggregates file ownership to repository ownership, including surviving "
         "lines, share, files touched, majority-owned files, and rank."
@@ -138,10 +138,10 @@ def file_ownership(
 def member_repository_ownership(
     context: AssetExecutionContext,
     file_ownership: list[FileOwnership],
-    sqlite: SQLiteResource,
+    postgres: PostgresResource,
 ) -> list[MemberRepositoryOwnership]:
     rows = calculate_member_repository_ownership(file_ownership)
-    sqlite.write_member_repository_ownership(context.run.run_id, rows)
+    postgres.write_member_repository_ownership(context.run.run_id, rows)
     context.add_output_metadata(
         _feature_metadata(
             "member_repository_ownership",
@@ -156,7 +156,7 @@ def member_repository_ownership(
 
 @asset(
     group_name="l4_features",
-    kinds={"python", "sqlite"},
+    kinds={"python", "postgres"},
     description=(
         "Aggregates surviving lines and distinct surviving commit SHAs by author. "
         "A surviving commit is a commit that still owns at least one current line."
@@ -174,14 +174,14 @@ def member_ownership(
     blame_records: list[BlameRecord],
     file_ownership: list[FileOwnership],
     member_repository_ownership: list[MemberRepositoryOwnership],
-    sqlite: SQLiteResource,
+    postgres: PostgresResource,
 ) -> list[MemberOwnership]:
     rows = calculate_member_ownership(
         blame_records,
         file_ownership,
         member_repository_ownership,
     )
-    sqlite.write_member_ownership(context.run.run_id, rows)
+    postgres.write_member_ownership(context.run.run_id, rows)
     context.add_output_metadata(
         _feature_metadata(
             "member_ownership",

@@ -4,9 +4,8 @@ A clone is an ephemeral working directory and a connection is a handle, not a
 data artifact, so neither belongs in the asset graph -- keeping them here is
 what lets assets return records instead of tempdir paths.
 
-``GiteaClient`` and ``GitWorkspace`` are implemented here as of PR 2;
-``PostgresResource`` is still configuration surface only and gains behaviour in
-the follow-up database integration PR.
+``GiteaClient`` and ``GitWorkspace`` are implemented here as of PR 2. The
+Postgres connection resource lives with the feature-store implementation.
 """
 
 from __future__ import annotations
@@ -25,7 +24,7 @@ import httpx
 from dagster import ConfigurableResource
 
 from .config import PipelineConfigError, PipelineSettings, get_pipeline_settings
-from .storage import SQLiteResource
+from .storage import PostgresResource
 
 # The blame invocation, in one place because two things depend on it agreeing:
 # the flags git is run with, and the header line written above each captured
@@ -320,19 +319,6 @@ class GitWorkspace(ConfigurableResource):
         return result.stdout if result.ok else None
 
 
-class PostgresResource(ConfigurableResource):
-    """Connection factory for the ``horizon`` schema.
-
-    A new schema in the existing database: the legacy ``gitea_analytics`` tables
-    stay untouched as the correctness baseline the new numbers are read against.
-
-    Configuration surface only until PR 4, which is the first PR that writes.
-    """
-
-    database_url: str | None = None
-    schema_name: str = "horizon"
-
-
 def _path_safe(value: str) -> str:
     """Flatten a slug into one filename component."""
 
@@ -357,5 +343,4 @@ def build_resources(
         ),
         "workspace": GitWorkspace(),
         "postgres": PostgresResource(database_url=resolved.database_url),
-        "sqlite": SQLiteResource(database_path=resolved.sqlite_path),
     }

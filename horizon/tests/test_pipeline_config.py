@@ -9,11 +9,10 @@ def test_settings_load_with_nothing_configured():
 
     assert settings.gitea_url is None
     assert settings.database_url is None
-    assert settings.sqlite_path == "data/horizon.sqlite3"
 
 
 def test_settings_read_horizon_and_legacy_phi_variable_names(monkeypatch):
-    monkeypatch.setenv("HORIZON_DATABASE_URL", "postgresql://u@127.0.0.1:5433/db")
+    monkeypatch.setenv("GITEA_ANALYTICS_DATABASE_URL", "postgresql://u@127.0.0.1:5433/db")
     monkeypatch.setenv("PHI_GITEA_URL", "https://git.example.com")
     monkeypatch.setenv("PHI_GITEA_API_TOKEN", "token-value")
 
@@ -22,12 +21,6 @@ def test_settings_read_horizon_and_legacy_phi_variable_names(monkeypatch):
     assert settings.database_url == "postgresql://u@127.0.0.1:5433/db"
     assert settings.gitea_url == "https://git.example.com"
     assert settings.gitea_api_token == "token-value"
-
-
-def test_settings_read_sqlite_path(monkeypatch):
-    monkeypatch.setenv("HORIZON_SQLITE_PATH", "/tmp/ownership.sqlite3")
-
-    assert PipelineSettings().sqlite_path == "/tmp/ownership.sqlite3"
 
 
 def test_horizon_prefixed_names_win_over_the_legacy_ones(monkeypatch):

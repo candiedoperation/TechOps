@@ -6,7 +6,6 @@ from pipeline.resources import (
     GiteaClient,
     GitWorkspace,
     PostgresResource,
-    SQLiteResource,
     build_resources,
 )
 
@@ -82,8 +81,8 @@ def test_every_check_is_registered_against_its_asset():
     }
 
 
-def test_definitions_expose_the_shared_resources():
-    assert set(defs.resources) == {"gitea", "workspace", "postgres", "sqlite"}
+def test_definitions_expose_the_three_shared_resources():
+    assert set(defs.resources) == {"gitea", "workspace", "postgres"}
 
 
 def test_resources_are_built_from_settings():
@@ -91,7 +90,6 @@ def test_resources_are_built_from_settings():
         gitea_url="https://git.example.com",
         gitea_api_token="token-value",
         database_url="postgresql://u@127.0.0.1:5433/db",
-        sqlite_path="/tmp/horizon-test.sqlite3",
     )
 
     resources = build_resources(settings)
@@ -99,11 +97,9 @@ def test_resources_are_built_from_settings():
     assert isinstance(resources["gitea"], GiteaClient)
     assert isinstance(resources["workspace"], GitWorkspace)
     assert isinstance(resources["postgres"], PostgresResource)
-    assert isinstance(resources["sqlite"], SQLiteResource)
     assert resources["gitea"].base_url == "https://git.example.com"
     assert resources["gitea"].api_token == "token-value"
     assert resources["postgres"].database_url == "postgresql://u@127.0.0.1:5433/db"
-    assert resources["sqlite"].database_path == "/tmp/horizon-test.sqlite3"
 
 
 def test_resources_build_even_when_nothing_is_configured():
@@ -111,5 +107,4 @@ def test_resources_build_even_when_nothing_is_configured():
     resources = build_resources(PipelineSettings())
 
     assert resources["postgres"].database_url is None
-    assert resources["sqlite"].database_path == "data/horizon.sqlite3"
     assert resources["gitea"].base_url is None
