@@ -12,7 +12,7 @@ def test_settings_load_with_nothing_configured():
 
 
 def test_settings_read_horizon_and_legacy_phi_variable_names(monkeypatch):
-    monkeypatch.setenv("HORIZON_DATABASE_URL", "postgresql://u@127.0.0.1:5433/db")
+    monkeypatch.setenv("GITEA_ANALYTICS_DATABASE_URL", "postgresql://u@127.0.0.1:5433/db")
     monkeypatch.setenv("PHI_GITEA_URL", "https://git.example.com")
     monkeypatch.setenv("PHI_GITEA_API_TOKEN", "token-value")
 
