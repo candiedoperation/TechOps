@@ -209,7 +209,7 @@ export const CorpDashboard = () => {
                         <Route path="/org/people/:userPk" element={<DashboardPeopleInfo />} />
                         <Route path="/org/teams" element={<DashboardTeamsList />} />
                         <Route path="/org/teams/:teamId" element={<DashboardTeamInfo />} />
-                        <Route path="/org/teams/:teamId/recruitment" element={<DashboardTeamRecruitment />} />
+                        <Route path="/org/teams/:teamId/recruitment" element={userInfo.pk ? <DashboardTeamRecruitment reviewerId={userInfo.pk} /> : null} />
                         <Route path="/org/teams/:teamId/meetings" element={<TeamMeetings />} />
                         <Route path="/org/teams/:teamId/meetings/:meetingId" element={<MeetingDetail />} />
                         <Route path="/org/teams/:teamId/meetings/:meetingId/checkin" element={<MeetingCheckin />} />
