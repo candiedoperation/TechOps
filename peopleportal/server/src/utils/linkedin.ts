@@ -5,7 +5,9 @@ const LINKEDIN_PROFILE_PATH = /^\/in\/([^/]+)\/?$/i;
  * Validates and normalizes an optional LinkedIn profile URL.
  * Returns an empty string for a blank value and null for an invalid value.
  */
-export function normalizeLinkedInProfileUrl(value: string | null | undefined): string | null {
+export function normalizeLinkedInProfileUrl(
+    value: string | null | undefined,
+): string | null {
     /* OrgController calls this with body.linkedinUrl whenever it is not
        undefined, so a JSON body carrying an explicit null reaches here and
        used to throw a TypeError, turning a bad request into a 500. Treat any

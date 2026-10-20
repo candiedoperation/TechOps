@@ -36,13 +36,17 @@ import dotenv from "dotenv";
 
 export type NodeEnvironment = "development" | "test" | "production";
 
-const VALID_ENVIRONMENTS: NodeEnvironment[] = ["development", "test", "production"];
+const VALID_ENVIRONMENTS: NodeEnvironment[] = [
+    "development",
+    "test",
+    "production",
+];
 
 function resolveEnvironment(): NodeEnvironment {
     const raw = (process.env.NODE_ENV ?? "development").toLowerCase();
     if (!VALID_ENVIRONMENTS.includes(raw as NodeEnvironment)) {
         throw new Error(
-            `NODE_ENV must be one of ${VALID_ENVIRONMENTS.join(", ")} (received "${raw}")`
+            `NODE_ENV must be one of ${VALID_ENVIRONMENTS.join(", ")} (received "${raw}")`,
         );
     }
     return raw as NodeEnvironment;
@@ -97,16 +101,18 @@ function isBlank(value: string | undefined): boolean {
 export function assertRequiredEnvironment(): void {
     if (!isProduction) return;
 
-    const missing = REQUIRED_IN_PRODUCTION.filter((key) => isBlank(process.env[key]));
+    const missing = REQUIRED_IN_PRODUCTION.filter((key) =>
+        isBlank(process.env[key]),
+    );
     if (missing.length > 0) {
         throw new Error(
-            `Missing required environment variables in production: ${missing.join(", ")}`
+            `Missing required environment variables in production: ${missing.join(", ")}`,
         );
     }
 
     if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
         throw new Error(
-            "NODE_TLS_REJECT_UNAUTHORIZED=0 disables all TLS verification and must not be set in production"
+            "NODE_TLS_REJECT_UNAUTHORIZED=0 disables all TLS verification and must not be set in production",
         );
     }
 }

@@ -20,9 +20,9 @@ import mongoose, { Schema, Document } from "mongoose";
 import { APICreateTeamRequest } from "../controllers/OrgController";
 
 export enum TeamCreationRequestStatus {
-    PENDING = 'PENDING',
-    APPROVED = 'APPROVED',
-    REJECTED = 'REJECTED'
+    PENDING = "PENDING",
+    APPROVED = "APPROVED",
+    REJECTED = "REJECTED",
 }
 
 export interface ITeamCreationRequest extends Document {
@@ -37,26 +37,39 @@ export interface ITeamCreationRequest extends Document {
     createdAt: Date;
 }
 
-const TeamCreationRequestSchema: Schema = new Schema({
-    requestorPk: { type: Number, required: true },
-    requestorName: { type: String, required: true },
-    requestorEmail: { type: String, required: true },
+const TeamCreationRequestSchema: Schema = new Schema(
+    {
+        requestorPk: { type: Number, required: true },
+        requestorName: { type: String, required: true },
+        requestorEmail: { type: String, required: true },
 
-    createTeamRequest: {
-        friendlyName: { type: String, required: true },
-        teamType: { type: String, required: true },
-        seasonType: { type: String, required: true },
-        seasonYear: { type: Number, required: true },
-        teamStartDate: { type: String, required: true },
-        teamEndDate: { type: String, required: true },
-        description: { type: String, required: true },
-        requestorRole: { type: String, required: true }
+        createTeamRequest: {
+            friendlyName: { type: String, required: true },
+            teamType: { type: String, required: true },
+            seasonType: { type: String, required: true },
+            seasonYear: { type: Number, required: true },
+            teamStartDate: { type: String, required: true },
+            teamEndDate: { type: String, required: true },
+            description: { type: String, required: true },
+            requestorRole: { type: String, required: true },
+        },
+
+        status: {
+            type: String,
+            enum: Object.values(TeamCreationRequestStatus),
+            default: TeamCreationRequestStatus.PENDING,
+        },
     },
-
-    status: { type: String, enum: Object.values(TeamCreationRequestStatus), default: TeamCreationRequestStatus.PENDING },
-}, { timestamps: true });
+    { timestamps: true },
+);
 
 /* TTL Index: Expire after 24 hours (86400 seconds) */
-TeamCreationRequestSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });
+TeamCreationRequestSchema.index(
+    { createdAt: 1 },
+    { expireAfterSeconds: 86400 },
+);
 
-export const TeamCreationRequest = mongoose.model<ITeamCreationRequest>("TeamCreationRequest", TeamCreationRequestSchema);
+export const TeamCreationRequest = mongoose.model<ITeamCreationRequest>(
+    "TeamCreationRequest",
+    TeamCreationRequestSchema,
+);

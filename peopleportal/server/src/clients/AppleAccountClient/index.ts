@@ -16,21 +16,22 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { SharedResourceClient } from ".."
-import { BindlePermissionMap } from "../../controllers/BindleController"
-import { GetGroupInfoResponse } from "../AuthentikClient/models"
+import { SharedResourceClient } from "..";
+import { BindlePermissionMap } from "../../controllers/BindleController";
+import { GetGroupInfoResponse } from "../AuthentikClient/models";
 
 export class AppleAccountClient implements SharedResourceClient {
-    private static readonly TAG = "AppleAccountClient"
+    private static readonly TAG = "AppleAccountClient";
     private readonly supportedBindles: BindlePermissionMap = {
         "apple:platformaccess": {
             friendlyName: "App Store Connect Access",
-            description: "Enabling this allows TestFlight and Publishing to the App Store",
+            description:
+                "Enabling this allows TestFlight and Publishing to the App Store",
         },
-    }
+    };
 
     async init(): Promise<void> {
-        return Promise.resolve()
+        return Promise.resolve();
     }
 
     getResourceName(): string {
@@ -41,12 +42,18 @@ export class AppleAccountClient implements SharedResourceClient {
         return this.supportedBindles;
     }
 
-    handleOrgBindleSync(org: GetGroupInfoResponse, callback: (updatedResourceCount: number, status: string) => void): Promise<boolean> {
+    handleOrgBindleSync(
+        org: GetGroupInfoResponse,
+        callback: (updatedResourceCount: number, status: string) => void,
+    ): Promise<boolean> {
         // TODO: Implement Apple Account Client
         return Promise.resolve(true);
     }
 
-    archiveTeam(org: GetGroupInfoResponse, callback: (updatedResourceCount: number, status: string) => void): Promise<boolean> {
+    archiveTeam(
+        org: GetGroupInfoResponse,
+        callback: (updatedResourceCount: number, status: string) => void,
+    ): Promise<boolean> {
         // TODO: Implement Apple Account Client archival
         return Promise.resolve(true);
     }

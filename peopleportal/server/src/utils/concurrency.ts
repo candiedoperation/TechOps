@@ -14,7 +14,7 @@
 export async function mapWithConcurrency<T, R>(
     items: readonly T[],
     limit: number,
-    mapper: (item: T, index: number) => Promise<R>
+    mapper: (item: T, index: number) => Promise<R>,
 ): Promise<PromiseSettledResult<R>[]> {
     if (items.length === 0) return [];
 
@@ -30,7 +30,10 @@ export async function mapWithConcurrency<T, R>(
             if (index >= items.length) return;
 
             try {
-                results[index] = { status: "fulfilled", value: await mapper(items[index]!, index) };
+                results[index] = {
+                    status: "fulfilled",
+                    value: await mapper(items[index]!, index),
+                };
             } catch (reason: unknown) {
                 results[index] = { status: "rejected", reason };
             }

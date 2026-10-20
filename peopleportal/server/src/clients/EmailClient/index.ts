@@ -24,7 +24,7 @@ import Handlebars from "handlebars";
 import { EmailSendRequest } from "./models";
 import { Options as NodemailerOptions } from "nodemailer/lib/mailer";
 
-type MailTemplateOptions = NodemailerOptions & TemplateOptions
+type MailTemplateOptions = NodemailerOptions & TemplateOptions;
 export class EmailClient {
     private transporter: Transporter;
     constructor() {
@@ -42,14 +42,14 @@ export class EmailClient {
         this.transporter.use(
             "compile",
             hbs({
-                extName: '.hbs',
+                extName: ".hbs",
                 viewPath: path.resolve(__dirname, "templates"),
                 viewEngine: {
                     extname: ".hbs",
                     partialsDir: path.resolve(__dirname, "templates"),
                     defaultLayout: false,
                 },
-            })
+            }),
         );
     }
 
@@ -69,8 +69,8 @@ export class EmailClient {
                 replyTo: request.replyTo,
             } as MailTemplateOptions);
         } catch (e) {
-            console.error(e)
-            throw e
+            console.error(e);
+            throw e;
         }
     }
 
@@ -84,15 +84,22 @@ export class EmailClient {
                 /* Register Partials for Dev Mode */
                 const templatesDir = path.resolve(__dirname, "templates");
                 const files = fs.readdirSync(templatesDir);
-                files.forEach(file => {
+                files.forEach((file) => {
                     if (file.endsWith(".hbs")) {
                         const partialName = path.basename(file, ".hbs");
-                        const partialContent = fs.readFileSync(path.join(templatesDir, file), "utf-8");
+                        const partialContent = fs.readFileSync(
+                            path.join(templatesDir, file),
+                            "utf-8",
+                        );
                         Handlebars.registerPartial(partialName, partialContent);
                     }
                 });
 
-                const templatePath = path.resolve(__dirname, "templates", request.templateName + ".hbs");
+                const templatePath = path.resolve(
+                    __dirname,
+                    "templates",
+                    request.templateName + ".hbs",
+                );
                 if (fs.existsSync(templatePath)) {
                     const source = fs.readFileSync(templatePath, "utf-8");
                     const template = Handlebars.compile(source);
@@ -106,9 +113,11 @@ export class EmailClient {
         }
 
         console.log(`Intercepted Email Send:`);
-        console.log(`From: ${request.from ?? process.env.PEOPLEPORTAL_SMTP_DEFAULTFROM}`);
+        console.log(
+            `From: ${request.from ?? process.env.PEOPLEPORTAL_SMTP_DEFAULTFROM}`,
+        );
         console.log(`To: ${request.to}`);
-        console.log(`cc: ${request.cc ?? 'None'}`);
+        console.log(`cc: ${request.cc ?? "None"}`);
         console.log(`bcc: ${request.bcc ?? `None`}`);
         console.log(`Subject: ${request.subject}`);
         console.log(`Body Preview:\n${resolvedBody}`);

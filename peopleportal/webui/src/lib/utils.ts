@@ -1,12 +1,12 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+    return twMerge(clsx(inputs));
 }
 
 export function getGPLv3License() {
-  return `People Portal UI
+    return `People Portal UI
 Copyright (C) ${new Date().getFullYear()}  Atheesh Thirumalairajan
 
 This program is free software: you can redistribute it and/or modify

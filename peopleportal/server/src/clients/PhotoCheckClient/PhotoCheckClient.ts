@@ -19,7 +19,7 @@ const FAIL_CLOSED = process.env.PHOTO_CHECK_FAIL_CLOSED === "true";
 
 function undecided(reason: string): PhotoCheckResult {
     console.warn(
-        `[photo-check] no decision (${reason}); ${FAIL_CLOSED ? "rejecting" : "ALLOWING"} upload`
+        `[photo-check] no decision (${reason}); ${FAIL_CLOSED ? "rejecting" : "ALLOWING"} upload`,
     );
     return { passed: !FAIL_CLOSED, reason };
 }
@@ -30,7 +30,9 @@ export interface PhotoCheckResult {
     count?: number;
 }
 
-export async function checkPhotoHasFace(imageBytes: Uint8Array): Promise<PhotoCheckResult> {
+export async function checkPhotoHasFace(
+    imageBytes: Uint8Array,
+): Promise<PhotoCheckResult> {
     if (!ENABLED) {
         /* Deliberately silent: this is a configured-off state, not a failure,
            and warning on every upload would train people to ignore the log. */

@@ -16,25 +16,47 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import React from "react"
+import React from "react";
 import { format } from "date-fns";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
-import { flexRender, getCoreRowModel, getFilteredRowModel, useReactTable, type ColumnDef, type ColumnFiltersState } from "@tanstack/react-table"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "../ui/table";
+import {
+    flexRender,
+    getCoreRowModel,
+    getFilteredRowModel,
+    useReactTable,
+    type ColumnDef,
+    type ColumnFiltersState,
+} from "@tanstack/react-table";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { Input } from "../ui/input";
-import { Pagination, PaginationContent, PaginationItem, PaginationPrevious, PaginationLink, PaginationEllipsis, PaginationNext } from "../ui/pagination";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationItem,
+    PaginationPrevious,
+    PaginationLink,
+    PaginationEllipsis,
+    PaginationNext,
+} from "../ui/pagination";
 import { MailIcon, Trash2Icon, User2Icon } from "lucide-react";
 
 export interface UserInformationBrief {
-    pk: string,
-    username: string,
-    email: string,
-    name: string,
-    memberSince?: Date,
-    active: boolean,
-    attributes: any,
-    avatar?: string
+    pk: string;
+    username: string;
+    email: string;
+    name: string;
+    memberSince?: Date;
+    active: boolean;
+    attributes: any;
+    avatar?: string;
 }
 
 export interface UserTableProps {
@@ -54,29 +76,40 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
     onRemove,
     filterPlaceholder = "Start Typing to Filter by Name",
     className = "",
-    teamPk
+    teamPk,
 }) => {
-    const navigate = useNavigate()
-    const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+    const navigate = useNavigate();
+    const [columnFilters, setColumnFilters] =
+        React.useState<ColumnFiltersState>([]);
 
     const columns: ColumnDef<UserInformationBrief>[] = [
-        { accessorKey: 'name', header: "Name", size: 250 },
+        { accessorKey: "name", header: "Name", size: 250 },
         {
             id: "role",
             header: "Role",
             size: 150,
             cell: ({ row }) => {
-                if (!teamPk || !row.original.attributes?.roles) return <span className="text-muted-foreground text-xs">Not Specified</span>;
+                if (!teamPk || !row.original.attributes?.roles)
+                    return (
+                        <span className="text-muted-foreground text-xs">
+                            Not Specified
+                        </span>
+                    );
                 const role = row.original.attributes.roles[teamPk];
 
-                if (!role) return <span className="text-muted-foreground text-xs">Not Specified</span>;
+                if (!role)
+                    return (
+                        <span className="text-muted-foreground text-xs">
+                            Not Specified
+                        </span>
+                    );
 
                 return (
                     <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
                         {role}
                     </span>
-                )
-            }
+                );
+            },
         },
         {
             accessorKey: "username",
@@ -86,37 +119,48 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
                 <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-xs text-muted-foreground">
                     {row.original.username}
                 </code>
-            )
+            ),
         },
         {
-            accessorKey: 'email',
+            accessorKey: "email",
             header: "Contact Information",
             size: 250,
             cell: ({ row }) => (
-                <div className="flex items-center font-mono text-xs text-muted-foreground truncate" title={row.original.email}>
+                <div
+                    className="flex items-center font-mono text-xs text-muted-foreground truncate"
+                    title={row.original.email}
+                >
                     <MailIcon className="mr-2 h-3.5 w-3.5" />
                     {row.original.email}
                 </div>
-            )
+            ),
         },
-        ...(onRemove ? [{
-            id: 'actions',
-            header: 'Actions',
-            size: 70,
-            cell: ({ row }: { row: { original: UserInformationBrief } }) => (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onRemove(row.original);
-                    }}
-                    className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-full text-muted-foreground hover:text-red-600 transition-colors"
-                    title="Remove member"
-                >
-                    <Trash2Icon size={16} />
-                </button>
-            )
-        }] : [])
-    ]
+        ...(onRemove
+            ? [
+                  {
+                      id: "actions",
+                      header: "Actions",
+                      size: 70,
+                      cell: ({
+                          row,
+                      }: {
+                          row: { original: UserInformationBrief };
+                      }) => (
+                          <button
+                              onClick={(e) => {
+                                  e.stopPropagation();
+                                  onRemove(row.original);
+                              }}
+                              className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-full text-muted-foreground hover:text-red-600 transition-colors"
+                              title="Remove member"
+                          >
+                              <Trash2Icon size={16} />
+                          </button>
+                      ),
+                  },
+              ]
+            : []),
+    ];
 
     const table = useReactTable({
         columns,
@@ -125,9 +169,9 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
         state: {
-            columnFilters
-        }
-    })
+            columnFilters,
+        },
+    });
 
     const handleRowClick = (userId: string) => {
         if (onUserClick) {
@@ -135,17 +179,22 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
         } else {
             navigate(`/org/people/${userId}`);
         }
-    }
+    };
 
     return (
         <div className={`flex flex-col w-full h-full ${className}`}>
             <div className="flex items-center py-4">
                 <Input
                     placeholder={filterPlaceholder}
-                    value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+                    value={
+                        (table.getColumn("name")?.getFilterValue() as string) ??
+                        ""
+                    }
                     className="max-w-md flex-grow-1"
                     onChange={(event) =>
-                        table.getColumn("name")?.setFilterValue(event.target.value)
+                        table
+                            .getColumn("name")
+                            ?.setFilterValue(event.target.value)
                     }
                 />
 
@@ -184,21 +233,31 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
                             <TableRow key={headerGroup.id}>
                                 {headerGroup.headers.map((header) => {
                                     const widthClass =
-                                        header.id === 'name' ? 'w-[250px]' :
-                                            header.id === 'role' ? 'w-[150px]' :
-                                                header.id === 'username' ? 'w-[120px]' :
-                                                    header.id === 'email' ? 'w-[250px]' :
-                                                        header.id === 'actions' ? 'w-[70px]' : '';
+                                        header.id === "name"
+                                            ? "w-[250px]"
+                                            : header.id === "role"
+                                              ? "w-[150px]"
+                                              : header.id === "username"
+                                                ? "w-[120px]"
+                                                : header.id === "email"
+                                                  ? "w-[250px]"
+                                                  : header.id === "actions"
+                                                    ? "w-[70px]"
+                                                    : "";
                                     return (
-                                        <TableHead key={header.id} className={widthClass}>
+                                        <TableHead
+                                            key={header.id}
+                                            className={widthClass}
+                                        >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext()
-                                                )}
+                                                      header.column.columnDef
+                                                          .header,
+                                                      header.getContext(),
+                                                  )}
                                         </TableHead>
-                                    )
+                                    );
                                 })}
                             </TableRow>
                         ))}
@@ -208,66 +267,134 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
                             table.getRowModel().rows.map((row) => (
                                 <TableRow
                                     key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                    onClick={() => handleRowClick(row.original.pk)}
-                                    style={{ cursor: 'pointer' }}
+                                    data-state={
+                                        row.getIsSelected() && "selected"
+                                    }
+                                    onClick={() =>
+                                        handleRowClick(row.original.pk)
+                                    }
+                                    style={{ cursor: "pointer" }}
                                 >
                                     {row.getVisibleCells().map((cell) => {
                                         const widthClass =
-
-                                            cell.column.id === 'name' ? 'w-[250px]' :
-                                                cell.column.id === 'role' ? 'w-[150px]' :
-                                                    cell.column.id === 'username' ? 'w-[120px]' :
-                                                        cell.column.id === 'email' ? 'w-[250px]' :
-                                                            cell.column.id === 'actions' ? 'w-[70px]' : '';
-                                        return (<TableCell key={cell.id} className={widthClass}>
-                                            {
-                                                flexRender(
+                                            cell.column.id === "name"
+                                                ? "w-[250px]"
+                                                : cell.column.id === "role"
+                                                  ? "w-[150px]"
+                                                  : cell.column.id ===
+                                                      "username"
+                                                    ? "w-[120px]"
+                                                    : cell.column.id === "email"
+                                                      ? "w-[250px]"
+                                                      : cell.column.id ===
+                                                          "actions"
+                                                        ? "w-[70px]"
+                                                        : "";
+                                        return (
+                                            <TableCell
+                                                key={cell.id}
+                                                className={widthClass}
+                                            >
+                                                {flexRender(
                                                     (() => {
-                                                        switch (cell.column.id) {
+                                                        switch (
+                                                            cell.column.id
+                                                        ) {
                                                             case "memberSince": {
-                                                                return format(cell.getValue() as string, "PPP")
+                                                                return format(
+                                                                    cell.getValue() as string,
+                                                                    "PPP",
+                                                                );
                                                             }
 
                                                             case "name": {
-                                                                const nameArray: string[] = (cell.getValue() as string).split(" ")
-                                                                const firstName = nameArray.slice(0, 1)
-                                                                const lastName = nameArray.slice(1)
+                                                                const nameArray: string[] =
+                                                                    (
+                                                                        cell.getValue() as string
+                                                                    ).split(
+                                                                        " ",
+                                                                    );
+                                                                const firstName =
+                                                                    nameArray.slice(
+                                                                        0,
+                                                                        1,
+                                                                    );
+                                                                const lastName =
+                                                                    nameArray.slice(
+                                                                        1,
+                                                                    );
 
-                                                                return (<div className="flex items-center">
-                                                                    <Avatar className="h-8 w-8 rounded-lg">
-                                                                        <AvatarImage src={row.original.avatar} alt={row.original.name} className="object-cover" />
-                                                                        <AvatarFallback className="rounded-lg bg-orange-100 text-orange-600"><User2Icon size="16" /></AvatarFallback>
-                                                                    </Avatar>
-                                                                    <div className="flex flex-col ml-2">
-                                                                        <span>{firstName}</span>
-                                                                        <span className="uppercase text-muted-foreground">{lastName}</span>
+                                                                return (
+                                                                    <div className="flex items-center">
+                                                                        <Avatar className="h-8 w-8 rounded-lg">
+                                                                            <AvatarImage
+                                                                                src={
+                                                                                    row
+                                                                                        .original
+                                                                                        .avatar
+                                                                                }
+                                                                                alt={
+                                                                                    row
+                                                                                        .original
+                                                                                        .name
+                                                                                }
+                                                                                className="object-cover"
+                                                                            />
+                                                                            <AvatarFallback className="rounded-lg bg-orange-100 text-orange-600">
+                                                                                <User2Icon size="16" />
+                                                                            </AvatarFallback>
+                                                                        </Avatar>
+                                                                        <div className="flex flex-col ml-2">
+                                                                            <span>
+                                                                                {
+                                                                                    firstName
+                                                                                }
+                                                                            </span>
+                                                                            <span className="uppercase text-muted-foreground">
+                                                                                {
+                                                                                    lastName
+                                                                                }
+                                                                            </span>
+                                                                        </div>
                                                                     </div>
-                                                                </div>)
+                                                                );
                                                             }
 
                                                             case "email": {
-                                                                const email = cell.getValue() as string;
+                                                                const email =
+                                                                    cell.getValue() as string;
                                                                 return (
-                                                                    <div className="truncate" title={email}>
+                                                                    <div
+                                                                        className="truncate"
+                                                                        title={
+                                                                            email
+                                                                        }
+                                                                    >
                                                                         {email}
                                                                     </div>
-                                                                )
+                                                                );
                                                             }
 
                                                             default:
-                                                                return cell.column.columnDef.cell;
+                                                                return cell
+                                                                    .column
+                                                                    .columnDef
+                                                                    .cell;
                                                         }
                                                     })(),
-                                                    cell.getContext())
-                                            }
-                                        </TableCell>)
+                                                    cell.getContext(),
+                                                )}
+                                            </TableCell>
+                                        );
                                     })}
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                                <TableCell
+                                    colSpan={columns.length}
+                                    className="h-24 text-center"
+                                >
                                     No results
                                 </TableCell>
                             </TableRow>
@@ -276,5 +403,5 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
                 </Table>
             </div>
         </div>
-    )
-}
+    );
+};
