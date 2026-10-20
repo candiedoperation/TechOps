@@ -41,6 +41,7 @@ jobs:
 
   build-and-test:
     name: Build and test (Nx)
+    needs: format # Fail fast: skip the slow build and tests when formatting is wrong
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
