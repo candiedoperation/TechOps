@@ -1,0 +1,57 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: ["master"]
+    paths:
+      - "peopleportal/**"
+      - "landing-v3/**"
+      - ".nx/**"
+      - "nx.json"
+      - "nx"
+      - ".prettierrc"
+      - ".prettierignore"
+      - ".github/workflows/pr_checks.yml"
+
+  workflow_dispatch:
+
+concurrency:
+  group: "pr-checks-${{ github.ref }}"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    name: Format (Prettier)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Keep in sync with the build job and the deploy workflows
+
+      - name: Check formatting
+        # Prettier is pinned so a new release cannot change the output underneath us.
+        # Run `npx prettier@3.9.10 --write peopleportal/webui/src peopleportal/server/src` to fix failures.
+        run: npx --yes prettier@3.9.10 --check peopleportal/webui/src peopleportal/server/src
+
+  build:
+    name: Build (Nx)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Keep in sync with the format job and the deploy workflows
+
+      - name: Build with Nx
+        # Same build the deploy workflows run, so a PR that cannot build fails before it merges
+        run: ./nx run-many -t build -p pplserver pplui landing-v3
