@@ -21,6 +21,7 @@ concurrency:
 permissions:
   contents: read
 
+# The three jobs run in parallel so the PR gets every result as fast as possible.
 jobs:
   format:
     name: Format (Prettier)
@@ -32,16 +33,15 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # Keep in sync with the build job and deploy_peopleportal.yml
+          node-version: "20" # Keep in sync with the other jobs and deploy_peopleportal.yml
 
       - name: Check formatting
         # Prettier is pinned so a new release cannot change the output underneath us.
         # Run `npx prettier@3.9.10 --write peopleportal/webui/src peopleportal/server/src` to fix failures.
         run: npx --yes prettier@3.9.10 --check peopleportal/webui/src peopleportal/server/src
 
-  build-and-test:
-    name: Build and test (Nx)
-    needs: format # Fail fast: skip the slow build and tests when formatting is wrong
+  build:
+    name: Build (Nx)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -50,14 +50,27 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # Keep in sync with the format job and deploy_peopleportal.yml
+          node-version: "20" # Keep in sync with the other jobs and deploy_peopleportal.yml
 
       - name: Build with Nx
         # Same build the deploy workflow runs, so a PR that cannot build fails before it merges
         run: ./nx run-many -t build -p pplserver pplui
 
+  test:
+    name: Test (Nx)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Keep in sync with the other jobs and deploy_peopleportal.yml
+
       - name: Run tests
-        # Integration tests (pplserver:test-integration) are left out: they need Mongo/Redis
+        # The test targets depend on the build, so Nx builds first inside this job.
+        # Integration tests (pplserver:test-integration) are left out: they need Mongo/Redis.
         run: |
           ./nx run pplserver:test-unit
           ./nx run pplui:test
