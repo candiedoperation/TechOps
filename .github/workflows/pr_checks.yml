@@ -66,7 +66,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # Keep in sync with the other jobs and deploy_peopleportal.yml
+          # Node 22, not 20: the server test script passes a glob to `node --test`, which Node 20
+          # does not expand, and express-handlebars requires Node >=22.15.
+          node-version: "22"
 
       - name: Run tests
         # The test targets depend on the build, so Nx builds first inside this job.
