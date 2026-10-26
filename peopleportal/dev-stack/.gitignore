@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+.oidc*
+.gitea-token*
+.bootstrap.lock/
+secrets/
+*.key
+*.pem
