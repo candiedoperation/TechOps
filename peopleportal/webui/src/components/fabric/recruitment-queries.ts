@@ -105,8 +105,11 @@ export function useRecruitmentQueries(teamId: string, selectedId: string | null)
     });
 
     async function refreshApplication(applicationId: string) {
-        // An initial detail read may predate the save; do not reuse its response.
-        await client.cancelQueries({ queryKey: keys.details(teamId, applicationId) });
+        // Reads in flight may predate the save, and invalidating a first load reuses its request.
+        await Promise.all([
+            client.cancelQueries({ queryKey: keys.applications(teamId) }),
+            client.cancelQueries({ queryKey: keys.details(teamId, applicationId) }),
+        ]);
         await Promise.all([
             client.invalidateQueries({ queryKey: keys.applications(teamId) }),
             client.invalidateQueries({ queryKey: keys.details(teamId, applicationId) }),

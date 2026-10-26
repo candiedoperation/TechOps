@@ -1,10 +1,11 @@
-import { act, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardTeamRecruitment } from "./DashboardTeamRecuitment";
-import type { RecruitmentApplication, RecruitmentDetails } from "./recruitment-queries";
+import { useRecruitmentQueries, type RecruitmentApplication, type RecruitmentDetails } from "./recruitment-queries";
 
 const basePath = "/org/teams/team-a/recruitment";
 const apiPath = "/api/ats/applications/team-a";
@@ -118,6 +119,26 @@ describe("recruitment review", () => {
         expect(screen.queryByText("Background a")).not.toBeInTheDocument();
         expect(screen.queryByText("A's other team")).not.toBeInTheDocument();
         expect(screen.getByTitle("Resume")).toHaveAttribute("src", "https://example.invalid/b.pdf");
+    });
+
+    it("keeps a saved rating when the initial applications response arrives after the save", async () => {
+        const staleList = deferred<Response>();
+        responses.set(apiPath, staleList.promise);
+        responses.set(`${apiPath}/a/feedback`, Promise.resolve(Response.json({})));
+        const client = new QueryClient();
+        const { result } = renderHook(() => useRecruitmentQueries("team-a", "a"), {
+            wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+        });
+        await waitFor(() => expect(result.current.details.data).toBeDefined());
+        // Later reads see the saved rating; the initial list read still holds the old one.
+        responses.delete(apiPath);
+        applications[0].stars = 5;
+        details.get("a")!.stars = 5;
+        act(() => result.current.feedback.mutate({ applicationId: "a", stars: 5 }));
+        await waitFor(() => expect(result.current.details.data?.stars).toBe(5));
+        await act(async () => staleList.resolve(Response.json([makeApplication("a")])));
+        await waitFor(() => expect(result.current.applications.isFetching).toBe(false));
+        expect(result.current.selected?.stars).toBe(5);
     });
 
 });

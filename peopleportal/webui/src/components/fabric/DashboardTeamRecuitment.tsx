@@ -74,7 +74,6 @@ function RecruitmentSession({ teamId }: { teamId: string }) {
             mutations: { retry: false },
         },
     }));
-    React.useEffect(() => () => client.clear(), [client]);
     return <QueryClientProvider client={client}><RecruitmentBoard teamId={teamId} /></QueryClientProvider>;
 }
 
