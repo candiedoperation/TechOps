@@ -16,7 +16,7 @@ import os
 
 # Unprefixed aliases accepted by pipeline.config.PipelineSettings. The
 # PHI_/HORIZON_ forms are covered by the prefix sweep below.
-_UNPREFIXED_SETTING_NAMES = frozenset({"DATABASE_URL"})
+_UNPREFIXED_SETTING_NAMES = frozenset()
 
 for _name in [
     key
