@@ -33,7 +33,22 @@ _SECTION_RE = re.compile(
 # The fourth field appears only on the first line of a run of consecutive lines
 # from the same commit, which is what makes it the group size.
 _HEADER_RE = re.compile(
-    r"^(?P<sha>[0-9a-f]{40}) (?P<orig>\d+) (?P<final>\d+)(?: (?P<group>\d+))?$"
+    r"^(?P<sha>(?:[0-9a-f]{40}|[0-9a-f]{64})) (?P<orig>\d+) "
+    r"(?P<final>\d+)(?: (?P<group>\d+))?$"
+)
+_REQUIRED_METADATA = frozenset(
+    {
+        "author",
+        "author-mail",
+        "author-time",
+        "author-tz",
+        "committer",
+        "committer-mail",
+        "committer-time",
+        "committer-tz",
+        "summary",
+        "filename",
+    }
 )
 
 
@@ -105,6 +120,8 @@ def _iter_blame_records(text: str) -> Iterator[BlameRecord]:
     """Walk the porcelain blocks, yielding one record per blamed line."""
 
     section: tuple[str, str, str] | None = None
+    seen_sections: set[tuple[str, str, str]] = set()
+    expected_line_number = 1
     header: re.Match[str] | None = None
     fields: dict[str, str] = {}
     boundary = False
@@ -121,6 +138,14 @@ def _iter_blame_records(text: str) -> Iterator[BlameRecord]:
                 matched_section.group("repo"),
                 matched_section.group("path"),
             )
+            if not section[2]:
+                raise BlameParseError("capture section has an empty file path")
+            if section in seen_sections:
+                raise BlameParseError(
+                    f"capture contains duplicate sections for {section[0]}/{section[1]}:{section[2]}"
+                )
+            seen_sections.add(section)
+            expected_line_number = 1
             continue
 
         if header is None:
@@ -140,7 +165,15 @@ def _iter_blame_records(text: str) -> Iterator[BlameRecord]:
         if raw.startswith("\t"):
             # The line's own text closes the block. Its content is discarded;
             # everything above it has already been collected.
-            yield _build(section, header, fields, boundary)
+            record = _build(section, header, fields, boundary)
+            if record.line_number_in_file != expected_line_number:
+                raise BlameParseError(
+                    f"expected final line {expected_line_number} in "
+                    f"{record.organization}/{record.repository}:{record.blamed_file_path}, "
+                    f"received {record.line_number_in_file}"
+                )
+            expected_line_number += 1
+            yield record
             header = None
             continue
 
@@ -161,25 +194,53 @@ def _build(
     boundary: bool,
 ) -> BlameRecord:
     org, repo, path = section if section else ("", "", "")
+    missing = sorted(_REQUIRED_METADATA - fields.keys())
+    if missing:
+        raise BlameParseError(
+            f"blame block for {org}/{repo}:{path} omitted metadata: {', '.join(missing)}"
+        )
+
+    original_line_number = int(header.group("orig"))
+    final_line_number = int(header.group("final"))
+    if original_line_number < 1 or final_line_number < 1:
+        raise BlameParseError("blame line numbers must be positive")
+
+    authored_at = _as_int(fields["author-time"])
+    committed_at = _as_int(fields["committer-time"])
+    if authored_at is None or committed_at is None:
+        raise BlameParseError("blame author-time and committer-time must be integers")
+
+    for field_name in ("author-tz", "committer-tz"):
+        if not re.fullmatch(r"[+-]\d{4}", fields[field_name]):
+            raise BlameParseError(f"blame {field_name} must be a signed four-digit offset")
+
     previous_sha, previous_path = _split_previous(fields.get("previous"))
+    if "previous" in fields and (
+        not previous_sha
+        or not re.fullmatch(r"(?:[0-9a-f]{40}|[0-9a-f]{64})", previous_sha)
+        or not previous_path
+    ):
+        raise BlameParseError("blame previous metadata must contain a commit SHA and file path")
     group = header.group("group")
+    if group is not None and int(group) < 1:
+        raise BlameParseError("blame consecutive-line count must be positive")
 
     return BlameRecord(
         organization=org,
         repository=repo,
         blamed_file_path=path,
-        line_number_in_file=int(header.group("final")),
+        line_number_in_file=final_line_number,
         commit_sha=header.group("sha"),
         commit_summary=fields.get("summary", ""),
         consecutive_line_count=int(group) if group else None,
-        line_number_at_origin=int(header.group("orig")),
+        line_number_at_origin=original_line_number,
         author_name=fields.get("author", ""),
         author_email=_strip_angle_brackets(fields.get("author-mail", "")),
-        authored_at_epoch=_as_int(fields.get("author-time")),
+        authored_at_epoch=authored_at,
         author_utc_offset=fields.get("author-tz", ""),
         committer_name=fields.get("committer", ""),
         committer_email=_strip_angle_brackets(fields.get("committer-mail", "")),
-        committed_at_epoch=_as_int(fields.get("committer-time")),
+        committed_at_epoch=committed_at,
         committer_utc_offset=fields.get("committer-tz", ""),
         # `filename` is always present in porcelain output; falling back to the
         # blamed path keeps a malformed block from inventing an empty source.
