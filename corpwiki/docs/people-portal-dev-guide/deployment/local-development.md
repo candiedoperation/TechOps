@@ -32,9 +32,9 @@ before starting containers, starts healthy services, bootstraps Authentik and
 Gitea, and runs `scripts/verify.sh`. Both up and verify print the selected ports.
 The first image pull, bootstrap and Nx dependency install can take several minutes.
 
-Open <http://localhost:5173>. Sign in as `akadmin` with the generated
+Open `http://localhost:5173`. Sign in as `akadmin` with the generated
 `AUTHENTIK_BOOTSTRAP_PASSWORD` in this directory's `.env`. Skip initial Authentik
-setup. The backend callback is <http://localhost:3000/api/auth/redirect>.
+setup. The backend callback is `http://localhost:3000/api/auth/redirect`.
 Use `localhost` consistently. Return to the Vite URL for hot reload.
 
 `--write-env` creates `peopleportal/server/.env.development` only when absent
