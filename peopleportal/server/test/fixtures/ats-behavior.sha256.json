@@ -1,0 +1,422 @@
+{
+  "upload: valid PDF": {
+    "trace": "d07b3550174210cc16660e91497e126dde9a978a69272822b2a5e96fa1c7b50b",
+    "response": "96b97ed2780ce0adfb2fbb16ef18e915c01c78d7ac1959564c5aa667d95e0649"
+  },
+  "upload: missing session": {
+    "trace": "e6f513ee400c2472bfbd81967676e133537ea5e145020648d4af6e09a3685646",
+    "response": "dab88098c23f68d9f49a351dcaf2948f36f79e064979249a2ec098f38b7452f8"
+  },
+  "upload: rejects resume.txt": {
+    "trace": "2eb0adc9ccfdf73e4b63dda414045a2c033a61e79609b6139a343155c461db5a",
+    "response": "73ba07d4361688070d394b5d49eecbe9291b56bb90523457b5f09ee687eea64f"
+  },
+  "upload: rejects resume": {
+    "trace": "2eb0adc9ccfdf73e4b63dda414045a2c033a61e79609b6139a343155c461db5a",
+    "response": "73ba07d4361688070d394b5d49eecbe9291b56bb90523457b5f09ee687eea64f"
+  },
+  "upload: rejects ../resume.pdf": {
+    "trace": "79923b48be3d5952a7251da5a5d8af9173d9fefb755ecccf6a9c07cae4b49f03",
+    "response": "e8d64aeb54ec5369ec649518f643d7c17278920831f7b58199de340536e93b35"
+  },
+  "upload: rejects a/resume.pdf": {
+    "trace": "79923b48be3d5952a7251da5a5d8af9173d9fefb755ecccf6a9c07cae4b49f03",
+    "response": "e8d64aeb54ec5369ec649518f643d7c17278920831f7b58199de340536e93b35"
+  },
+  "upload: rejects a\\resume.pdf": {
+    "trace": "79923b48be3d5952a7251da5a5d8af9173d9fefb755ecccf6a9c07cae4b49f03",
+    "response": "e8d64aeb54ec5369ec649518f643d7c17278920831f7b58199de340536e93b35"
+  },
+  "upload: invalid MIME": {
+    "trace": "5aa69a911f45f73dedf86b692c3ebaa9eaf820fc39a3b7b61cfcb39bec22839a",
+    "response": "48e48ac4c57bec3f56da188b84ae1f3f3e5fcc8448ad902405cea06d9553ea0f"
+  },
+  "upload: missing applicant": {
+    "trace": "31e7b0f9296ea7ee608039e99620f9cfcc9a88044f9bdd9429e080c7e70155ef",
+    "response": "3344539987515262d3d8e2c7a86a476bb68c620f977b3af137ff463186ad00f3"
+  },
+  "upload: signing failure propagates": {
+    "trace": "9ed153eac547d194b3bfc1ddd53c71d2c3b0067e8d844c61b6d573c7cf2ed4c9",
+    "response": "dfed4d19a11d529a92356d3378b4902e14871bd5599ae13e587180d5f2188c61"
+  },
+  "download: resumes/65a000000000000000000001.pdf": {
+    "trace": "7beb2b86031a3b291fb78436cb572421fae8ebc59fdd16c5d806f63720eb80b6",
+    "response": "b671f38e1db41cead7eee60c112c9b61296544b7ce63c8ae0bfde80c3ac39f8a"
+  },
+  "download: resumes/./65a000000000000000000001.pdf": {
+    "trace": "7beb2b86031a3b291fb78436cb572421fae8ebc59fdd16c5d806f63720eb80b6",
+    "response": "b671f38e1db41cead7eee60c112c9b61296544b7ce63c8ae0bfde80c3ac39f8a"
+  },
+  "download: resumes/folder/../65a000000000000000000001.pdf": {
+    "trace": "7beb2b86031a3b291fb78436cb572421fae8ebc59fdd16c5d806f63720eb80b6",
+    "response": "b671f38e1db41cead7eee60c112c9b61296544b7ce63c8ae0bfde80c3ac39f8a"
+  },
+  "download: another applicant": {
+    "trace": "3bfe28dc6de7565d1d2503456939985041bc5c41e13c7bdaab66c307a1bc5454",
+    "response": "fff792d918111e3434a09bf66728eb2da2d0315895f6bc06e9e645ad03836605"
+  },
+  "download: no guest": {
+    "trace": "e6f513ee400c2472bfbd81967676e133537ea5e145020648d4af6e09a3685646",
+    "response": "dab88098c23f68d9f49a351dcaf2948f36f79e064979249a2ec098f38b7452f8"
+  },
+  "download: signing failure": {
+    "trace": "2afcc699b56aedd159daf410cfa726d863a54fdb9d7d0ec7ee4e7b14e9e7a845",
+    "response": "645196276e817e25da446bdd6f017e1e1ce38b8462639b02484939e30a8da533"
+  },
+  "submission: success": {
+    "trace": "574130bc551decb5ea60cf2b80df4e71c98b4be46dde95d167b7d181fb44b0c7",
+    "response": "0f5a085548ac950a8aed975ae46de78742fa8b95df856f8a9e02ab2acb102b77"
+  },
+  "submission: internal member": {
+    "trace": "5be3b361f76d8a45521d211c2b198a51f119b9752b8a00b67ff0659fcb1d8fe9",
+    "response": "0f5a085548ac950a8aed975ae46de78742fa8b95df856f8a9e02ab2acb102b77"
+  },
+  "submission: incomplete request": {
+    "trace": "e23424d4e35b321b081fc98b99a09ed3c969aadc090b92f252d977c3fe23c11e",
+    "response": "9e6d97fd78ffa0cada91ea0e7e4dd655e1c770e1a153e0a03edc1525581c5e44"
+  },
+  "submission: no guest": {
+    "trace": "89ce731c0575305f74d4f0384601052efa31c03751a57a067e9e64ccf2f4e306",
+    "response": "1a4a24b970292880a3a6f93fea27499ea049f5e64d0a38347b0847650804a139"
+  },
+  "submission: recruitment closed": {
+    "trace": "fb7a37c015abf1851f9f0b30b5cefb58acc72d980e3c9ac7c7007aefec1e5bfc",
+    "response": "18d76117a154526eeb10daae30de01780c3634f573e4bbe08a4effb79d784d5f"
+  },
+  "submission: invalid role": {
+    "trace": "8b163edccc784c26d99563e55efb98ff489afedb4c2ae34aa4534df7c8cce8fd",
+    "response": "fe0b5875e98bad6347901b2269101f37fc4df53505d4a4c6fa342c3c2806190b"
+  },
+  "submission: invalid resumeUrl MissingRequiredField": {
+    "trace": "5b05af59be06c47ba901f9ca8162d055ac838b34d54a528b946e8b425ad4cf32",
+    "response": "8f54f451bde06210749dd65577d245fdd218c7d21122db8bcb07c905fe532f9e"
+  },
+  "submission: invalid resumeUrl InvalidFileType": {
+    "trace": "55a3fb27f4da35faeb1a9d100e4b8e9a3cc99a4dad83da198a5d0c0596575b32",
+    "response": "0e52b8f4f712f5909bc073bcd9729c5855219dfc5d9db8d940a82b756776c709"
+  },
+  "submission: invalid whyAppDev MissingRequiredField": {
+    "trace": "8a1e865a0821788719b3dbed7a820fd2d827e0feb9d64d0ed403056065705c01",
+    "response": "ba64918d297859a68359fbe0406938fdacb284c0ad8cf862b4adaab22c4799f8"
+  },
+  "submission: invalid whyAppDev WordCountExceeded": {
+    "trace": "dd533898e3db02319e708ad2037800255e0108ddd6afd256da13ff1647eb9dc4",
+    "response": "c428d5c24d9190f25295604930df52a06e9b97b6f56e7865fe4f8fb20c5fad73"
+  },
+  "submission: invalid instagramFollow MissingRequiredField": {
+    "trace": "83873f42016378eecf4c4d134bdff6c9286f95dddf4846213f3e167743517891",
+    "response": "9f0cf2a25cb8e4a0585f9e15e0e12200ecd0b9af25ce77e1987b9dc039b433db"
+  },
+  "submission: invalid linkedinUrl InvalidURL": {
+    "trace": "99c96540290608ed2a2c2f7530aa3622e1c834338654b7c45c0f5c54701023fd",
+    "response": "6b9adfccd1d5cb25b23356e330165fa296ed433336a22d5676767bce5e55e269"
+  },
+  "submission: invalid githubUrl InvalidURL": {
+    "trace": "0252f5ffebcb1b6aa0911198c0aca5b45a8cd819a87a94bcd713d05f954ab6f7",
+    "response": "7dc8fbc4170f65114f120b4daacd9282b0a399542d5bfb1e7c2c0d5cba75244f"
+  },
+  "submission: MissingResponse": {
+    "trace": "8325ec2f5e6e9b9818391c4b9394cb6eee0c4dd5e7c5bb092d7196acf352d6cd",
+    "response": "58f861c0c3aa331b4a02b492418952a121b33306e3b96f338267244ece8f96fc"
+  },
+  "submission: ResponseTooShort": {
+    "trace": "f2d7d15d426d44d20558c2ab03de742aa7f283526c9c437e0393dd42e675d8be",
+    "response": "74abd5d6fbf2315cd9aa4671f8017711d0985a7a0e44825e9fc979c8b8de696a"
+  },
+  "submission: ResponseTooLong": {
+    "trace": "aa4afad56cdc6342b34bb30f0549f7ef39d335ff8bbd242f8d8d37833f7d43e0",
+    "response": "a1610640e238fdb2033ce8f5fac0ae43a3ca889e30f57cb956f0fbc89ff3a220"
+  },
+  "submission: missing applicant": {
+    "trace": "60a69a225176cc26dfd10e193e8b13a742cc56d24495603359e8041d60ab51d7",
+    "response": "c5fa44d54f436d4e9e3d9a3fd842d4cd6feb0332f51863b4881311cac529f26a"
+  },
+  "submission: duplicate": {
+    "trace": "b96fa5ea38ff7eec0b4f9cc09d3dd10c0ccc114bfb61999d3753b6a8eb9ea062",
+    "response": "acbe02393b9eef4d485b450af5a1ac2f433e11f1eb2aa64825065dfffccd2e4d"
+  },
+  "submission: resume belongs to someone else": {
+    "trace": "13bb06971ce5ea7d0e2edb04e6a34a691d2ff7fe1b6eb895b4f453407b8a4a9b",
+    "response": "9421a789d28f4a59574fe2443139b123a462af1e0855257c33e1cef188f84531"
+  },
+  "submission: invalid PDF signature": {
+    "trace": "55e72674b402788d4118b296fe7706066af1e2c2235ef1b81d68a017db1950ed",
+    "response": "0638b472c301799015db159759f2652adf03f47b7efeb13dec931463813ef636"
+  },
+  "submission: storage exception": {
+    "trace": "5e86807d8efd263e49112b9b33610dc674b231c5ac6bb31202a49aed5c36d7a5",
+    "response": "52c2ae32c7d874a41e07ebb5ae0efe71bf4ce90e59d0fd1c1d34ce01d44f5b6c"
+  },
+  "submission: applicant disappears": {
+    "trace": "d48f86b4cb791aadfc2644cb9f6fefb2faf6196f1a79ff71c95826d94009e8bc",
+    "response": "c5fa44d54f436d4e9e3d9a3fd842d4cd6feb0332f51863b4881311cac529f26a"
+  },
+  "submission: application creation fails": {
+    "trace": "70046bed5f7f160d16c5e8c6d2140b341c9dd858885d71a65551b4b3fb42a9a1",
+    "response": "cf2abb90606f0edce82b1998a1187086a06ac11c83ffa3ec1df2b4a5e82e2f5b"
+  },
+  "submission: directory fails": {
+    "trace": "55c428a901c6fc71299928c7702ab04c5c026d6743e96cf7dd224b3d45e43698",
+    "response": "cf2abb90606f0edce82b1998a1187086a06ac11c83ffa3ec1df2b4a5e82e2f5b"
+  },
+  "profile: merges changes": {
+    "trace": "85687eade144505c3d54c3f64331fcbbadd384945206b3d603d6edb6a2520284",
+    "response": "f6962767760c9da9282dc7b33f560d36e63c4b84202dd20c732616c7357bede7"
+  },
+  "profile: no guest": {
+    "trace": "e6f513ee400c2472bfbd81967676e133537ea5e145020648d4af6e09a3685646",
+    "response": "dab88098c23f68d9f49a351dcaf2948f36f79e064979249a2ec098f38b7452f8"
+  },
+  "profile: missing applicant": {
+    "trace": "2022d580654ad73c07fb76ac8c4def2731b17200ba353f259f7465222dae9548",
+    "response": "a9d9412cf19e1ab6257563a841639064a56ac737842e5ee0c168d217452ea96e"
+  },
+  "profile: rejects another resume": {
+    "trace": "b6fbcf52e23de515e8aaffdfe4bf52041a1680624603cefbf189b9662f166809",
+    "response": "9421a789d28f4a59574fe2443139b123a462af1e0855257c33e1cef188f84531"
+  },
+  "profile: verifies changed resume": {
+    "trace": "6ba15df5ccd6defa312ae0b8fa1c3978714309794b16f891606eb8e66d39bd38",
+    "response": "f6962767760c9da9282dc7b33f560d36e63c4b84202dd20c732616c7357bede7"
+  },
+  "profile: invalid signature": {
+    "trace": "ebe9cc8b60bade5a51711c17a76336fcd6a8e74c22b8e9ab162d3a29f22ec658",
+    "response": "0638b472c301799015db159759f2652adf03f47b7efeb13dec931463813ef636"
+  },
+  "applications: cards": {
+    "trace": "d098f4cfe61e71398c1d39369918990727ef9da148c9ed7387361a9e2c97fa35",
+    "response": "ff76b5330411db9a922a2120d1a937d624fa95a4020e423af13410c50dd86ff7"
+  },
+  "applications: empty": {
+    "trace": "9a2b7f31d199a63c407aff243f7c1c1fc6f2bcc5e61ab24d49913179f7e539b7",
+    "response": "2c7fedfa54ce85b5b9c44c330215a564b61da0f2059806b5e0ab72fbbccc88e5"
+  },
+  "applications: query failure throws": {
+    "trace": "9d993e3b9a04b67a9d516130fc090d2553ffe9983624cc5cd9b3347f59ccd59e",
+    "response": "1692769322b69076924b4c68b9bb6fad3b19f64b0c4d047dbac8890fdabb4d36"
+  },
+  "application: details": {
+    "trace": "a23576d13f5fb5845b3f10e0694c82f0277699e5d36bd5a823732db7f4530af4",
+    "response": "71469414be4ff36d254e68d7f368a13812ae9d3747d451d928b36058b9922c47"
+  },
+  "application: missing": {
+    "trace": "9b1e99ee269f144acfb5b37a18eab65a6067f560485837d8497c2c8ca21f27e0",
+    "response": "5fba7f2b2af58be36d892198159d913bfb77f10e78e6e914fca35488782174cf"
+  },
+  "application: optional fields": {
+    "trace": "31f33506347618b9b5b507f487a740bc2cf84504818f47fb2b67ce5d94798a43",
+    "response": "89a90d25cbcf2ce293978a391a75ea2cf37b024afe48e7528d8c03733f220866"
+  },
+  "feedback: empty": {
+    "trace": "9270f34e092db41f6b21214e268324cf41acaaee3fb95ffac2a994b0c15b0e32",
+    "response": "124cb6aa46f288c82295116458e0ee49ba4985be3d7395bcbee2b5531567f4fd"
+  },
+  "feedback: zero stars": {
+    "trace": "6ddae63d249d747e26a63bbfa39d13eb9890a428bc8b0fc6a6530c1bf972d333",
+    "response": "e66d184d680bcacee66b7c7a2e3708724c64641f0ed84d9bef5588b3e3fb46ea"
+  },
+  "feedback: high stars": {
+    "trace": "6ddae63d249d747e26a63bbfa39d13eb9890a428bc8b0fc6a6530c1bf972d333",
+    "response": "e66d184d680bcacee66b7c7a2e3708724c64641f0ed84d9bef5588b3e3fb46ea"
+  },
+  "feedback: rating": {
+    "trace": "66b0a96688a5073e61f34cd3e81d0e52dead554031a98fed402475724bdeb95a",
+    "response": "b081702f2709e09097c44a5ad5a0b994d6d5673d488c23a88e51e7fa9a123351"
+  },
+  "feedback: notes": {
+    "trace": "6538f09f1a56f15282aaddc4e6e45ff6e3bc79476acc4d74939d28d212bc4829",
+    "response": "1b33559af94627637a03af803005e5378bcc47697941d0eb9b51af2bc0fbdda1"
+  },
+  "feedback: both": {
+    "trace": "61268111589c6063dc77f8c26d3678b0b5019e5898396525c290036523f6ba9e",
+    "response": "4c1962afaa2fdb741c3a723e3a777701684867ca8be663ac91744043b7b3802f"
+  },
+  "feedback: blank notes": {
+    "trace": "db446a3bf93d06b54263946cd63409729cc2e994890cff599774e29dc58e2294",
+    "response": "1f3ec20bcbc8e0e14dc2334894972794a7de930be54454d1bed138d32c6d1928"
+  },
+  "feedback: unclosed fence": {
+    "trace": "c19e59f175b6a3b658432c76fa06dc38a922429fdb113aa9cddd61d10b3a7cd5",
+    "response": "a748c4c814c7bb970ed6a17dd364fc4ae959649805328ef035a2a250eab9041e"
+  },
+  "feedback: prepends existing notes": {
+    "trace": "9a04adc123d38da74f3dbc4a5bd5960285a63dbcc88fd297afc3b846a9b22f08",
+    "response": "6f9adb980aea121b9a14ca1be43732aa07a108e5539a59c3ca7f317ae45a5dbf"
+  },
+  "feedback: wrong team": {
+    "trace": "5f2acb815d6c43325002c6f87c2b5b194b26226649970131b8de0d08060cc909",
+    "response": "5fba7f2b2af58be36d892198159d913bfb77f10e78e6e914fca35488782174cf"
+  },
+  "feedback: save failure": {
+    "trace": "2765a67076427125ae01fb7ecf72f9fc008529a81c0664ddb58b76a477ff3d28",
+    "response": "667f211a72842355e2cf83720afa6b66894c0d73968109a07fdc4a114d76a290"
+  },
+  "recruiter resume: signed URL": {
+    "trace": "a114f7f2be593cc5d3bb4c815062c37c5e500fe77a760603e983c94b7b4ddd0d",
+    "response": "3389a7ba6becc470865846418ddc03735440a7275175bb02d43b0a134a7fccfb"
+  },
+  "recruiter resume: no application": {
+    "trace": "dba3be5b214e22c740f9e3e8dfce3684feb1720e3cd7401555be3016727de3cb",
+    "response": "5f1341834663e7db30e3e783a5210f6c2aef7e29372f970ca22c4e068148f269"
+  },
+  "recruiter resume: bad key omitted": {
+    "trace": "e79abfc5641d2d581ff3110b11de63962f6b66816064bd2e424c3417c380829c",
+    "response": "cb520303b259f62b23c4c8d4ed7c71402166970e91c9d18435729c48c2d9ffe9"
+  },
+  "recruiter resume: signing failure omitted": {
+    "trace": "6ae0696342faa3e77565791458cc5741d8eda9d735302b7b02541f9ce20243b6",
+    "response": "cb520303b259f62b23c4c8d4ed7c71402166970e91c9d18435729c48c2d9ffe9"
+  },
+  "history: application exists": {
+    "trace": "ab1280c72d08432fba8344eceeb6f841d826bb2d428302512bdcb24bae029558",
+    "response": "f4d40da3256425665630a37582523bd906e8298fd5a35cc5c251bbf70199f8f1"
+  },
+  "history: no team application": {
+    "trace": "dba3be5b214e22c740f9e3e8dfce3684feb1720e3cd7401555be3016727de3cb",
+    "response": "5f1341834663e7db30e3e783a5210f6c2aef7e29372f970ca22c4e068148f269"
+  },
+  "stages: list": {
+    "trace": "d938e196140864f64098302d214d777e5adb808ea3d7f44775be831717d04eb3",
+    "response": "5cc6e85e4cc900323ef56a079ee29a96f0c8c343622c2d4d5a056f8f3f149fc3"
+  },
+  "stage: missing user": {
+    "trace": "fdea12925ec2f2d6bb5c03c3a590daf97249141857ce5fd1671edf9583dc0244",
+    "response": "4dd0d141f69080ae77c668f12643a3f294f5ddb0c06d6e421026a15ad4f0869a"
+  },
+  "stage: missing application": {
+    "trace": "99419a2006b93b62fd4cdefc6f8134d80da9bb6a0cebbb15fc115e4952bbe8b4",
+    "response": "5fba7f2b2af58be36d892198159d913bfb77f10e78e6e914fca35488782174cf"
+  },
+  "stage: no hiring permission": {
+    "trace": "265256cf69dc08ceb33e040b69bd4581961926e23596ce4f55b83a0103053982",
+    "response": "0a79ce35d72925d0c6352ac6c08c5a3e148c261d82af700d158f4ddc4a8c124e"
+  },
+  "stage: same stage": {
+    "trace": "831977f716215ddc2ce4ec8afd4a6807a2a86fc6b308b199e72ec0034f8b509d",
+    "response": "8e1ad41009a01537ad727c31eb112595543f09fdf196225336991ce9d8202b54"
+  },
+  "stage: invalid transition": {
+    "trace": "96b2cf05d2fe5087e8258cb71701c12b3455810085c7ec94e8ec932f8241bfa9",
+    "response": "dbe23427c236d81a8e416c6e367fa66be718aebff27de1e7158d2432e4d7256c"
+  },
+  "stage: interview requires link": {
+    "trace": "f4606c7975c160f3a79c16e09f48a9aec1cb28ac5e93955f3b19e3fe5d78226a",
+    "response": "f452561525c3fb52026130adf8aeda89751d9a74eec695260e47b1301beb335f"
+  },
+  "stage: interview requires guidelines": {
+    "trace": "0d9378ab17d3afce153d45199a03f75b4961be117e342d3ef2498416f9740984",
+    "response": "b10fb1036b09e271c3302b198c3e2bcb1695898d3d687cc305add8703300c0ae"
+  },
+  "stage: interview notification": {
+    "trace": "03188299d855fb498e63de61998357158eb9bf2b541774235a65bd9156f1d58a",
+    "response": "7e7fc92a68f765df6d726d8aa9b6444cc92b1a14861e773c7f0e69e572f7e917"
+  },
+  "stage: rejection notification": {
+    "trace": "d2ed3eb4d429373804d7851585fc60ee7572c3b011d23554a60f5e3eac26efd0",
+    "response": "f8fac661dbf8ec0bdd1c3d3a903022c5c2942f1acbb12731c6a6546a6b7f53a1"
+  },
+  "stage: potential hire stays silent": {
+    "trace": "9786b5eb84d146cc9f388f0a6dc4b40ee36e2c0b532c376862eb6a38f28074e6",
+    "response": "cfd71364b030735da4e088cc98dd45828491be1f662375d90df0c78472adb8ca"
+  },
+  "stage: missing hire destination": {
+    "trace": "6b064a5384de2ab9a7235c3bc65e097d4f919977e2d4d341b1cd8ef2c3954adc",
+    "response": "be8bbebaa9193f729a7c8cd387716cac05e5cca5e946f9af9812427038535b5f"
+  },
+  "stage: hired new member": {
+    "trace": "38b3b2bd48705dd24a148685d1a000211c480f5b79f1d8829d8ae91d0f2f59a3",
+    "response": "99be1eb03c04c96815efc775bc09d770ee0b6be06514fb10ff1de2c74641da50"
+  },
+  "stage: hired existing member": {
+    "trace": "5da8e35274e337ec06de226767d455903e0a9235f11ec6d424725cb77c0fa3a4",
+    "response": "99be1eb03c04c96815efc775bc09d770ee0b6be06514fb10ff1de2c74641da50"
+  },
+  "stage: outside hire destination": {
+    "trace": "48a9e9ba1c2faa53a2da7620df539f562c260bfa8d5b226db2f53b80a7b6b614",
+    "response": "7885163fc364436c12ac92b76e4bea9272afc3ed1262eb92304c44bbbb274518"
+  },
+  "stage: email failure after save": {
+    "trace": "9ec63af787850d1790a831ce8ac703718c672dc13a7a386fde20fd89c9163ae9",
+    "response": "8d697a2b7ffe3062dfb7577fd7cf73b3988dfa96241e98a81d5437d7a9816282"
+  },
+  "stage: membership failure": {
+    "trace": "0a7a45d96aa9fb14125f9ff305cbd598d5690dbb52b645b083a7fdc330085662",
+    "response": "8d697a2b7ffe3062dfb7577fd7cf73b3988dfa96241e98a81d5437d7a9816282"
+  },
+  "config: get": {
+    "trace": "d6869922cab2281a31e8259c35e2ef27d3492cf6d142f4a0fdb96ac42cdb4600",
+    "response": "2accb07a5733b45dcacacc9d2564f9dd60e99a86d94a5141f9555e02b3f41726"
+  },
+  "config: missing": {
+    "trace": "04ee4505a875dedf7aaac19f2ca45ddf54997be7f0ba033812c3e8516d9e2a0d",
+    "response": "48ef1d82cee46bd0b55baffef4642903eb075d936b2e7f6f143b5ed81e5cb239"
+  },
+  "config: update": {
+    "trace": "71b5e33a8037b2c941da408f0c156ca518c16dc246597a4cf31eeab15748f8da",
+    "response": "bc9bc09c79be0bf5c6f41fed389d5b8feb5b6cb6b07b092b20aaf588ff18582c"
+  },
+  "config: empty roles": {
+    "trace": "fb0fdb16730bba00aa04f3c6e99417628e77c29fb069f65b7e9451e85c3debcb",
+    "response": "76d488b6db86978e10cd13c7c481076b36dcf6dfd4624963c08fee22da6f5494"
+  },
+  "config: stop recruiting": {
+    "trace": "62b7ecddf0a41734db5bf3179251608bb119cf05884f24e26b106d07c48b349a",
+    "response": "dd44042a88f413c4507ef418b1b67b6a08b1e9813da66166801cda3beedb9484"
+  },
+  "config: removal of missing recruiting status preserves response": {
+    "trace": "6d81d8daed0bb8acda0be84724f90bc5721391de430cc8618c59e427a2950a7a",
+    "response": "dc8436fcfa25528228db62e8b2ed9f9d2dc48eb2fa2c228761cc4da7e971e78e"
+  },
+  "recruitment: add subteam": {
+    "trace": "0347c96890fb2e1ed023923ef6ca64d772eee0ff92d8992c223f5be32111aa29",
+    "response": "72db90ae934396880f3a5e0f0641b81389ebccb6d4a874d13a437eb70195c908"
+  },
+  "recruitment: remove last subteam": {
+    "trace": "306e91d914221b3df4ce18aa4b7949190eb234714b6fb2bed5d302b9809c90bd",
+    "response": "ab71df2aa549c345ba0fb5795633ae84ec7d18309d615f4bb3653d972cab1e30"
+  },
+  "recruitment: missing team removal": {
+    "trace": "90e38ee6a2f7e8420e303e2134ee3373a7b31f58db736d3f17ba13834eeb6c91",
+    "response": "e6c6e1f244e1fd4e29db5348f7bb3c3c63233daf91a61b933e9175c236ab41f9"
+  },
+  "open team: details": {
+    "trace": "320f72f91a5556c0f71ed6996ad5851a2f9949ac78a0cda536867817fe3657c3",
+    "response": "4ede0ebe06db680690c906d110f7951f22dfbf0bdba637fa24212a376acdf716"
+  },
+  "open team: closed": {
+    "trace": "32bfab20308ee2375d3c98cc4a80a0fecc0110ca63cb370f48fcf07aca801345",
+    "response": "a501cb6cc8c7c13e9113bf33f696719e6fe833d8c2dd3fcdd0bc3f9aaa9ba330"
+  },
+  "open team: directory failure": {
+    "trace": "d34a9a57c800eca79f38cf446026b52f92655b813b666d250b3f4947b2e6fba8",
+    "response": "38883a38684e7c2d17285ed85eafff6b66239dd2ce21c7f90487dfa5e431646d"
+  },
+  "open team: group not found": {
+    "trace": "97ed60f7d3e554dc61486f4bbe7eee6f14b7c0267d97a23b541664155306ad2e",
+    "response": "5011e39a9441194e87a7de9dd545645eecaef9d8d762a28fedb276e1ed81d0fd"
+  },
+  "open teams: cold cache": {
+    "trace": "df844f598cc82631bfbf6d5545454a78ea9610ee5b0584591d274525e7a82f10",
+    "response": "803e60c0df8792cc203120d715da5a6ff1d049a0e23b1dbf8edca7919fe94555"
+  },
+  "open teams: fresh cache": {
+    "trace": "4b527e86b96b65b3f05acf019ff4fedcc7f568090e109f2edcbeb1ae15336952",
+    "response": "9b30ccbc10e1379cc8bd229e1ff230edbce5065d9cf16697694493249995f669"
+  },
+  "open teams: missing group cleanup": {
+    "trace": "4b70366b5f8f4426eaae251b4dd19b6e286b0bfe7f10ed82045397ece1383a7f",
+    "response": "2c7fedfa54ce85b5b9c44c330215a564b61da0f2059806b5e0ab72fbbccc88e5"
+  },
+  "open teams: stale cache survives refresh failure": {
+    "trace": "7de109c66e741762f0414aa39ac1b683a7f7c1c69f21b7018df5cef1714b75b6",
+    "response": "9b30ccbc10e1379cc8bd229e1ff230edbce5065d9cf16697694493249995f669"
+  },
+  "open teams: shared refresh across controller instances": {
+    "trace": "5f4bf681eba1999d78cdb8d92e8894db7633cd26b9e0b089aafa19c20f361314",
+    "response": "45a7235b29de83fa104b57e0f4fdbc0807c112e27319ffbc1d58252eb2c3d0e7"
+  },
+  "statistics: populated and empty teams": {
+    "trace": "81646c138278287003e72989f9c1c79afc81f3a1ae304855df265929b1e6cbf3",
+    "response": "7c8ed405e46612e90c8a3809624df72ee6b47de94a7b46b7befe4ee721988009"
+  }
+}

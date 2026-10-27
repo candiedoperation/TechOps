@@ -1736,6 +1736,24 @@ export class OrgController extends Controller {
         @Body() inviteReq: APITeamInviteCreateRequest,
         @Path("teamId") _teamId?: string,
     ) {
+        return this.createInviteRecordAndSend(req, inviteReq);
+    }
+
+    async createInviteForATS(
+        req: ExpressRequestAuthUserShim & ExpressRequestBindleShim,
+        inviteReq: APITeamInviteCreateRequest,
+        inviteId: string,
+    ) {
+        return this.createInviteRecordAndSend(req, inviteReq, inviteId);
+    }
+
+    private async createInviteRecordAndSend(
+        req:
+            | express.Request
+            | (ExpressRequestAuthUserShim & ExpressRequestBindleShim),
+        inviteReq: APITeamInviteCreateRequest,
+        inviteId?: string,
+    ) {
         /* Validate & Normalize Name */
         const cleanedName = validatePersonName(inviteReq.inviteeName);
         inviteReq.inviteeName = capitalizeString(cleanedName);
@@ -1761,6 +1779,12 @@ export class OrgController extends Controller {
         } catch (e) {
             /* We Gracefully Handle All But Previous Error! */
             if (e instanceof CustomValidationError) throw e;
+            if (
+                inviteId &&
+                (!(e instanceof AuthentikClientError) ||
+                    e.code !== AuthentikClientErrorType.USER_NOT_FOUND)
+            )
+                throw e;
         }
 
         /* Gather Additional Data */
@@ -1787,7 +1811,7 @@ export class OrgController extends Controller {
         }
 
         /* Create New Invite */
-        const createdInvite = await Invite.create({
+        const inviteData = {
             inviteName: inviteReq.inviteeName,
             inviteEmail: inviteReq.inviteeEmail,
             roleTitle: inviteReq.roleTitle,
@@ -1798,7 +1822,31 @@ export class OrgController extends Controller {
             expiresAt: new Date(
                 Date.now() + 48 * 60 * 60 * 1000,
             ) /* 48 Hours */,
-        });
+        };
+        const createdInvite = inviteId
+            ? await Invite.findOneAndUpdate(
+                  { _id: inviteId },
+                  { $setOnInsert: inviteData },
+                  { upsert: true, new: true, runValidators: true },
+              )
+            : await Invite.create(inviteData);
+        if (
+            createdInvite.inviteEmail !== inviteReq.inviteeEmail ||
+            createdInvite.teamPk !== teamInfo.pk ||
+            createdInvite.subteamPk !== inviteReq.subteamPk ||
+            createdInvite.roleTitle !== inviteReq.roleTitle
+        ) {
+            throw new CustomValidationError(
+                409,
+                "Invite does not match this hiring action",
+            );
+        }
+        if (inviteId && createdInvite.expiresAt.getTime() <= Date.now()) {
+            createdInvite.expiresAt = new Date(
+                Date.now() + 48 * 60 * 60 * 1000,
+            );
+            await createdInvite.save();
+        }
 
         /* Send an Email to the Invitee and the Invitor */
         const onboardUrl = `${process.env.PEOPLEPORTAL_BASE_URL}/onboard/${createdInvite._id}`;

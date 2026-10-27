@@ -118,13 +118,19 @@ services:
   mongo:
     image: mongo:7
     restart: unless-stopped
+    command: [mongod, --replSet, ppdev, --bind_ip_all]
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo:/data/db
       - mongo-config:/data/configdb
     healthcheck:
-      test: [CMD, mongosh, --quiet, --eval, "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "try { rs.status(); } catch (e) { if (e.codeName !== 'NotYetInitialized') throw e; rs.initiate({_id: 'ppdev', members: [{_id: 0, host: 'localhost:27017'}]}); } quit(db.hello().isWritablePrimary ? 0 : 1)"
       interval: 5s
       timeout: 10s
       retries: 30

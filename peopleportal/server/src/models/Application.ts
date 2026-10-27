@@ -26,6 +26,27 @@ export enum ApplicationStage {
     HIRED = "Hired",
 }
 
+export interface PendingStageAction {
+    id: string;
+    stage: ApplicationStage;
+    input: {
+        stage: ApplicationStage;
+        interviewLink?: string;
+        interviewGuidelines?: string;
+        hiredRole?: string;
+        hiredSubteamPk?: string;
+    };
+    state: "pending" | "processing";
+    completedSteps: string[];
+    leaseToken?: string;
+    leaseUntil?: Date;
+    recipientType?: "member" | "external";
+    memberPk?: string;
+    membershipStarted?: boolean;
+    inviteId: string;
+    sender: { name: string; email: string };
+}
+
 export interface IApplication extends Document {
     applicantId: Schema.Types.ObjectId;
     teamPk: string;
@@ -43,7 +64,47 @@ export interface IApplication extends Document {
     appDevInternalPk?: number;
     stars: number;
     notes?: string;
+    pendingStageAction?: PendingStageAction;
 }
+
+const PendingStageActionSchema = new Schema<PendingStageAction>(
+    {
+        id: { type: String, required: true },
+        stage: {
+            type: String,
+            enum: Object.values(ApplicationStage),
+            required: true,
+        },
+        input: {
+            stage: {
+                type: String,
+                enum: Object.values(ApplicationStage),
+                required: true,
+            },
+            interviewLink: String,
+            interviewGuidelines: String,
+            hiredRole: String,
+            hiredSubteamPk: String,
+        },
+        state: {
+            type: String,
+            enum: ["pending", "processing"],
+            required: true,
+        },
+        completedSteps: { type: [String], default: [] },
+        leaseToken: String,
+        leaseUntil: Date,
+        recipientType: { type: String, enum: ["member", "external"] },
+        memberPk: String,
+        membershipStarted: Boolean,
+        inviteId: { type: String, required: true },
+        sender: {
+            name: { type: String, required: true },
+            email: { type: String, required: true },
+        },
+    },
+    { _id: false },
+);
 
 const ApplicationSchema = new Schema<IApplication>(
     {
@@ -96,6 +157,7 @@ const ApplicationSchema = new Schema<IApplication>(
         hiredSubteamPk: { type: String, required: false },
         stars: { type: Number, required: true, default: 0, min: 0, max: 5 },
         notes: { type: String, required: false, maxlength: 10000 },
+        pendingStageAction: { type: PendingStageActionSchema, required: false },
     },
     { timestamps: true },
 );

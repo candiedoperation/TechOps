@@ -66,6 +66,7 @@ check 'Gitea API version HTTP 200' http_200 "http://127.0.0.1:$GITEA_PORT/api/v1
 check 'Gitea authentik auth source exists' gitea_source
 check 'Gitea can discover authentik via public OIDC URL' gitea_discovery
 check 'MongoDB ping' compose exec -T mongo mongosh --quiet --eval "quit(db.adminCommand('ping').ok ? 0 : 1)"
+check 'MongoDB writable replica set' compose exec -T mongo mongosh --quiet --eval "const h = db.hello(); quit(h.setName === 'ppdev' && h.isWritablePrimary ? 0 : 1)"
 check 'Redis PONG' redis_ping
 check 'Mailpit API HTTP 200' http_200 "http://127.0.0.1:$MAILPIT_PORT/api/v1/messages"
 if (( failures > 0 )); then die "$failures smoke check(s) failed."; fi

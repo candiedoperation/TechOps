@@ -32,6 +32,12 @@ before starting containers, starts healthy services, bootstraps Authentik and
 Gitea, and runs `scripts/verify.sh`. Both up and verify print the selected ports.
 The first image pull, bootstrap and Nx dependency install can take several minutes.
 
+Application submission requires MongoDB transactions. The dev stack initializes
+a single-node replica set named `ppdev` without deleting existing data. After
+updating an existing stack, rerun `up.sh --write-env` and update an existing
+server env file from the printed block. Its `PEOPLEPORTAL_MONGO_URL` must include
+`replicaSet=ppdev&directConnection=true`, especially when using a custom port.
+
 Open `http://localhost:5173`. Sign in as `akadmin` with the generated
 `AUTHENTIK_BOOTSTRAP_PASSWORD` in this directory's `.env`. Skip initial Authentik
 setup. The backend callback is `http://localhost:3000/api/auth/redirect`.
@@ -139,7 +145,7 @@ docker compose stop
 ```
 
 `verify.sh` checks all eight included containers and backing-service APIs with
-16 checks, and exits 0 when all pass. It always prints a visible NOTE about S3.
+17 checks, and exits 0 when all pass. It always prints a visible NOTE about S3.
 Reset preserves stack and server/UI env files, deletes service data and exported
 OIDC/token files, and changes the Gitea token on the next bootstrap. Update the
 server env from the new output. Keep the same `COMPOSE_PROJECT_NAME` between
