@@ -480,6 +480,9 @@ export const EventAttendance = () => {
         );
         if (rsvpRes.ok) {
             setRsvp((await rsvpRes.json()).rsvp);
+            if (showRsvps) {
+                refreshList();
+            }
         } else {
             toast.error(`Failed to refresh RSVP: ${rsvpRes.statusText}`);
             return;
@@ -593,7 +596,10 @@ export const EventAttendance = () => {
             });
     };
     React.useEffect(() => {
-        refreshList();
+        // load() already fetches page 1; only refetch on page changes for users who can see the list
+        if (showRsvps) {
+            refreshList();
+        }
     }, [debouncedPage]);
 
     return (
