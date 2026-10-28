@@ -480,6 +480,7 @@ export const EventAttendance = () => {
         );
         if (rsvpRes.ok) {
             setRsvp((await rsvpRes.json()).rsvp);
+            if (showRsvps) refreshList();
         } else {
             toast.error(`Failed to refresh RSVP: ${rsvpRes.statusText}`);
             return;
