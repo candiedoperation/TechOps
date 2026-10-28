@@ -89,6 +89,20 @@ interface SubteamATSConfig {
     isRecruiting: boolean;
 }
 
+type ApplicationEmailStatus =
+    | "pending"
+    | "accepted"
+    | "failed"
+    | "uncertain";
+
+interface ApplicationEmailDelivery {
+    status: ApplicationEmailStatus;
+    stage: string;
+    error?: string;
+    attemptCount: number;
+    lastAttemptAt: string;
+}
+
 // Lite object for Kanban
 interface KanbanApplicationCard {
     id: string;
@@ -98,6 +112,7 @@ interface KanbanApplicationCard {
     rolePreferences: { role: string; subteamPk: string }[];
     appliedAt: string;
     stars: number;
+    emailDelivery?: ApplicationEmailDelivery;
     [key: string]: unknown; // Index signature for Kanban compatibility
 }
 
@@ -157,6 +172,8 @@ export const DashboardTeamRecruitment = () => {
     const [selectedApplicationDetails, setSelectedApplicationDetails] =
         React.useState<KanbanApplicationDetails | null>(null);
     const [isLoadingDetails, setIsLoadingDetails] = React.useState(false);
+    const [retryingEmailApplicationId, setRetryingEmailApplicationId] =
+        React.useState<string | null>(null);
 
     const [applicantUrls, setApplicantUrls] = React.useState<any | null>(null);
     const [otherApplications, setOtherApplications] = React.useState<any[]>([]);
@@ -456,6 +473,69 @@ export const DashboardTeamRecruitment = () => {
                 toast.error("Failed to Update Stage: " + err.message);
                 fetchApplications();
             });
+    }
+
+    function retryApplicationEmail(
+        application: KanbanApplicationCard,
+        confirmUncertain = false,
+    ) {
+        setRetryingEmailApplicationId(application.id);
+        setApplications((apps) =>
+            apps.map((app) =>
+                app.id === application.id && app.emailDelivery
+                    ? {
+                          ...app,
+                          emailDelivery: {
+                              ...app.emailDelivery,
+                              status: "pending",
+                          },
+                      }
+                    : app,
+            ),
+        );
+
+        fetch(
+            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}/${application.id}/email/retry`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ confirmUncertain }),
+            },
+        )
+            .then(async (response) => {
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(
+                        data.message || `HTTP ${response.status}`,
+                    );
+                }
+
+                toast.success("Email retry completed", {
+                    description: `Email status: ${data.application.emailDelivery.status}`,
+                });
+                fetchApplications();
+            })
+            .catch((error) => {
+                toast.error("Failed to Retry Email", {
+                    description: error.message,
+                });
+                fetchApplications();
+            })
+            .finally(() => setRetryingEmailApplicationId(null));
+    }
+
+    function requestApplicationEmailRetry(
+        application: KanbanApplicationCard,
+    ) {
+        if (application.emailDelivery?.status === "uncertain") {
+            const confirmed = window.confirm(
+                `The first email to ${application.name} may already have been delivered. Retrying could send a duplicate. Resend the original email?`,
+            );
+            if (!confirmed) return;
+            retryApplicationEmail(application, true);
+        } else if (application.emailDelivery?.status === "failed") {
+            retryApplicationEmail(application);
+        }
     }
 
     function cancelStageUpdate() {
@@ -911,6 +991,88 @@ export const DashboardTeamRecruitment = () => {
                                                                         }
                                                                     />
                                                                 </div>
+
+                                                                {item.emailDelivery && (
+                                                                    <div className="mt-2 flex flex-col items-start gap-1">
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className={
+                                                                                item.emailDelivery.status ===
+                                                                                "accepted"
+                                                                                    ? "border-green-300 text-green-700"
+                                                                                    : item.emailDelivery.status ===
+                                                                                        "failed"
+                                                                                      ? "border-red-300 text-red-700"
+                                                                                      : item.emailDelivery.status ===
+                                                                                          "uncertain"
+                                                                                        ? "border-amber-300 text-amber-800"
+                                                                                        : "border-blue-300 text-blue-700"
+                                                                            }
+                                                                        >
+                                                                            {item.emailDelivery.stage} email:{" "}
+                                                                            {
+                                                                                item.emailDelivery
+                                                                                    .status
+                                                                            }
+                                                                        </Badge>
+                                                                        {item.emailDelivery.error &&
+                                                                            (item.emailDelivery.status ===
+                                                                                "failed" ||
+                                                                                item.emailDelivery.status ===
+                                                                                    "uncertain") && (
+                                                                                <p
+                                                                                    className="max-w-full truncate text-[10px] text-destructive"
+                                                                                    title={
+                                                                                        item
+                                                                                            .emailDelivery
+                                                                                            .error
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        item
+                                                                                            .emailDelivery
+                                                                                            .error
+                                                                                    }
+                                                                                </p>
+                                                                            )}
+                                                                        {(item.emailDelivery.status ===
+                                                                            "failed" ||
+                                                                            item.emailDelivery.status ===
+                                                                                "uncertain") && (
+                                                                            <Button
+                                                                                type="button"
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                className="h-6 px-2 text-[10px]"
+                                                                                disabled={
+                                                                                    retryingEmailApplicationId ===
+                                                                                    item.id
+                                                                                }
+                                                                                onPointerDown={(
+                                                                                    event,
+                                                                                ) =>
+                                                                                    event.stopPropagation()
+                                                                                }
+                                                                                onClick={(
+                                                                                    event,
+                                                                                ) => {
+                                                                                    event.stopPropagation();
+                                                                                    requestApplicationEmailRetry(
+                                                                                        item,
+                                                                                    );
+                                                                                }}
+                                                                            >
+                                                                                {retryingEmailApplicationId ===
+                                                                                item.id
+                                                                                    ? "Retrying..."
+                                                                                    : item.emailDelivery.status ===
+                                                                                        "uncertain"
+                                                                                      ? "Review & retry"
+                                                                                      : "Retry email"}
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </KanbanCard>
                                                     );

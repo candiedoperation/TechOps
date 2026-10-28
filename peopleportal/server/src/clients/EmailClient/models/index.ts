@@ -26,3 +26,7 @@ export interface EmailSendRequest {
     templateVars: object;
     from?: string;
 }
+
+export type EmailSendResult =
+    | { kind: "sent"; accepted: string[]; rejected: string[] }
+    | { kind: "intercepted" };

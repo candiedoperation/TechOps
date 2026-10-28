@@ -1079,6 +1079,23 @@ const models: TsoaRoute.Models = {
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ApplicationEmailStatus": {
+        "dataType": "refEnum",
+        "enums": ["pending","accepted","failed","uncertain"],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ATSApplicationEmailDeliverySummary": {
+        "dataType": "refObject",
+        "properties": {
+            "status": {"ref":"ApplicationEmailStatus","required":true},
+            "stage": {"ref":"ApplicationStage","required":true},
+            "error": {"dataType":"string"},
+            "attemptCount": {"dataType":"double","required":true},
+            "lastAttemptAt": {"dataType":"datetime","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ATSKanbanApplicationCard": {
         "dataType": "refObject",
         "properties": {
@@ -1089,6 +1106,7 @@ const models: TsoaRoute.Models = {
             "appliedAt": {"dataType":"datetime","required":true},
             "stage": {"ref":"ApplicationStage","required":true},
             "stars": {"dataType":"double","required":true,"validators":{"minimum":{"errorMsg":"Minimum Stars is 0","value":0},"maximum":{"errorMsg":"Maximum Stars is 5","value":5}}},
+            "emailDelivery": {"ref":"ATSApplicationEmailDeliverySummary"},
         },
         "additionalProperties": false,
     },
@@ -1103,6 +1121,7 @@ const models: TsoaRoute.Models = {
             "appliedAt": {"dataType":"datetime","required":true},
             "stage": {"ref":"ApplicationStage","required":true},
             "stars": {"dataType":"double","required":true,"validators":{"minimum":{"errorMsg":"Minimum Stars is 0","value":0},"maximum":{"errorMsg":"Maximum Stars is 5","value":5}}},
+            "emailDelivery": {"ref":"ATSApplicationEmailDeliverySummary"},
             "email": {"dataType":"string","required":true},
             "profile": {"ref":"Record_string.string_","required":true},
             "responses": {"ref":"Record_string.string_","required":true},
@@ -1122,6 +1141,14 @@ const models: TsoaRoute.Models = {
             "interviewGuidelines": {"dataType":"string"},
             "hiredRole": {"dataType":"string"},
             "hiredSubteamPk": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ATSRetryApplicationEmailRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "confirmUncertain": {"dataType":"boolean"},
         },
         "additionalProperties": false,
     },
@@ -3870,6 +3897,40 @@ export function RegisterRoutes(app: Router) {
 
               await templateService.apiHandler({
                 methodName: 'updateApplicationStage',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsATSController_retryApplicationEmail: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                teamId: {"in":"path","name":"teamId","required":true,"dataType":"string"},
+                applicationId: {"in":"path","name":"applicationId","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"ref":"ATSRetryApplicationEmailRequest"},
+        };
+        app.post('/api/ats/applications/:teamId/:applicationId/email/retry',
+            authenticateMiddleware([{"bindles":["corp:hiringaccess"]}]),
+            ...(fetchMiddlewares<RequestHandler>(ATSController)),
+            ...(fetchMiddlewares<RequestHandler>(ATSController.prototype.retryApplicationEmail)),
+
+            async function ATSController_retryApplicationEmail(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsATSController_retryApplicationEmail, request, response });
+
+                const controller = new ATSController();
+
+              await templateService.apiHandler({
+                methodName: 'retryApplicationEmail',
                 controller,
                 response,
                 next,
