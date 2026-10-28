@@ -454,6 +454,10 @@ export const EventAttendance = () => {
         setDialogOpen(true);
     };
 
+    // RSVPs close when the event starts (the server enforces this too).
+    const rsvpClosed =
+        event !== null && new Date(event.startTime).getTime() <= Date.now();
+
     const submitRsvp = async (acceptRsvp: boolean) => {
         const res = await fetch(
             `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/events/${eventId}/rsvp`,
@@ -468,7 +472,10 @@ export const EventAttendance = () => {
         );
 
         if (!res.ok) {
-            toast.error(`Failed to RSVP to event: ${res.statusText}`);
+            const body = await res.json().catch(() => null);
+            toast.error(
+                `Failed to RSVP to event: ${body?.message ?? res.statusText}`,
+            );
             return;
         }
 
@@ -700,6 +707,18 @@ export const EventAttendance = () => {
                 <h2 className="text-xl font-semibold">RSVP</h2>
                 {loading ? (
                     <Skeleton className="h-18" />
+                ) : rsvp === null && rsvpClosed ? (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-base">
+                                RSVPs are closed
+                            </CardTitle>
+                            <CardDescription>
+                                This event has already started, so RSVPs are
+                                no longer accepted.
+                            </CardDescription>
+                        </CardHeader>
+                    </Card>
                 ) : rsvp === null ? (
                     <Card>
                         <CardHeader>
@@ -762,7 +781,13 @@ export const EventAttendance = () => {
                                     : "Declined"}
                             </Badge>
                         </CardHeader>
-                        {updating ? (
+                        {rsvpClosed ? (
+                            <CardFooter>
+                                <p className="text-sm text-muted-foreground">
+                                    RSVPs closed when this event started.
+                                </p>
+                            </CardFooter>
+                        ) : updating ? (
                             <>
                                 <CardContent>
                                     <p className="text-sm text-muted-foreground mb-3">

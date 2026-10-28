@@ -815,6 +815,14 @@ export class EventController extends Controller {
             throw new CustomValidationError(404, `No event with id ${eventId}`);
         }
 
+        // RSVPs close when the event starts.
+        if (event.startTime.getTime() <= Date.now()) {
+            throw new CustomValidationError(
+                400,
+                "RSVPs are closed because this event has already started.",
+            );
+        }
+
         // Ensure email is available through session or tempsession
         const email =
             req.session.authorizedUser?.email ??
