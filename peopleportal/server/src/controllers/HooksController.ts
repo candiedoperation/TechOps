@@ -32,6 +32,10 @@ import {
 import { GiteaClient } from "../clients/GiteaClient";
 import { AuthentikClient } from "../clients/AuthentikClient";
 
+import { logger } from "../utils/logger";
+
+const log = logger.child({ module: "HooksController" });
+
 @Route("/api/webhook")
 export class HooksController extends Controller {
     /* How recently a personal repository must have been created for its
@@ -101,8 +105,9 @@ export class HooksController extends Controller {
             ]);
         } catch (e: any) {
             /* Potential Group Not Found Error! We're good, not mission critical. */
-            console.error(
-                `Failed applying branch protection for ${commitEvent.repository.full_name}: ${e.message}`,
+            log.error(
+                { err: e, repository: commitEvent.repository.full_name },
+                "Failed applying branch protection",
             );
         }
 
@@ -118,8 +123,9 @@ export class HooksController extends Controller {
                 repoEvent.repository.owner.username,
             );
         } catch (e: any) {
-            console.error(
-                `Failed resolving the owner of ${repoEvent.repository.full_name}: ${e.message}`,
+            log.error(
+                { err: e, repository: repoEvent.repository.full_name },
+                "Failed resolving the repository owner",
             );
             return "OK (Actions Failed)";
         }
@@ -154,8 +160,9 @@ export class HooksController extends Controller {
             });
         } catch (e: any) {
             /* Processing failed; leave the repository untouched for an authorized operator to review. */
-            console.error(
-                `Failed provisioning repository ${repoEvent.repository.full_name}: ${e.message}`,
+            log.error(
+                { err: e, repository: repoEvent.repository.full_name },
+                "Failed provisioning repository",
             );
             return "OK (Actions Failed)";
         }
@@ -195,13 +202,15 @@ export class HooksController extends Controller {
             }
 
             await this.giteaClient.deleteRepository(ownerName, repository.name);
-            console.warn(
-                `Deleted personal repository ${repository.full_name}: team code belongs in a team organization`,
+            log.warn(
+                { repository: repository.full_name },
+                "Deleted personal repository: team code belongs in a team organization",
             );
             return "OK (Personal Repository Deleted)";
         } catch (e: any) {
-            console.error(
-                `Not deleting personal repository ${repoEvent.repository.full_name}: ${e.message}`,
+            log.error(
+                { err: e, repository: repoEvent.repository.full_name },
+                "Not deleting personal repository",
             );
             return "OK (Actions Failed)";
         }

@@ -21,6 +21,10 @@ import fs from "fs";
 import path from "path";
 import { getGPLv3License } from "../utils/strings";
 
+import { logger } from "../utils/logger";
+
+const log = logger.child({ module: "PlatformController" });
+
 interface PlatformLicenseResponse {
     licenseText: string;
     dependencies: { name: string; version: string }[];
@@ -53,7 +57,7 @@ export class PlatformController extends Controller {
                 }
             }
         } catch (e) {
-            console.error("Failed to read package.json", e);
+            log.error({ err: e }, "Failed to read package.json");
         }
 
         return {

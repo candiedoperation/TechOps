@@ -27,6 +27,10 @@ import { formatBindleAccessError } from "./utils/strings";
 import { ConstraintViolationException } from "@aws-sdk/client-organizations";
 import { hasAdminAuthority } from "./config";
 
+import { logger } from "./utils/logger";
+
+const log = logger.child({ module: "auth" });
+
 export async function NativeExpressOIDCAuthPort(
     req: express.Request,
     res: express.Response,
@@ -124,7 +128,7 @@ async function oidcAuthVerify(
             request.session.refreshToken
         ) {
             try {
-                console.log("Access Token Expired. Attempting Refresh...");
+                log.debug("Access token expired; attempting refresh");
                 const newTokens = await OpenIdClient.refreshAccessToken(
                     request.session.refreshToken,
                 );
@@ -139,7 +143,7 @@ async function oidcAuthVerify(
 
                 return Promise.resolve(true);
             } catch (refreshError) {
-                console.error("Token Refresh Failed:", refreshError);
+                log.error({ err: refreshError }, "Token Refresh Failed");
             }
         }
 
@@ -473,7 +477,7 @@ async function bindlesAuthVerify(
             ),
         );
     } catch (e) {
-        console.error("Bindle Permission Check Failed", e);
+        log.error({ err: e }, "Bindle Permission Check Failed");
         if (e instanceof ResourceAccessError) return Promise.reject(e);
         return Promise.reject(
             new ResourceAccessError(403, "Bindle Permission Check Failed"),

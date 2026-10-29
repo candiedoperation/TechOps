@@ -45,6 +45,10 @@ import { DiscordClient } from "../clients/DiscordClient";
 
 import type { DocumentJSON } from "../utils/types";
 
+import { logger } from "../utils/logger";
+
+const log = logger.child({ module: "EventController" });
+
 export interface GetEventListOptions {
     before?: Date;
     after?: Date;
@@ -264,10 +268,7 @@ export class EventController extends Controller {
             }
             return { status: "Success", data: event };
         } catch (error) {
-            console.error(
-                `Failed to get event data for event ${eventId}:`,
-                error,
-            );
+            log.error({ err: error, eventId }, "Failed to get event data");
             throw new ResourceAccessError(500, "Failed to fetch event data");
         }
     }
@@ -347,7 +348,10 @@ export class EventController extends Controller {
                     },
                 });
             } catch (error) {
-                console.error("Failed to send email to event invitees:", error);
+                log.error(
+                    { err: error },
+                    "Failed to send email to event invitees",
+                );
                 issues.push("Failed to send email.");
             }
         }
@@ -398,9 +402,9 @@ export class EventController extends Controller {
             });
         } catch (error) {
             issues.push("Failed to schedule 2 hour reminder.");
-            console.error(
-                `Failed to schedule 2 hour reminder for event ${event._id}:`,
-                error,
+            log.error(
+                { err: error, eventId: event._id },
+                "Failed to schedule 2 hour reminder",
             );
         }
 
@@ -434,10 +438,7 @@ export class EventController extends Controller {
         try {
             event = await Event.findOne({ _id: eventId }).exec();
         } catch (error) {
-            console.error(
-                `Failed to get event data for event ${eventId}: `,
-                error,
-            );
+            log.error({ err: error, eventId }, "Failed to get event data");
             throw new ResourceAccessError(
                 500,
                 `Failed to fetch event ${eventId}`,
@@ -494,7 +495,7 @@ export class EventController extends Controller {
                     },
                 });
             } catch (error) {
-                console.error(`Failed to get email recipients:`, error);
+                log.error({ err: error }, "Failed to get email recipients");
                 issues.push("Failed to send emails.");
             }
         }
@@ -651,7 +652,7 @@ export class EventController extends Controller {
                 });
             } catch (error) {
                 issues.push("Failed to replace notification job.");
-                console.error("Failed to re-schedule notification:", error);
+                log.error({ err: error }, "Failed to re-schedule notification");
             }
         }
 
@@ -730,7 +731,7 @@ export class EventController extends Controller {
                 },
             });
         } catch (error) {
-            console.error("Failed to send email:", error);
+            log.error({ err: error }, "Failed to send email");
             issues.push("Failed to send emails.");
         }
 
@@ -783,7 +784,7 @@ export class EventController extends Controller {
                 },
             };
         } catch (error) {
-            console.error(`Failed to get RSVPs for event ${eventId}:`, error);
+            log.error({ err: error, eventId }, "Failed to get RSVPs");
             throw new ResourceAccessError(500, "Failed to fetch RSVPs");
         }
     }
@@ -915,7 +916,7 @@ export class EventController extends Controller {
                 },
             });
         } catch (error) {
-            console.error("Failed to send confirmation email for RSVP.");
+            log.error("Failed to send confirmation email for RSVP.");
             issues.push("Failed to send confirmation email.");
         }
 
@@ -983,12 +984,12 @@ export class EventController extends Controller {
                 message,
             );
             if (!success) {
-                console.error("Failed to send slack message.");
+                log.error("Failed to send slack message.");
                 return false;
             }
             return success;
         } else {
-            console.error("Slack announcements channel not found.");
+            log.error("Slack announcements channel not found.");
             return false;
         }
     }
@@ -1008,7 +1009,7 @@ export class EventController extends Controller {
             }
             return true;
         } catch (error) {
-            console.error("Failed to send discord announcement:", error);
+            log.error({ err: error }, "Failed to send discord announcement");
             return false;
         }
     }

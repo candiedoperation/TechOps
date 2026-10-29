@@ -43,6 +43,10 @@ import { signAvatarUrl } from "../utils/avatars";
 import { executiveAuthVerify } from "../auth";
 import { describeUnknownError } from "../utils/errors";
 
+import { logger } from "../utils/logger";
+
+const log = logger.child({ module: "AuthController" });
+
 export interface CorpUserInfoResponse extends UserInfoResponse {
     avatar: string;
     isExecutive: boolean;
@@ -255,7 +259,7 @@ export class AuthController extends Controller {
             /* Case 3: Default */
             return res.redirect(302, "/");
         } catch (e) {
-            console.log(e);
+            log.error({ err: e }, "handleRedirect failed");
             throw e;
         }
     }
@@ -443,9 +447,9 @@ export class AuthController extends Controller {
                         teamName =
                             teamInfo.attributes?.friendlyName || teamInfo.name;
                     } catch (e) {
-                        console.error(
-                            `Failed to fetch team info for ${app.teamPk}`,
-                            e,
+                        log.error(
+                            { err: e, teamPk: app.teamPk },
+                            "Failed to fetch team info",
                         );
                     }
 
@@ -462,9 +466,9 @@ export class AuthController extends Controller {
                                     subteamInfo.attributes?.friendlyName ||
                                     subteamInfo.name;
                             } catch (e) {
-                                console.error(
-                                    `Failed to fetch subteam info for ${pref.subteamPk}`,
-                                    e,
+                                log.error(
+                                    { err: e, subteamPk: pref.subteamPk },
+                                    "Failed to fetch subteam info",
                                 );
                             }
                             return { ...pref, subteamName };
@@ -529,9 +533,9 @@ export class AuthController extends Controller {
         } catch (e: unknown) {
             /* A provider problem must not strand the user in a logged-in
                session: fall through to the local logout below. */
-            console.error(
-                "Failed building provider logout URL:",
-                describeUnknownError(e),
+            log.error(
+                { err: describeUnknownError(e) },
+                "Failed building provider logout URL",
             );
         }
 
