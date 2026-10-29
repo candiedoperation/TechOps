@@ -39,6 +39,7 @@ A present-but-empty value counts as missing.
 |---|---|
 | `NODE_ENV` | `development`, `test` or `production`. Anything else throws. Default `development` |
 | `PORT` | Listen port. Default `3000` |
+| `LOG_LEVEL` | `trace`, `debug`, `info`, `warn`, `error`, `fatal` or `silent`. Default `info` (`silent` under `NODE_ENV=test`). Production logs one JSON object per line; other environments get readable output. Every line written during a request carries its `requestId` and `userId` |
 | `PEOPLEPORTAL_BASE_URL` | Public origin. Builds the OIDC redirect and post-logout URLs |
 | `PEOPLEPORTAL_WEBHOOK_URL` | Origin Gitea calls back on. Usually the same as above |
 | `PEOPLEPORTAL_MONGO_URL` | MongoDB connection string |
