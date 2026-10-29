@@ -118,6 +118,10 @@ import { IUserReview, UserReview } from "../models/UserReview";
 
 import type { DocumentJSON } from "../utils/types";
 
+import { logger, errorMap } from "../utils/logger";
+
+const log = logger.child({ module: "OrgController" });
+
 export interface EnabledRootSettings {
     [key: string]: boolean;
 }
@@ -505,7 +509,7 @@ export class OrgController extends Controller {
                 userInfo.username,
             );
         } catch (e) {
-            console.error(e);
+            log.error({ err: e }, "getReview failed");
             throw new ResourceAccessError(
                 500,
                 "Failed to get user team membership",
@@ -528,7 +532,7 @@ export class OrgController extends Controller {
                 .exec();
             return { review: review };
         } catch (e) {
-            console.error(e);
+            log.error({ err: e }, "getReview failed");
             throw new ResourceAccessError(500, "Failed to fetch review");
         }
     }
@@ -721,7 +725,7 @@ export class OrgController extends Controller {
                 userInfo.username,
             );
         } catch (e) {
-            console.error(e);
+            log.error({ err: e }, "writeReview failed");
             throw new ResourceAccessError(
                 500,
                 "Failed to get user team membership",
@@ -748,7 +752,7 @@ export class OrgController extends Controller {
                 throw new CustomValidationError(400, "Review already created.");
             }
         } catch (e) {
-            console.error(e);
+            log.error({ err: e }, "writeReview failed");
             if (e instanceof CustomValidationError) {
                 throw e;
             }
@@ -767,7 +771,7 @@ export class OrgController extends Controller {
             if (e instanceof Error.ValidationError) {
                 throw new CustomValidationError(400, `Invalid Review: ${e}`);
             }
-            console.error(e);
+            log.error({ err: e }, "writeReview failed");
             throw new ResourceAccessError(500, "Failed to create review");
         }
 
@@ -1112,7 +1116,7 @@ export class OrgController extends Controller {
                             }),
                         );
                     } catch (e) {
-                        console.error("Failed to delete old avatar", e);
+                        log.error({ err: e }, "Failed to delete old avatar");
                     }
                 }
 
@@ -1124,14 +1128,14 @@ export class OrgController extends Controller {
                         }),
                     );
                 } catch (e) {
-                    console.error(
+                    log.error(
+                        { err: e },
                         "Failed to delete temp avatar after commit",
-                        e,
                     );
                 }
             } catch (e) {
                 if (e instanceof CustomValidationError) throw e;
-                console.error("Failed to process avatar update", e);
+                log.error({ err: e }, "Failed to process avatar update");
                 throw new CustomValidationError(
                     500,
                     "Failed to update avatar.",
@@ -1509,7 +1513,7 @@ export class OrgController extends Controller {
                             return ownerNode;
                         }
                     } catch (e) {
-                        // console.error(`Failed to process team ${team.name}`, e);
+                        // log.error({ err: e, team: team.name }, "Failed to process team");
                     }
                 }),
             );
@@ -2068,7 +2072,7 @@ export class OrgController extends Controller {
                     allowedAvatars,
                 );
                 if (!isValid) {
-                    console.error(
+                    log.error(
                         "Profile picture was not valid. Account created anyway.",
                     );
                     await deleteTempAvatar(req.avatarKey);
@@ -2078,7 +2082,7 @@ export class OrgController extends Controller {
 
                 const imageBytes = await getS3ObjectBytes(req.avatarKey);
                 if (!imageBytes) {
-                    console.error(
+                    log.error(
                         "Failed to fetch avatar bytes. Account created anyway.",
                     );
                     await deleteTempAvatar(req.avatarKey);
@@ -2088,7 +2092,7 @@ export class OrgController extends Controller {
 
                 const faceCheckResult = await checkPhotoHasFace(imageBytes);
                 if (faceCheckResult.passed === false) {
-                    console.error(
+                    log.error(
                         "Avatar failed face check. Account created anyway.",
                     );
                     await deleteTempAvatar(req.avatarKey);
@@ -2123,7 +2127,7 @@ export class OrgController extends Controller {
                 );
             } catch (e) {
                 // Don't fail the whole request, just log error. User is created.
-                console.error("Failed to process avatar", e);
+                log.error({ err: e }, "Failed to process avatar");
             }
         }
 
@@ -2828,7 +2832,11 @@ export class OrgController extends Controller {
         }
 
         /* Write All the Errors during the Process... */
-        console.log(errors);
+        if (errors.size > 0)
+            log.warn(
+                { errors: errorMap(errors) },
+                "Shared resource sync finished with errors",
+            );
         res.end();
     }
 
@@ -2993,9 +3001,9 @@ export class OrgController extends Controller {
         }
 
         if (errors.size > 0)
-            console.error(
-                "[OrgController] Archive completed with errors:",
-                errors,
+            log.error(
+                { errors: errorMap(errors) },
+                "Archive completed with errors",
             );
 
         /* 3. Stamp the team as archived */
