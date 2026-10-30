@@ -39,7 +39,11 @@ done
 AUTHZ="Authorization: Bearer ${AK_TOKEN}"
 CT="Content-Type: application/json"
 
-api() { curl -s -H "$AUTHZ" -H "$CT" "$@"; }
+# -f makes curl exit non-zero on 4xx/5xx instead of silently returning the
+# error body with exit 0. Without it, a failed write (e.g. a slug conflict)
+# looked identical to success and the script kept "creating" orphaned
+# providers every run instead of failing loudly.
+api() { curl -sf -H "$AUTHZ" -H "$CT" "$@"; }
 pick() { python3 -c "import sys,json;d=json.load(sys.stdin);r=d.get('results',[d]);print(r[0]['$1'] if r else '')"; }
 
 echo "==> authentik at $AK, app base url $BASE_URL"
@@ -100,7 +104,23 @@ print(json.dumps({
 PY
 )
 
-PROV=$(api "$AK/api/v3/providers/oauth2/?name=people-portal" | pick pk)
+# Look this up by the application's slug, not by filtering providers on
+# name. The provider that already backs the "people-portal" application here
+# is literally named "Provider for People Portal" (created by hand, or by an
+# older version of this script, before it settled on naming providers after
+# the app slug) -- a `?name=people-portal` filter never matches it. That
+# silently sent every run down the "create" branch instead, and because our
+# curl calls didn't check HTTP status, the follow-up POST that tried to
+# create a second application with the same (unique) slug failed invisibly,
+# leaving behind an orphaned provider with no application every time.
+APP=$(api "$AK/api/v3/core/applications/people-portal/" 2>/dev/null) || APP=""
+PROV=$(printf '%s' "$APP" | python3 -c "
+import sys, json
+try:
+    print(json.load(sys.stdin)['provider'])
+except Exception:
+    pass
+")
 if [ -z "$PROV" ]; then
   PROV=$(api -X POST "$AK/api/v3/providers/oauth2/" -d "$BODY" | pick pk)
   api -X POST "$AK/api/v3/core/applications/" \

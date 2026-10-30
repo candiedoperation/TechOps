@@ -79,6 +79,20 @@
         "command": "tsx scripts/seed.ts",
         "cwd": "{projectRoot}"
       }
+    },
+    "seed-ats": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx scripts/seed-ats-applicants.ts",
+        "cwd": "{projectRoot}"
+      }
+    },
+    "test-ats-concurrency": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsx scripts/test-ats-stage-concurrency.ts",
+        "cwd": "{projectRoot}"
+      }
     }
   }
 }

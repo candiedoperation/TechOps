@@ -404,7 +404,7 @@ export class ATSController extends Controller {
      * a distributed lock is not worth its failure modes here.
      */
     private static openTeamsRefreshInFlight = false;
-
+    
     private refreshOpenTeamsInBackground() {
         if (ATSController.openTeamsRefreshInFlight) return;
         ATSController.openTeamsRefreshInFlight = true;
