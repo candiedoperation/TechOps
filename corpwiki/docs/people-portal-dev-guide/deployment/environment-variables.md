@@ -6,10 +6,23 @@ sidebar_position: 3
 
 Every variable the People Portal server reads, grouped by what it configures.
 
-Loading is layered, lowest priority first, in `src/config/environment.ts`:
-`.env`, then `.env.<NODE_ENV>`, then `.env.<NODE_ENV>.local`. Anything already in
-the real process environment always wins, so container and CI values are never
-clobbered by a stray file.
+`src/config/environment.ts` reads `.env`, then `.env.<NODE_ENV>`, then
+`.env.<NODE_ENV>.local`. The first value found wins because the loader uses
+`override: false`. Anything already in the real process environment always wins.
+
+For local development, run `peopleportal/dev-stack/scripts/up.sh --write-env`
+to create `peopleportal/server/.env.development` only if absent. It also prints
+the exact block for a server `.env`. Existing env files are never overwritten;
+an older `.env` can shadow these generated development values. See
+[Local Development](./local-development.md).
+
+The dev stack uses `PORTAL_PORT=3000` and `WEBUI_PORT=5173` by default.
+For alternate ports, its env renderer emits `PP_DEV_PORTAL_PORT` and/or
+`PP_DEV_WEBUI_PORT` only for changed values. `--write-env` creates the UI
+overrides in `peopleportal/webui/.env.development.local` if absent. These
+variables configure Vite, not the server. Existing env files are preserved;
+remove stale overrides when returning to defaults. See the local development
+guide for every backing-service port variable and the override procedure.
 
 :::warning Required in production
 Outside development and test, the server refuses to start unless all of these are
@@ -46,6 +59,11 @@ ephemeral one and warns, so sessions do not survive a restart.
 | `PEOPLEPORTAL_OIDC_CLIENTID` | Client id from the Authentik provider |
 | `PEOPLEPORTAL_OIDC_CLIENTSECRET` | Client secret |
 
+The dev stack uses `http://localhost:9000` for Authentik and
+`http://localhost:9000/application/o/people-portal/.well-known/openid-configuration`
+for discovery. It generates the admin token and separate portal/Gitea clients;
+no TLS verification override is needed for local HTTP.
+
 The app requests `openid profile email people_portal offline_access`, and reads
 `pk`, `is_superuser` and `attributes` from the custom scope. See
 [OpenID Provider Configuration](./oidc-provider-config.md) for the provider side,
@@ -58,6 +76,10 @@ including what logout needs.
 | `PEOPLEPORTAL_GITEA_ENDPOINT` | Gitea base URL |
 | `PEOPLEPORTAL_GITEA_TOKEN` | Admin token. Needs `write:admin` for system webhooks |
 | `PEOPLEPORTAL_GITEA_WEBHOOK_SECRET` | Shared secret. **Minimum 32 characters** |
+
+The dev stack uses `http://localhost:3001` for Gitea. Its generated webhook
+origin is `http://host.docker.internal:3000`, so container callbacks reach the
+host server on Linux and macOS.
 
 The webhook secret is not optional once Gitea is enabled. `GiteaHookSetup` builds
 the `Authorization: Bearer` header from it before creating either hook, and throws
@@ -88,7 +110,7 @@ requested separately from `users:read` and is easy to miss.
 | Variable | Notes |
 |---|---|
 | `PEOPLEPORTAL_SMTP_HOST` | SMTP server |
-| `PEOPLEPORTAL_SMTP_PORT` | `465` for SSL, `587` for STARTTLS |
+| `PEOPLEPORTAL_SMTP_PORT` | `465` for SSL, `587` for STARTTLS; dev-stack Mailpit uses `1025` |
 | `PEOPLEPORTAL_SMTP_SECURE` | `true` or `false` |
 | `PEOPLEPORTAL_SMTP_USER` | SMTP username |
 | `PEOPLEPORTAL_SMTP_PASS` | SMTP password |
@@ -98,6 +120,10 @@ requested separately from `users:read` and is easy to miss.
 `PEOPLEPORTAL_SMTP_DEFAULTFROM` is the From fallback, not `PEOPLEPORTAL_SMTP_USER`.
 Set `PEOPLEPORTAL_EMAIL_CONREROUTE` on any environment seeded with real member
 addresses, or onboarding mail reaches real people.
+
+The dev stack sets SMTP to `127.0.0.1:1025`, `SECURE=false`, with development
+credentials accepted by Mailpit. Messages stay in the local inbox at
+`http://localhost:8025` without external delivery.
 
 ## Photo check
 
@@ -144,6 +170,19 @@ the role assumed for console links, so changing it breaks console access for
 accounts created under the old name.
 
 Policy documents live in `peopleportal/server/aws/`.
+
+The local dev environment includes no S3 object storage service. Resume/avatar
+uploads will fail until a local S3 option is added. Garage, SeaweedFS and
+versitygw are candidates for a follow-up; no replacement has been selected.
+The stack keeps S3 settings as
+placeholders: S3_BUCKET_NAME=people-portal, S3_ENDPOINT=http://s3.example.invalid,
+S3_FORCE_PATH_STYLE=true, and dummy AWS access/secret values. That placeholder
+endpoint is deliberately nonfunctional. The current server ignores
+endpoint/path-style settings
+and AWS_ENABLED=false. Dummy organization IDs satisfy startup checks only.
+AWS provisioning and uploads are unsupported locally. This stack changes no
+server S3/AWS behavior. verify.sh prints a NOTE for this known gap and verifies
+only the included backing services.
 
 ## Node
 

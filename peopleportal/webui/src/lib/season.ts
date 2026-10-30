@@ -25,7 +25,10 @@ export type TeamLifecycle = "active" | "expired" | "archived";
 
 /** The season containing `now`, defaulting to the present moment. */
 export function currentSeason(now: Date = new Date()): Season {
-    return { type: now.getMonth() >= 7 ? "FALL" : "SPRING", year: now.getFullYear() };
+    return {
+        type: now.getMonth() >= 7 ? "FALL" : "SPRING",
+        year: now.getFullYear(),
+    };
 }
 
 /**
@@ -51,7 +54,10 @@ export function isExpired(team: SeasonedTeam, now: Date = new Date()): boolean {
  * Which of the three Archive Teams buckets a team belongs to. Explicit
  * archival wins over season, so archiving an old team moves it out of Expired.
  */
-export function teamLifecycle(team: SeasonedTeam, now: Date = new Date()): TeamLifecycle {
+export function teamLifecycle(
+    team: SeasonedTeam,
+    now: Date = new Date(),
+): TeamLifecycle {
     if (team.archivedAt) return "archived";
     return isExpired(team, now) ? "expired" : "active";
 }
@@ -59,9 +65,13 @@ export function teamLifecycle(team: SeasonedTeam, now: Date = new Date()): TeamL
 /** Splits teams into the three buckets, preserving input order within each. */
 export function partitionByLifecycle<T extends SeasonedTeam>(
     teams: T[],
-    now: Date = new Date()
+    now: Date = new Date(),
 ): Record<TeamLifecycle, T[]> {
-    const buckets: Record<TeamLifecycle, T[]> = { active: [], expired: [], archived: [] };
+    const buckets: Record<TeamLifecycle, T[]> = {
+        active: [],
+        expired: [],
+        archived: [],
+    };
     for (const team of teams) buckets[teamLifecycle(team, now)].push(team);
     return buckets;
 }

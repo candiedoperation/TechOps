@@ -16,10 +16,11 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
-export type DeepPartial<T> = T extends object ? {
-  [P in keyof T]?: DeepPartial<T[P]>;
-} : T;
+export type DeepPartial<T> = T extends object
+    ? {
+          [P in keyof T]?: DeepPartial<T[P]>;
+      }
+    : T;
 
 import type { FlattenMaps, Types } from "mongoose";
 
@@ -27,4 +28,5 @@ import type { FlattenMaps, Types } from "mongoose";
  * The shape a Mongoose document takes after .lean()/.toJSON().
  * Shared so tsoa sees a single model definition across controllers.
  */
-export type DocumentJSON<T> = FlattenMaps<T> & Required<{ _id: Types.ObjectId }> & { __v: number };
+export type DocumentJSON<T> = FlattenMaps<T> &
+    Required<{ _id: Types.ObjectId }> & { __v: number };

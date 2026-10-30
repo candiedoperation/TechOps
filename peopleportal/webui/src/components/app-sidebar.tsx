@@ -16,8 +16,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Link } from "react-router-dom"
-import * as React from "react"
+import { Link } from "react-router-dom";
+import * as React from "react";
 import {
     ArchiveIcon,
     LayoutListIcon,
@@ -34,10 +34,10 @@ import {
     TicketIcon,
     Users,
     UsersRoundIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/nav-main";
+import { NavUser } from "@/components/nav-user";
 import {
     Sidebar,
     SidebarContent,
@@ -46,9 +46,9 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import logo from "../assets/logo.svg"
-import type { CorpUserInfo } from "@/pages/CorpDashboard"
+} from "@/components/ui/sidebar";
+import logo from "../assets/logo.svg";
+import type { CorpUserInfo } from "@/pages/CorpDashboard";
 
 const buildNavMain = (isExecutive: boolean) => {
     const sections = [
@@ -58,7 +58,11 @@ const buildNavMain = (isExecutive: boolean) => {
             icon: Building2,
             isActive: true,
             items: [
-                { icon: PersonStandingIcon, title: "People", url: "/org/people" },
+                {
+                    icon: PersonStandingIcon,
+                    title: "People",
+                    url: "/org/people",
+                },
                 { icon: UsersRoundIcon, title: "Teams", url: "/org/teams" },
                 { icon: NetworkIcon, title: "Org Chart", url: "/org/orgchart" },
             ],
@@ -68,8 +72,16 @@ const buildNavMain = (isExecutive: boolean) => {
             url: "#",
             icon: Terminal,
             items: [
-                { icon: FolderGit2Icon, title: "Source Code Repository", url: "https://git.appdevclub.com" },
-                { icon: FingerprintIcon, title: "Identity Management Portal", url: "https://auth.appdevclub.com" },
+                {
+                    icon: FolderGit2Icon,
+                    title: "Source Code Repository",
+                    url: "https://git.appdevclub.com",
+                },
+                {
+                    icon: FingerprintIcon,
+                    title: "Identity Management Portal",
+                    url: "https://auth.appdevclub.com",
+                },
             ],
         },
         {
@@ -85,11 +97,19 @@ const buildNavMain = (isExecutive: boolean) => {
             url: "#",
             icon: BookOpen,
             items: [
-                { icon: ScaleIcon, title: "Licensing", url: "/platform/license" },
-                { icon: LifeBuoyIcon, title: "Support Docs", url: "https://wiki.appdevclub.com/people-portal-user-guide/intro" },
+                {
+                    icon: ScaleIcon,
+                    title: "Licensing",
+                    url: "/platform/license",
+                },
+                {
+                    icon: LifeBuoyIcon,
+                    title: "Support Docs",
+                    url: "https://wiki.appdevclub.com/people-portal-user-guide/intro",
+                },
             ],
         },
-    ]
+    ];
 
     if (isExecutive) {
         sections.push({
@@ -97,16 +117,26 @@ const buildNavMain = (isExecutive: boolean) => {
             url: "#",
             icon: CrownIcon,
             items: [
-                { icon: LayoutListIcon, title: "Active Teams", url: "/exec/active-teams" },
-                { icon: ArchiveIcon, title: "Archive Teams", url: "/exec/archive-teams" },
+                {
+                    icon: LayoutListIcon,
+                    title: "Active Teams",
+                    url: "/exec/active-teams",
+                },
+                {
+                    icon: ArchiveIcon,
+                    title: "Archive Teams",
+                    url: "/exec/archive-teams",
+                },
             ],
-        })
+        });
     }
 
-    return sections
-}
+    return sections;
+};
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar> & { userInfo: CorpUserInfo }) {
+export function AppSidebar({
+    ...props
+}: React.ComponentProps<typeof Sidebar> & { userInfo: CorpUserInfo }) {
     return (
         <Sidebar variant="inset" {...props}>
             <SidebarHeader>
@@ -118,8 +148,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar> & 
                                     <img src={logo} alt="ADC Logo" />
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-medium">App Dev Club</span>
-                                    <span className="truncate text-xs">People Portal Platform</span>
+                                    <span className="truncate font-medium">
+                                        App Dev Club
+                                    </span>
+                                    <span className="truncate text-xs">
+                                        People Portal Platform
+                                    </span>
                                 </div>
                             </Link>
                         </SidebarMenuButton>
@@ -130,14 +164,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar> & 
                 <NavMain items={buildNavMain(props.userInfo.isExecutive)} />
             </SidebarContent>
             <SidebarFooter>
-                <NavUser user={{
-                    pk: props.userInfo.pk,
-                    name: props.userInfo.name,
-                    email: props.userInfo.email,
-                    avatar: props.userInfo.avatar,
-                    pk : props.userInfo.pk
-                }} />
+                <NavUser
+                    user={{
+                        pk: props.userInfo.pk,
+                        name: props.userInfo.name,
+                        email: props.userInfo.email,
+                        avatar: props.userInfo.avatar,
+                        pk: props.userInfo.pk,
+                    }}
+                />
             </SidebarFooter>
         </Sidebar>
-    )
+    );
 }

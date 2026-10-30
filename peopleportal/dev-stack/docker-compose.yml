@@ -1,0 +1,195 @@
+# Local backing services. Application server and UI run through Nx on the host.
+# scripts/up.sh bootstraps this project before printing the portal environment.
+name: ${COMPOSE_PROJECT_NAME:-peopleportal-dev}
+
+x-authentik-environment: &authentik-environment
+  AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?run scripts/gen-env.sh}
+  AUTHENTIK_POSTGRESQL__HOST: postgres
+  AUTHENTIK_POSTGRESQL__NAME: authentik
+  AUTHENTIK_POSTGRESQL__USER: authentik
+  AUTHENTIK_POSTGRESQL__PASSWORD: ${POSTGRES_PASSWORD:?run scripts/gen-env.sh}
+  AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
+  AUTHENTIK_EMAIL__HOST: mailpit
+  AUTHENTIK_EMAIL__PORT: "1025"
+  AUTHENTIK_EMAIL__USE_TLS: "false"
+  AUTHENTIK_EMAIL__USE_SSL: "false"
+  AUTHENTIK_EMAIL__FROM: authentik@example.invalid
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run scripts/gen-env.sh}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:2026.5.2
+    restart: unless-stopped
+    command: server
+    environment: *authentik-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${AUTHENTIK_PORT:-9000}:9000"
+    volumes:
+      - authentik-media:/media
+    healthcheck:
+      test: [CMD, ak, healthcheck]
+      interval: 10s
+      timeout: 10s
+      retries: 60
+      start_period: 60s
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:2026.5.2
+    restart: unless-stopped
+    command: worker
+    environment:
+      <<: *authentik-environment
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD:?run scripts/gen-env.sh}
+      AUTHENTIK_BOOTSTRAP_TOKEN: ${AUTHENTIK_BOOTSTRAP_TOKEN:?run scripts/gen-env.sh}
+      AUTHENTIK_BOOTSTRAP_EMAIL: ${AUTHENTIK_BOOTSTRAP_EMAIL}
+      PORTAL_BASE_URL: ${PORTAL_BASE_URL:?run scripts/gen-env.sh}
+      GITEA_URL: ${GITEA_URL:?run scripts/gen-env.sh}
+      PORTAL_OIDC_CLIENT_ID: ${PORTAL_OIDC_CLIENT_ID}
+      PORTAL_OIDC_CLIENT_SECRET: ${PORTAL_OIDC_CLIENT_SECRET:?run scripts/gen-env.sh}
+      GITEA_OIDC_CLIENT_ID: ${GITEA_OIDC_CLIENT_ID}
+      GITEA_OIDC_CLIENT_SECRET: ${GITEA_OIDC_CLIENT_SECRET:?run scripts/gen-env.sh}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - authentik-media:/media
+      - ./blueprints:/blueprints/custom:ro
+    healthcheck:
+      test: [CMD, ak, healthcheck]
+      interval: 10s
+      timeout: 10s
+      retries: 60
+      start_period: 60s
+
+  gitea:
+    image: docker.gitea.com/gitea:1.24.3
+    restart: unless-stopped
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__database__PATH: /data/gitea/gitea.db
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__server__DOMAIN: ${PUBLIC_HOST:-localhost}
+      GITEA__server__ROOT_URL: ${GITEA_URL:?run scripts/gen-env.sh}/
+      GITEA__server__SSH_DOMAIN: ${PUBLIC_HOST:-localhost}
+      GITEA__server__SSH_PORT: ${GITEA_SSH_PORT:-2222}
+      GITEA__service__DISABLE_REGISTRATION: "true"
+      GITEA__service__ALLOW_ONLY_EXTERNAL_REGISTRATION: "true"
+      GITEA__oauth2_client__ENABLE_AUTO_REGISTRATION: "true"
+      GITEA__webhook__ALLOWED_HOST_LIST: host.docker.internal,${PUBLIC_HOST:-localhost}
+      GITEA__mailer__ENABLED: "true"
+      GITEA__mailer__PROTOCOL: smtp
+      GITEA__mailer__SMTP_ADDR: mailpit
+      GITEA__mailer__SMTP_PORT: "1025"
+      GITEA__mailer__FROM: gitea@example.invalid
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${GITEA_PORT:-3001}:3000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${GITEA_SSH_PORT:-2222}:22"
+    extra_hosts:
+      # OIDC loopback bridge below resolves the public host within Gitea.
+      - "${PUBLIC_HOST:-localhost}:127.0.0.1"
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - gitea:/data
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:3000/api/healthz]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo:/data/db
+      - mongo-config:/data/configdb
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, "yes"]
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.27.8
+    restart: unless-stopped
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${MAILPIT_PORT:-8025}:8025"
+      - "${BIND_ADDRESS:-127.0.0.1}:${SMTP_PORT:-1025}:1025"
+    volumes:
+      - mailpit:/data
+    healthcheck:
+      test: [CMD, /mailpit, readyz]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # Gitea must reach the same OIDC URLs as the browser. In its network namespace,
+  # localhost otherwise means Gitea itself. This tiny proxy forwards OIDC only,
+  # preserving Host so authentik advertises browser-reachable public endpoints.
+  # Reuses the pinned image's Python; no host runtime or extra image is needed.
+  gitea-oidc:
+    image: ghcr.io/goauthentik/server:2026.5.2
+    restart: unless-stopped
+    network_mode: service:gitea
+    entrypoint: [python, /scripts/oidc-bridge.py]
+    environment:
+      AUTHENTIK_PORT: ${AUTHENTIK_PORT:-9000}
+    volumes:
+      - ./scripts/oidc-bridge.py:/scripts/oidc-bridge.py:ro
+    depends_on:
+      gitea:
+        condition: service_healthy
+      authentik-server:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['AUTHENTIK_PORT'] + '/health', timeout=4)"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  postgres:
+  authentik-media:
+  gitea:
+  mongo:
+  mongo-config:
+  redis:
+  mailpit:

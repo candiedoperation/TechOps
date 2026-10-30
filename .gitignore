@@ -1,4 +1,7 @@
-.nx/installation
+# Nx wrapper install dir: ignore node_modules etc., but commit the lockfile so
+# ./nx installs deterministically (nxw.js runs `npm i` here with no lock otherwise).
+.nx/installation/*
+!.nx/installation/package-lock.json
 .nx/cache
 .nx/workspace-data
 .nx/self-healing

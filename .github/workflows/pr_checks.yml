@@ -1,0 +1,78 @@
+name: People Portal PR Checks
+
+on:
+  pull_request:
+    branches: ["master"]
+    paths:
+      - "peopleportal/**"
+      - ".nx/**"
+      - "nx.json"
+      - "nx"
+      - ".prettierrc"
+      - ".prettierignore"
+      - ".github/workflows/pr_checks.yml"
+
+  workflow_dispatch:
+
+concurrency:
+  group: "pr-checks-${{ github.ref }}"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# The three jobs run in parallel so the PR gets every result as fast as possible.
+jobs:
+  format:
+    name: Format (Prettier)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Keep in sync with the other jobs and deploy_peopleportal.yml
+
+      - name: Check formatting
+        # Prettier is pinned so a new release cannot change the output underneath us.
+        # Run `npx prettier@3.9.10 --write peopleportal/webui/src peopleportal/server/src` to fix failures.
+        run: npx --yes prettier@3.9.10 --check peopleportal/webui/src peopleportal/server/src
+
+  build:
+    name: Build (Nx)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20" # Keep in sync with the other jobs and deploy_peopleportal.yml
+
+      - name: Build with Nx
+        # Same build the deploy workflow runs, so a PR that cannot build fails before it merges
+        run: ./nx run-many -t build -p pplserver pplui
+
+  test:
+    name: Test (Nx)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # Node 22, not 20: the server test script passes a glob to `node --test`, which Node 20
+          # does not expand, and express-handlebars requires Node >=22.15.
+          node-version: "22"
+
+      - name: Run tests
+        # The test targets depend on the build, so Nx builds first inside this job.
+        # Integration tests (pplserver:test-integration) are left out: they need Mongo/Redis.
+        run: |
+          ./nx run pplserver:test-unit
+          ./nx run pplui:test

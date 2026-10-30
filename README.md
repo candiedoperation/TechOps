@@ -27,6 +27,31 @@ Scaffolding and initial architecture for the new App Dev **Horizon** project. Th
 
 ---
 
+## Quick start for contributors
+
+For People Portal, install Docker with Compose v2.20+, Bash, curl, OpenSSL and
+Python 3.9+, plus Node.js 22.12+ and npm for the application. Windows contributors
+need WSL2 with Docker integration. From a fresh clone:
+
+```bash
+cd peopleportal/dev-stack
+./scripts/up.sh --write-env
+cd ../..
+./nx serve pplserver
+# In a second terminal, from the repo root:
+./nx serve pplui
+```
+
+Open <http://localhost:5173> and log in as `akadmin` using
+`AUTHENTIK_BOOTSTRAP_PASSWORD` from the generated `peopleportal/dev-stack/.env`.
+Mail lands in [Mailpit](http://localhost:8025). The stack also provides Gitea,
+MongoDB and Redis. S3 object storage is not included; resume/avatar uploads
+will fail until a local S3 option is added. Garage, SeaweedFS and versitygw are
+candidates for a follow-up; no replacement has been selected. S3 env variables
+remain placeholders.
+AWS provisioning is also unsupported locally; see the [dev-stack README](./peopleportal/dev-stack/README.md) and
+[local development guide](./corpwiki/docs/people-portal-dev-guide/deployment/local-development.md).
+
 ## Workflows & CI/CD
 
 We rely on GitHub Actions and Nx's powerful task running capabilities to automate our development lifecycle. The available workflows include:

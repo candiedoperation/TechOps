@@ -9,7 +9,7 @@ import appconfig from './src/appconfig';
 
 const config: Config = {
   title: 'App Dev Wiki',
-  tagline: 'Dinosaurs are cool',
+  tagline: 'Documentation, guides and technical resources for App Dev Club',
   favicon: appconfig.logo,
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -20,10 +20,8 @@ const config: Config = {
   url: 'https://wiki.appdevclub.com',
   baseUrl: '/',
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'candiedoperation', // Usually your GitHub org/user name.
-  projectName: 'AppDev-CorpWiki', // Usually your repo name.
+  organizationName: 'candiedoperation',
+  projectName: 'TechOps',
   onBrokenLinks: 'throw',
 
   // Even if you don't use internationalization, you can use this field to set
@@ -80,7 +78,7 @@ const config: Config = {
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/candiedoperation/AppDev-CorpWiki/tree/master/',
+            'https://github.com/candiedoperation/TechOps/edit/master/corpwiki/',
         },
 
         blog: false,

@@ -12,7 +12,7 @@ Axios: added for making requests to backend
 - Any known issues
 - If feature has complicated implementation that has not been discussed, overview of functionality
 
-Before making a PR, always merge main into your branch prior and test, it is the individual
-developer’s responsibility to stay up to date with main and deal with merge conflicts with their
+Before making a PR, always merge `master` into your branch prior and test, it is the individual
+developer’s responsibility to stay up to date with `master` and deal with merge conflicts with their
 features.
 

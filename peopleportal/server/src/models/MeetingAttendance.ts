@@ -16,10 +16,10 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document } from "mongoose";
 
 /** Whether an attendee is expected at the meeting or merely invited */
-export type AttendanceRole = 'required' | 'optional';
+export type AttendanceRole = "required" | "optional";
 
 /**
  * One row of the attendance relation: links a single person (Authentik user PK)
@@ -44,18 +44,24 @@ export interface IMeetingAttendance extends Document {
     updatedAt: Date;
 }
 
-const MeetingAttendanceSchema = new Schema<IMeetingAttendance>({
-    meetingId: { type: String, required: true, index: true },
-    teamPk:    { type: String, required: true, index: true },
-    seriesId:  { type: String, required: true, index: true },
-    userPk:    { type: Number, required: true, index: true },
-    role:      { type: String, enum: ['required', 'optional'], required: true },
-    present:   { type: Boolean, default: false },
-    markedBy:  { type: Number, default: null },
-    markedAt:  { type: Date, default: null },
-}, { timestamps: true });
+const MeetingAttendanceSchema = new Schema<IMeetingAttendance>(
+    {
+        meetingId: { type: String, required: true, index: true },
+        teamPk: { type: String, required: true, index: true },
+        seriesId: { type: String, required: true, index: true },
+        userPk: { type: Number, required: true, index: true },
+        role: { type: String, enum: ["required", "optional"], required: true },
+        present: { type: Boolean, default: false },
+        markedBy: { type: Number, default: null },
+        markedAt: { type: Date, default: null },
+    },
+    { timestamps: true },
+);
 
 /* A person can appear at most once on a given meeting occurrence. */
 MeetingAttendanceSchema.index({ meetingId: 1, userPk: 1 }, { unique: true });
 
-export const MeetingAttendance = model<IMeetingAttendance>('MeetingAttendance', MeetingAttendanceSchema);
+export const MeetingAttendance = model<IMeetingAttendance>(
+    "MeetingAttendance",
+    MeetingAttendanceSchema,
+);

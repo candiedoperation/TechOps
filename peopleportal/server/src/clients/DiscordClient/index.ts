@@ -16,11 +16,15 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Client, Events, GatewayIntentBits, GuildBasedChannel } from 'discord.js'
-import { SharedResourceClient } from '..';
-import { BindlePermissionMap } from '../../controllers/BindleController';
-import { GetGroupInfoResponse } from '../AuthentikClient/models';
-
+import {
+    Client,
+    Events,
+    GatewayIntentBits,
+    GuildBasedChannel,
+} from "discord.js";
+import { SharedResourceClient } from "..";
+import { BindlePermissionMap } from "../../controllers/BindleController";
+import { GetGroupInfoResponse } from "../AuthentikClient/models";
 
 export class DiscordClient implements SharedResourceClient {
     private static readonly TAG = "DiscordClient";
@@ -62,21 +66,25 @@ export class DiscordClient implements SharedResourceClient {
             this.enabled = false;
             this.discordClient = null;
             console.warn(
-                `${DiscordClient.TAG}: ${missing.join(" and ")} not set; Discord integration disabled.`
+                `${DiscordClient.TAG}: ${missing.join(" and ")} not set; Discord integration disabled.`,
             );
             return;
         }
 
         this.enabled = true;
         this.discordClient = new Client({ intents: DiscordClient.INTENTS });
-        this.discordClient.on(Events.ClientReady, () => this.isReady = true);
+        this.discordClient.on(Events.ClientReady, () => (this.isReady = true));
         /* login() is async and rejects on a bad/expired token. Unhandled, that
            rejection killed the process at import time, before Express ever
            listened, turning a Discord credential problem into a full outage.
            Degrade to a disabled Discord integration instead. */
-        this.discordClient.login(process.env.PEOPLEPORTAL_DISCORD_BOT_TOKEN)
+        this.discordClient
+            .login(process.env.PEOPLEPORTAL_DISCORD_BOT_TOKEN)
             .catch((e) => {
-                console.error("DiscordClient: login failed, Discord integration disabled:", e?.message ?? e);
+                console.error(
+                    "DiscordClient: login failed, Discord integration disabled:",
+                    e?.message ?? e,
+                );
             });
     }
 
@@ -90,7 +98,10 @@ export class DiscordClient implements SharedResourceClient {
         try {
             await this.waitForReady();
         } catch (e: any) {
-            console.error(`${DiscordClient.TAG}: not ready, integration disabled:`, e?.message ?? e);
+            console.error(
+                `${DiscordClient.TAG}: not ready, integration disabled:`,
+                e?.message ?? e,
+            );
         }
     }
 
@@ -108,7 +119,7 @@ export class DiscordClient implements SharedResourceClient {
             const onReady = () => {
                 clearTimeout(timeout);
                 resolve();
-            }
+            };
 
             timeout = setTimeout(() => {
                 client.off(Events.ClientReady, onReady);
@@ -127,11 +138,17 @@ export class DiscordClient implements SharedResourceClient {
     }
 
     // Implement later when needed.
-    async handleOrgBindleSync(org: GetGroupInfoResponse, callback: (updatedResourceCount: number, status: string) => void): Promise<boolean> {
+    async handleOrgBindleSync(
+        org: GetGroupInfoResponse,
+        callback: (updatedResourceCount: number, status: string) => void,
+    ): Promise<boolean> {
         return Promise.resolve(true);
     }
 
-    async archiveTeam(org: GetGroupInfoResponse, callback: (updatedResourceCount: number, status: string) => void): Promise<boolean> {
+    async archiveTeam(
+        org: GetGroupInfoResponse,
+        callback: (updatedResourceCount: number, status: string) => void,
+    ): Promise<boolean> {
         // TODO: Implement Discord channel archival
         return Promise.resolve(true);
     }
@@ -142,8 +159,12 @@ export class DiscordClient implements SharedResourceClient {
         if (!this.enabled || !this.discordClient) return undefined;
 
         // Uses guild id in .env in case bot is in multiple servers.
-        const guild = await this.discordClient.guilds.fetch(process.env.PEOPLEPORTAL_DISCORD_SERVER_ID!);
-        return guild.channels.cache.find(ch => ch.name === channelName && ch.isTextBased());
+        const guild = await this.discordClient.guilds.fetch(
+            process.env.PEOPLEPORTAL_DISCORD_SERVER_ID!,
+        );
+        return guild.channels.cache.find(
+            (ch) => ch.name === channelName && ch.isTextBased(),
+        );
     }
 
     async sendMessageInChannel(channel: GuildBasedChannel, message: string) {

@@ -27,14 +27,14 @@ const getReservedTeamNames = (): Set<string> => {
 
         const config = ENABLED_SERVICE_TEAMS[serviceTeamName];
         if (config && config.subteams) {
-            config.subteams.forEach(subteam => {
+            config.subteams.forEach((subteam) => {
                 reservedNames.add(subteam.uniqueName);
             });
         }
     }
 
     return reservedNames;
-}
+};
 
 /* Define Flattened Set of Service Teams */
 export const ENABLED_SERVICE_TEAM_NAMES: Set<string> = getReservedTeamNames();
