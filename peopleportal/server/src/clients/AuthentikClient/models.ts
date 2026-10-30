@@ -16,62 +16,65 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { EnabledBindlePermissions } from "../../controllers/BindleController"
-import { EnabledRootSettings, RootTeamSettingInfo } from "../../controllers/OrgController"
+import { EnabledBindlePermissions } from "../../controllers/BindleController";
+import {
+    EnabledRootSettings,
+    RootTeamSettingInfo,
+} from "../../controllers/OrgController";
 
 export enum TeamType {
     PROJECT = "PROJECT",
     CORPORATE = "CORPORATE",
     BOOTCAMP = "BOOTCAMP",
-    SERVICE = "SERVICE"
+    SERVICE = "SERVICE",
 }
 
 export enum SeasonType {
     FALL = "FALL",
-    SPRING = "SPRING"
+    SPRING = "SPRING",
 }
 
 export enum ServiceSeasonType {
-    ROLLING = "ROLLING"
+    ROLLING = "ROLLING",
 }
 
 export interface TeamAttributeDefinition {
-    friendlyName: string,
-    teamType: TeamType,
-    seasonType: SeasonType | ServiceSeasonType,
-    seasonYear: number,
-    teamStartDate?: string,
-    teamEndDate?: string,
-    peoplePortalCreation?: boolean,
-    flaggedForDeletion?: boolean,
+    friendlyName: string;
+    teamType: TeamType;
+    seasonType: SeasonType | ServiceSeasonType;
+    seasonYear: number;
+    teamStartDate?: string;
+    teamEndDate?: string;
+    peoplePortalCreation?: boolean;
+    flaggedForDeletion?: boolean;
     /* ISO timestamp set when the team is archived; absent means active */
-    archivedAt?: string,
+    archivedAt?: string;
     /* User PK of the executive who archived the team */
-    archivedBy?: string,
-    description: string,
+    archivedBy?: string;
+    description: string;
     rootTeamSettings: {
         /* The key is the setting name (Ex. AwsAccount, AppleDevAccount, etc.) */
-        [key: string]: EnabledRootSettings
-    },
+        [key: string]: EnabledRootSettings;
+    };
 
     bindlePermissions: {
         /* The key is the Client name (Ex. GiteaClient, OpenIdClient, etc.) */
-        [key: string]: EnabledBindlePermissions
-    }
+        [key: string]: EnabledBindlePermissions;
+    };
 }
 
 export interface UserAttributeDefinition {
-    peoplePortalCreation?: boolean,
-    alumniAccount: boolean,
-    major: string,
-    expectedGrad: Date,
-    phoneNumber: string,
-    linkedinUrl?: string,
+    peoplePortalCreation?: boolean;
+    alumniAccount: boolean;
+    major: string;
+    expectedGrad: Date;
+    phoneNumber: string;
+    linkedinUrl?: string;
     roles: {
         /* Org ID Mapped to Role Title */
-        [key: string]: string
-    },
-    avatar?: string
+        [key: string]: string;
+    };
+    avatar?: string;
 }
 
 export interface AuthentikFilterCursor {
@@ -79,7 +82,6 @@ export interface AuthentikFilterCursor {
     authentikIndex: number;
     searchHash: string;
 }
-
 
 export interface PaginationDefinition {
     next: number;
@@ -93,86 +95,86 @@ export interface PaginationDefinition {
 
 /* Teams API Models */
 export interface GetUserListOptions {
-    page?: number,
-    search?: string
+    page?: number;
+    search?: string;
 }
 
 export interface GetTeamsListOptions {
-    subgroupsOnly?: boolean,
-    includeUsers?: boolean,
+    subgroupsOnly?: boolean;
+    includeUsers?: boolean;
     /* When false (default), teams flagged with `archivedAt` are excluded */
-    includeArchived?: boolean,
-    search?: string,
-    limit?: number,
-    cursor?: string
+    includeArchived?: boolean;
+    search?: string;
+    limit?: number;
+    cursor?: string;
 }
 
 export interface GetTeamsForUsernameResponse {
-    teams: TeamInformationBrief[]
+    teams: TeamInformationBrief[];
 }
 
 /* Messy but, changing would cause breaking changes */
 export interface TeamInformationBrief extends TeamAttributeDefinition {
-    parent: string | null,
-    name: string,
-    pk: string,
+    parent: string | null;
+    name: string;
+    pk: string;
 }
 
 /* Given in groups-list Authentik API endpoint */
 export interface TeamInformationDetail extends TeamInformationBrief {
-    users: UserInformationPartial[],
-    parent_obj?: TeamInformationBrief,
-    subteamPkList: string[],
-    subteams: TeamInformationBrief[]
+    users: UserInformationPartial[];
+    parent_obj?: TeamInformationBrief;
+    subteamPkList: string[];
+    subteams: TeamInformationBrief[];
 }
 
 export interface TeamMembershipBrief extends TeamInformationBrief {
-    parentName?: string,
-    parentFriendlyName?: string,
+    parentName?: string;
+    parentFriendlyName?: string;
 }
 
 export interface GetTeamMembershipsResponse {
-    memberships: TeamMembershipBrief[]
+    memberships: TeamMembershipBrief[];
 }
 
 export interface GetTeamsListResponse {
-    teams: TeamInformationBrief[],
-    nextCursor?: string
+    teams: TeamInformationBrief[];
+    nextCursor?: string;
 }
 
 export interface GetTeamsListDetailResponse {
-    teams: TeamInformationDetail[],
-    nextCursor?: string
+    teams: TeamInformationDetail[];
+    nextCursor?: string;
 }
 
 export interface GetGroupInfoRequestOptions {
-    includeParentInfo?: boolean,
-    includeChildren?: boolean,
-    includeUsers?: boolean,
-    disableSubteamMemberPopulate?: boolean
+    includeParentInfo?: boolean;
+    includeChildren?: boolean;
+    includeUsers?: boolean;
+    disableSubteamMemberPopulate?: boolean;
 }
 
 export interface GetGroupInfoResponse {
-    pk: string,
-    name: string,
-    users: UserInformationBrief[],
-    parentPk: string,
-    parentInfo?: GetGroupInfoResponse, /* Optional to Avoid Breaking Changes */
-    subteamPkList: string[],
-    subteams: GetGroupInfoResponse[],
-    attributes: TeamAttributeDefinition
+    pk: string;
+    name: string;
+    users: UserInformationBrief[];
+    parentPk: string;
+    parentInfo?: GetGroupInfoResponse; /* Optional to Avoid Breaking Changes */
+    subteamPkList: string[];
+    subteams: GetGroupInfoResponse[];
+    attributes: TeamAttributeDefinition;
 }
 
 export interface AddGroupMemberRequest {
-    groupId: string,
-    userPk: number,
-    roleTitle: string
+    groupId: string;
+    userPk: number;
+    roleTitle: string;
 }
 
 export interface RemoveGroupMemberRequest {
-    groupInfo?: GetGroupInfoResponse, /* We Can Optimize Calls if using Bindle Auth */
-    groupId: string,
-    userPk: number
+    groupInfo?: GetGroupInfoResponse; /* We Can Optimize Calls if using Bindle Auth */
+    groupId: string;
+    userPk: number;
 }
 
 export interface CreateUserRequest {
@@ -185,64 +187,64 @@ export interface CreateUserRequest {
         expectedGrad: Date;
         phoneNumber: string;
         linkedinUrl?: string;
-        roles: { [key: string]: string }
-    }
+        roles: { [key: string]: string };
+    };
 }
 
 export interface CreateTeamRequest {
-    parent?: string,
-    parentName?: string,
-    isSuperuser?: boolean,
-    serviceTeamName?: string,
+    parent?: string;
+    parentName?: string;
+    isSuperuser?: boolean;
+    serviceTeamName?: string;
     attributes: {
-        friendlyName: string,
-        teamType: TeamType,
-        seasonType: SeasonType | ServiceSeasonType,
-        seasonYear: number,
-        description: string,
+        friendlyName: string;
+        teamType: TeamType;
+        seasonType: SeasonType | ServiceSeasonType;
+        seasonYear: number;
+        description: string;
         /* Optional: only top-level teams carry meeting dates; sub-teams omit them */
-        teamStartDate?: string,
-        teamEndDate?: string,
-    }
+        teamStartDate?: string;
+        teamEndDate?: string;
+    };
 }
 
 /* Returned in authentik groups-list API endpoint */
 export interface UserInformationPartial {
-    pk: string,
-    username: string,
-    name: string,
-    email: string,
-    active: boolean,
-    attributes: UserAttributeDefinition,
+    pk: string;
+    username: string;
+    name: string;
+    email: string;
+    active: boolean;
+    attributes: UserAttributeDefinition;
 }
 
 /* User Information API Models */
 export interface UserInformationBrief {
-    pk: string,
-    username: string,
-    name: string,
-    email: string,
-    memberSince: Date,
-    active: boolean,
-    attributes: UserAttributeDefinition,
-    is_superuser: boolean,
-    avatar: string,
+    pk: string;
+    username: string;
+    name: string;
+    email: string;
+    memberSince: Date;
+    active: boolean;
+    attributes: UserAttributeDefinition;
+    is_superuser: boolean;
+    avatar: string;
 }
 
 export interface UserInformationDetail extends UserInformationBrief {
-    groups: string[],
-    last_login: Date,
-    type: string,
+    groups: string[];
+    last_login: Date;
+    type: string;
     groupsInfo: {
-        name: string,
-        pk: string,
-        attributes: TeamAttributeDefinition
-    }[],
+        name: string;
+        pk: string;
+        attributes: TeamAttributeDefinition;
+    }[];
 }
 
 export interface GetUserListResponse {
-    pagination: PaginationDefinition,
-    users: UserInformationBrief[]
+    pagination: PaginationDefinition;
+    users: UserInformationBrief[];
 }
 
 export enum AuthentikClientErrorType {
@@ -268,9 +270,12 @@ export enum AuthentikClientErrorType {
 }
 
 export class AuthentikClientError extends Error {
-    constructor(public readonly code: AuthentikClientErrorType, messageOverride?: string) {
-        super(messageOverride ?? AuthentikClientError.getMessage(code))
-        this.name = "AuthentikClientError"
+    constructor(
+        public readonly code: AuthentikClientErrorType,
+        messageOverride?: string,
+    ) {
+        super(messageOverride ?? AuthentikClientError.getMessage(code));
+        this.name = "AuthentikClientError";
     }
 
     private static getMessage(code: AuthentikClientErrorType): string {
@@ -326,14 +331,14 @@ export class AuthentikServerVersion {
 
     /**
      * Compares two Authentik Version Strings
-     * 
+     *
      * @param v1 Authentik Version String
      * @param v2 Authentik Version String
      * @returns -1, 0 or 1 for numeric comparison
      */
     private static compare(v1: string, v2: string): number {
-        const p1 = v1.split('.').map(Number);
-        const p2 = v2.split('.').map(Number);
+        const p1 = v1.split(".").map(Number);
+        const p2 = v2.split(".").map(Number);
         const len = Math.max(p1.length, p2.length);
 
         for (let i = 0; i < len; i++) {

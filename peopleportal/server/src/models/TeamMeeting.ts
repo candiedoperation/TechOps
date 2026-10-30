@@ -16,7 +16,7 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document } from "mongoose";
 
 export interface ITeamMeeting extends Document {
     teamPk: string;
@@ -39,15 +39,21 @@ export interface ITeamMeeting extends Document {
     updatedAt: Date;
 }
 
-const TeamMeetingSchema = new Schema<ITeamMeeting>({
-    teamPk:      { type: String, required: true, index: true },
-    seriesId:    { type: String, required: true, index: true },
-    name:        { type: String, required: true },
-    description: { type: String, default: '' },
-    start:       { type: Date, required: true },
-    end:         { type: Date, required: true },
-    createdBy:   { type: Number, required: true },
-    visibleToAll: { type: Boolean, default: false },
-}, { timestamps: true });
+const TeamMeetingSchema = new Schema<ITeamMeeting>(
+    {
+        teamPk: { type: String, required: true, index: true },
+        seriesId: { type: String, required: true, index: true },
+        name: { type: String, required: true },
+        description: { type: String, default: "" },
+        start: { type: Date, required: true },
+        end: { type: Date, required: true },
+        createdBy: { type: Number, required: true },
+        visibleToAll: { type: Boolean, default: false },
+    },
+    { timestamps: true },
+);
 
-export const TeamMeeting = model<ITeamMeeting>('TeamMeeting', TeamMeetingSchema);
+export const TeamMeeting = model<ITeamMeeting>(
+    "TeamMeeting",
+    TeamMeetingSchema,
+);

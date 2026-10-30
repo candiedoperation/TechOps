@@ -16,57 +16,63 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document } from "mongoose";
 
 export interface IInvite extends Document {
-  inviteName: string;
-  inviteEmail: string;
-  roleTitle: string;
-  teamName: string;
-  teamPk: string;
-  subteamPk: string;
-  inviterPk: number;
-  expiresAt: Date;
+    inviteName: string;
+    inviteEmail: string;
+    roleTitle: string;
+    teamName: string;
+    teamPk: string;
+    subteamPk: string;
+    inviterPk: number;
+    expiresAt: Date;
 }
 
-const inviteSchema = new Schema<IInvite>({
-  inviteName: {
-    type: String,
-    required: true,
-    minlength: [2, 'Name must be at least 2 characters'],
-    maxlength: [60, 'Name must be at most 60 characters'],
-    match: [/^[A-Za-z .'-]+$/, "Invalid name. Use only letters, spaces, apostrophes, periods, and hyphens."]
-  },
-  inviteEmail: {
-    type: String,
-    required: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
-  },
-  roleTitle: {
-    type: String,
-    required: true,
-  },
-  teamName: {
-    type: String,
-    required: true,
-  },
-  teamPk: {
-    type: String,
-    required: true,
-  },
-  subteamPk: {
-    type: String,
-    required: true,
-  },
-  inviterPk: {
-    type: Number,
-    required: true,
-  },
-  expiresAt: {
-    type: Date,
-    required: true,
-    index: { expires: 0 }
-  }
-}, { timestamps: true });
+const inviteSchema = new Schema<IInvite>(
+    {
+        inviteName: {
+            type: String,
+            required: true,
+            minlength: [2, "Name must be at least 2 characters"],
+            maxlength: [60, "Name must be at most 60 characters"],
+            match: [
+                /^[A-Za-z .'-]+$/,
+                "Invalid name. Use only letters, spaces, apostrophes, periods, and hyphens.",
+            ],
+        },
+        inviteEmail: {
+            type: String,
+            required: true,
+            match: [/^\S+@\S+\.\S+$/, "Please enter a valid email"],
+        },
+        roleTitle: {
+            type: String,
+            required: true,
+        },
+        teamName: {
+            type: String,
+            required: true,
+        },
+        teamPk: {
+            type: String,
+            required: true,
+        },
+        subteamPk: {
+            type: String,
+            required: true,
+        },
+        inviterPk: {
+            type: Number,
+            required: true,
+        },
+        expiresAt: {
+            type: Date,
+            required: true,
+            index: { expires: 0 },
+        },
+    },
+    { timestamps: true },
+);
 
-export const Invite = model<IInvite>('Invite', inviteSchema);
+export const Invite = model<IInvite>("Invite", inviteSchema);

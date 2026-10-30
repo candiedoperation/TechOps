@@ -19,32 +19,35 @@
 import { Document, Schema, model } from "mongoose";
 
 export enum RsvpStatus {
-    ACCEPT = 'Accept',
-    DECLINE = 'Decline',
-    CANCEL = 'Cancel',
+    ACCEPT = "Accept",
+    DECLINE = "Decline",
+    CANCEL = "Cancel",
 }
 
 export interface IRsvp extends Document {
-  eventId: string; // Event id of corresponding event.
-  status: RsvpStatus;
-  email: string;
+    eventId: string; // Event id of corresponding event.
+    status: RsvpStatus;
+    email: string;
 }
 
-const rsvpSchema = new Schema<IRsvp>({
-    eventId: {
-        type: String,
-        required: true,
-        lowercase: true,
+const rsvpSchema = new Schema<IRsvp>(
+    {
+        eventId: {
+            type: String,
+            required: true,
+            lowercase: true,
+        },
+        status: {
+            type: String,
+            enum: Object.values(RsvpStatus),
+            required: true,
+        },
+        email: {
+            type: String,
+            required: true,
+        },
     },
-    status: {
-        type: String,
-        enum: Object.values(RsvpStatus),
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-    },
-}, {timestamps: true});
+    { timestamps: true },
+);
 
-export const EventRsvp = model<IRsvp>('RSVP', rsvpSchema);     
+export const EventRsvp = model<IRsvp>("RSVP", rsvpSchema);

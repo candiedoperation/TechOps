@@ -39,7 +39,10 @@ export class RedisClient {
             if (!redisUrl) {
                 /* Unconfigured is a deployment choice, not an error. Say so once
                    and stop trying, rather than throwing on every cache read. */
-                log.warn(this.TAG, "PEOPLEPORTAL_REDIS_URL is unset; running without a cache.");
+                log.warn(
+                    this.TAG,
+                    "PEOPLEPORTAL_REDIS_URL is unset; running without a cache.",
+                );
                 this.disabled = true;
                 return null;
             }
@@ -60,7 +63,10 @@ export class RedisClient {
                        reconnects in a tight loop, which is what made a downed
                        Redis hang startup and flood the log. */
                     reconnectStrategy: (retries: number) =>
-                        Math.min(100 * 2 ** retries, this.MAX_RECONNECT_DELAY_MS),
+                        Math.min(
+                            100 * 2 ** retries,
+                            this.MAX_RECONNECT_DELAY_MS,
+                        ),
                 },
             });
 
@@ -68,10 +74,14 @@ export class RedisClient {
                takes down the process, so this listener is mandatory, not
                cosmetic: a mid-flight Redis restart would otherwise kill us. */
             this.client.on("error", (e: unknown) => {
-                this.logErrorThrottled(`Redis unavailable, serving uncached: ${e instanceof Error ? e.message : String(e)}`);
+                this.logErrorThrottled(
+                    `Redis unavailable, serving uncached: ${e instanceof Error ? e.message : String(e)}`,
+                );
             });
 
-            this.client.on("ready", () => log.info(this.TAG, "Cache connected."));
+            this.client.on("ready", () =>
+                log.info(this.TAG, "Cache connected."),
+            );
         }
 
         return this.client;
@@ -83,7 +93,11 @@ export class RedisClient {
     }
 
     /** Runs a cache operation, degrading any failure or stall to `fallback`. */
-    private static async attempt<T>(label: string, operation: () => Promise<T>, fallback: T): Promise<T> {
+    private static async attempt<T>(
+        label: string,
+        operation: () => Promise<T>,
+        fallback: T,
+    ): Promise<T> {
         if (!this.ready()) return fallback;
 
         try {
@@ -93,11 +107,21 @@ export class RedisClient {
             return await Promise.race([
                 operation(),
                 new Promise<T>((_, reject) =>
-                    setTimeout(() => reject(new Error(`${label} timed out after ${this.COMMAND_TIMEOUT_MS}ms`)), this.COMMAND_TIMEOUT_MS)
+                    setTimeout(
+                        () =>
+                            reject(
+                                new Error(
+                                    `${label} timed out after ${this.COMMAND_TIMEOUT_MS}ms`,
+                                ),
+                            ),
+                        this.COMMAND_TIMEOUT_MS,
+                    ),
                 ),
             ]);
         } catch (e: unknown) {
-            this.logErrorThrottled(`${label} failed, treating as a miss: ${e instanceof Error ? e.message : String(e)}`);
+            this.logErrorThrottled(
+                `${label} failed, treating as a miss: ${e instanceof Error ? e.message : String(e)}`,
+            );
             return fallback;
         }
     }
@@ -115,35 +139,56 @@ export class RedisClient {
             await Promise.race([
                 client.connect(),
                 new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("connect timed out")), this.CONNECT_TIMEOUT_MS)
+                    setTimeout(
+                        () => reject(new Error("connect timed out")),
+                        this.CONNECT_TIMEOUT_MS,
+                    ),
                 ),
             ]);
         } catch (e: unknown) {
             /* Deliberately not rethrown: startup() exits the process on a thrown
                error, and the server serves fine without a cache. */
-            log.warn(this.TAG, `Cache unavailable at boot, continuing without it and retrying in the background: ${e instanceof Error ? e.message : String(e)}`);
+            log.warn(
+                this.TAG,
+                `Cache unavailable at boot, continuing without it and retrying in the background: ${e instanceof Error ? e.message : String(e)}`,
+            );
         }
     }
 
     public static async get<T>(key: string): Promise<T | null> {
-        return this.attempt(`get(${key})`, async () => {
-            const value = await this.client!.get(key);
-            return value ? (JSON.parse(value) as T) : null;
-        }, null);
+        return this.attempt(
+            `get(${key})`,
+            async () => {
+                const value = await this.client!.get(key);
+                return value ? (JSON.parse(value) as T) : null;
+            },
+            null,
+        );
     }
 
     public static async set(key: string, value: unknown, ttlSeconds?: number) {
-        await this.attempt(`set(${key})`, async () => {
-            const serialized = JSON.stringify(value);
-            if (ttlSeconds) await this.client!.set(key, serialized, { EX: ttlSeconds });
-            else await this.client!.set(key, serialized);
-        }, undefined);
+        await this.attempt(
+            `set(${key})`,
+            async () => {
+                const serialized = JSON.stringify(value);
+                if (ttlSeconds)
+                    await this.client!.set(key, serialized, { EX: ttlSeconds });
+                else await this.client!.set(key, serialized);
+            },
+            undefined,
+        );
     }
 
     public static async delete(key: string) {
         /* A failed invalidation serves stale data until the TTL expires, so
            every cached key must carry one. */
-        await this.attempt(`delete(${key})`, async () => { await this.client!.del(key); }, undefined);
+        await this.attempt(
+            `delete(${key})`,
+            async () => {
+                await this.client!.del(key);
+            },
+            undefined,
+        );
     }
 
     /** Lets tests and shutdown paths release the connection and start clean. */

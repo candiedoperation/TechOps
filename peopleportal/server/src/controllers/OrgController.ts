@@ -16,50 +16,119 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import * as express from 'express';
-import path from 'path';
-import { Error, FlattenMaps, HydratedDocument, Types } from 'mongoose';
-import { Request, Body, Controller, Get, Patch, Path, Post, Queries, Route, SuccessResponse, Put, Security, Delete, Tags, Query } from "tsoa";
-import { AddGroupMemberRequest, GetGroupInfoResponse, GetTeamsListResponse, GetUserListOptions, GetUserListResponse, RemoveGroupMemberRequest, SeasonType, TeamType, UserInformationBrief, GetTeamsForUsernameResponse, AuthentikClientError, CreateUserRequest, ServiceSeasonType, AuthentikClientErrorType, TeamInformationDetail, GetTeamsListDetailResponse, UserInformationPartial, TeamAttributeDefinition, TeamInformationBrief, GetTeamMembershipsResponse } from "../clients/AuthentikClient/models";
+import * as express from "express";
+import path from "path";
+import { Error, FlattenMaps, HydratedDocument, Types } from "mongoose";
+import {
+    Request,
+    Body,
+    Controller,
+    Get,
+    Patch,
+    Path,
+    Post,
+    Queries,
+    Route,
+    SuccessResponse,
+    Put,
+    Security,
+    Delete,
+    Tags,
+    Query,
+} from "tsoa";
+import {
+    AddGroupMemberRequest,
+    GetGroupInfoResponse,
+    GetTeamsListResponse,
+    GetUserListOptions,
+    GetUserListResponse,
+    RemoveGroupMemberRequest,
+    SeasonType,
+    TeamType,
+    UserInformationBrief,
+    GetTeamsForUsernameResponse,
+    AuthentikClientError,
+    CreateUserRequest,
+    ServiceSeasonType,
+    AuthentikClientErrorType,
+    TeamInformationDetail,
+    GetTeamsListDetailResponse,
+    UserInformationPartial,
+    TeamAttributeDefinition,
+    TeamInformationBrief,
+    GetTeamMembershipsResponse,
+} from "../clients/AuthentikClient/models";
 import { AuthentikClient } from "../clients/AuthentikClient";
 import { Invite } from "../models/Invites";
 import { EmailClient } from "../clients/EmailClient";
-import { SharedResourceClient } from '../clients';
-import { ENABLED_SHARED_RESOURCES, ENABLED_TEAMSETTING_RESOURCES, ENABLED_SERVICE_TEAMS, TEAM_TYPE_CONFIGS } from '../config';
-import { SlackClient } from '../clients/SlackClient';
-import { AWSClient } from '../clients/AWSClient';
-import { checkPhotoHasFace } from '../clients/PhotoCheckClient/PhotoCheckClient';
-import { s3Client, BUCKET_NAME } from '../clients/AWSClient/S3Client';
-import { GetObjectCommand, PutObjectCommand, CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { SharedResourceClient } from "../clients";
+import {
+    ENABLED_SHARED_RESOURCES,
+    ENABLED_TEAMSETTING_RESOURCES,
+    ENABLED_SERVICE_TEAMS,
+    TEAM_TYPE_CONFIGS,
+} from "../config";
+import { SlackClient } from "../clients/SlackClient";
+import { AWSClient } from "../clients/AWSClient";
+import { checkPhotoHasFace } from "../clients/PhotoCheckClient/PhotoCheckClient";
+import { s3Client, BUCKET_NAME } from "../clients/AWSClient/S3Client";
+import {
+    GetObjectCommand,
+    PutObjectCommand,
+    CopyObjectCommand,
+    DeleteObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createPresignedPost } from "@aws-sdk/s3-presigned-post";
-import { sanitizeUserFullName, validateTeamName, capitalizeString, validatePersonName } from '../utils/strings';
-import { BindleController, EnabledBindlePermissions } from '../controllers/BindleController';
-import { AuthorizedUser } from '../clients/OpenIdClient';
-import { executiveAuthVerify } from '../auth';
-import { TeamCreationRequest, TeamCreationRequestStatus, ITeamCreationRequest } from '../models/TeamCreationRequest';
-import { CustomValidationError, ResourceAccessError, SharedResourcesError, describeUnknownError } from '../utils/errors';
-import { ExpressRequestBindleExtension } from '../types/express';
-import { validateS3FileSignature, FILE_SIGNATURES, getS3ObjectBytes, deleteTempAvatar } from '../utils/s3-validation';
-import { signAvatarUrl, invalidateAvatarUrlCache } from '../utils/avatars';
-import { normalizeLinkedInProfileUrl } from '../utils/linkedin';
+import {
+    sanitizeUserFullName,
+    validateTeamName,
+    capitalizeString,
+    validatePersonName,
+} from "../utils/strings";
+import {
+    BindleController,
+    EnabledBindlePermissions,
+} from "../controllers/BindleController";
+import { AuthorizedUser } from "../clients/OpenIdClient";
+import { executiveAuthVerify } from "../auth";
+import {
+    TeamCreationRequest,
+    TeamCreationRequestStatus,
+    ITeamCreationRequest,
+} from "../models/TeamCreationRequest";
+import {
+    CustomValidationError,
+    ResourceAccessError,
+    SharedResourcesError,
+    describeUnknownError,
+} from "../utils/errors";
+import { ExpressRequestBindleExtension } from "../types/express";
+import {
+    validateS3FileSignature,
+    FILE_SIGNATURES,
+    getS3ObjectBytes,
+    deleteTempAvatar,
+} from "../utils/s3-validation";
+import { signAvatarUrl, invalidateAvatarUrlCache } from "../utils/avatars";
+import { normalizeLinkedInProfileUrl } from "../utils/linkedin";
 import MarkdownIt from "markdown-it";
-import zxcvbn from 'zxcvbn';
-import { IUserReview, UserReview } from '../models/UserReview';
+import zxcvbn from "zxcvbn";
+import { IUserReview, UserReview } from "../models/UserReview";
 
 import type { DocumentJSON } from "../utils/types";
 
 export interface EnabledRootSettings {
-    [key: string]: boolean
+    [key: string]: boolean;
 }
 
 export interface RootTeamSettingMap {
-    [key: string]: RootTeamSettingInfo
+    [key: string]: RootTeamSettingInfo;
 }
 
 export interface RootTeamSettingInfo {
-    friendlyName: string,
-    description: string,
+    friendlyName: string;
+    description: string;
 }
 
 interface APIGetCommonTeamsResponse {
@@ -87,8 +156,8 @@ interface APIGetReviewsOptions {
 interface APIGetReviewsResponse {
     reviews: DocumentJSON<IUserReview>[];
     aggregateData?: {
-        totalReviews: number,
-        averageRating: number
+        totalReviews: number;
+        averageRating: number;
     };
 }
 
@@ -104,42 +173,40 @@ interface APICreateReviewResponse {
 }
 
 /* Define Request Interfaces */
-interface APIUserInfoResponse extends UserInformationBrief {
-
-}
+interface APIUserInfoResponse extends UserInformationBrief {}
 
 interface APICreateSubTeamRequest {
-    friendlyName: string,
-    description: string
+    friendlyName: string;
+    description: string;
 }
 
 export interface APICreateTeamRequest {
-    friendlyName: string,
-    teamType: TeamType,
-    seasonType: SeasonType,
-    seasonYear: number,
-    description: string,
-    teamStartDate?: string,
-    teamEndDate: string,
-    requestorRole: string
+    friendlyName: string;
+    teamType: TeamType;
+    seasonType: SeasonType;
+    seasonYear: number;
+    description: string;
+    teamStartDate?: string;
+    teamEndDate: string;
+    requestorRole: string;
 }
 
 interface APIUpdateTeamRequest {
     /** @minLength 1 */
-    friendlyName?: string,
+    friendlyName?: string;
     /** @minLength 1 */
-    description?: string,
-    teamStartDate?: string,
-    teamEndDate?: string,
+    description?: string;
+    teamStartDate?: string;
+    teamEndDate?: string;
 }
 
 interface APITeamInfoResponse {
-    team: GetGroupInfoResponse,
-    subteams: GetGroupInfoResponse[]
+    team: GetGroupInfoResponse;
+    subteams: GetGroupInfoResponse[];
 }
 
 interface APITeamMemberAddResponse {
-    coreAdditionComplete: boolean,
+    coreAdditionComplete: boolean;
 }
 
 interface APITeamInviteCreateRequest {
@@ -170,18 +237,17 @@ interface APITeamInviteAcceptRequest {
 }
 
 interface APIGetTeamsListOptions {
-    search?: string,
-    subgroupsOnly?: boolean,
-    includeUsers?: boolean,
+    search?: string;
+    subgroupsOnly?: boolean;
+    includeUsers?: boolean;
     /** When false (default), archived teams are excluded from the results. @default false */
-    includeArchived?: boolean,
+    includeArchived?: boolean;
 
     /** @default 20 */
     limit?: number;
     /** Base-64 Encoded Cursor */
     cursor?: string;
 }
-
 
 interface APIGetOrgChartResponse {
     root: OrgChartNode;
@@ -194,21 +260,20 @@ interface OrgChartNode {
     attributes?: {
         friendlyName?: string;
         description?: string;
-        role?: string;              // The person's role (e.g., "President", "Developer")
+        role?: string; // The person's role (e.g., "President", "Developer")
         email?: string;
-        teamContext?: string[];     // Breadcrumb: ["SubteamName", "RootTeamName"] for display
+        teamContext?: string[]; // Breadcrumb: ["SubteamName", "RootTeamName"] for display
         [key: string]: any;
     };
     children?: OrgChartNode[];
-    siblings?: OrgChartNode[];      // Horizontal siblings at the same level (for frontend to render horizontally)
-    isPrimaryExpansion?: boolean;   // If true, this person is the expansion anchor
-    hasChildren?: boolean;          // For lazy loading indicator
+    siblings?: OrgChartNode[]; // Horizontal siblings at the same level (for frontend to render horizontally)
+    isPrimaryExpansion?: boolean; // If true, this person is the expansion anchor
+    hasChildren?: boolean; // For lazy loading indicator
 }
 
-
 interface APIGetOrgChartOptions {
-    /** 
-     * If true, recursively fetches all subteams and their members. 
+    /**
+     * If true, recursively fetches all subteams and their members.
      * If false, returns only the Division Apex structure (without subteams populated).
      * @default true
      */
@@ -216,11 +281,11 @@ interface APIGetOrgChartOptions {
 }
 
 interface ExpressRequestAuthUserShim {
-    session: { authorizedUser: AuthorizedUser }
+    session: { authorizedUser: AuthorizedUser };
 }
 
 interface ExpressRequestBindleShim {
-    bindle: ExpressRequestBindleExtension
+    bindle: ExpressRequestBindleExtension;
 }
 
 interface APITeamCreationRequestResponse {
@@ -246,22 +311,25 @@ function isValidGradDate(value: string): boolean {
 
 @Route("/api/org")
 export class OrgController extends Controller {
-    private teamSettingList: { [key: string]: RootTeamSettingMap } = {}
+    private teamSettingList: { [key: string]: RootTeamSettingMap } = {};
     private sharedResources: SharedResourceClient[];
     private readonly authentikClient;
     private readonly emailClient;
     private readonly slackClient;
 
     constructor() {
-        super()
-        this.authentikClient = new AuthentikClient()
-        this.emailClient = new EmailClient()
-        this.slackClient = ENABLED_SHARED_RESOURCES.slackClient as SlackClient
-        this.sharedResources = Object.values(ENABLED_SHARED_RESOURCES)
+        super();
+        this.authentikClient = new AuthentikClient();
+        this.emailClient = new EmailClient();
+        this.slackClient = ENABLED_SHARED_RESOURCES.slackClient as SlackClient;
+        this.sharedResources = Object.values(ENABLED_SHARED_RESOURCES);
 
-        for (const teamSettingResource of Object.values(ENABLED_TEAMSETTING_RESOURCES)) {
-            const resourceName = teamSettingResource.getResourceName()
-            this.teamSettingList[resourceName] = teamSettingResource.getSupportedSettings()
+        for (const teamSettingResource of Object.values(
+            ENABLED_TEAMSETTING_RESOURCES,
+        )) {
+            const resourceName = teamSettingResource.getResourceName();
+            this.teamSettingList[resourceName] =
+                teamSettingResource.getSupportedSettings();
         }
     }
 
@@ -278,14 +346,17 @@ export class OrgController extends Controller {
         }
 
         if (parsedStart > parsedEnd) {
-            throw new CustomValidationError(400, "Team start date must be on or before team end date");
+            throw new CustomValidationError(
+                400,
+                "Team start date must be on or before team end date",
+            );
         }
     }
 
     /**
      * Fetches the list of people in the organization.
      * Uses the Authentik Client for internal filtering.
-     * 
+     *
      * @param options Options for searching and pagination
      * @returns Paginated List of People in the Organization
      */
@@ -293,13 +364,20 @@ export class OrgController extends Controller {
     @Tags("People Management")
     @SuccessResponse(200)
     @Security("oidc")
-    async getPeople(@Queries() options: GetUserListOptions): Promise<GetUserListResponse> {
-        const userList = await this.authentikClient.getUserList(options)
+    async getPeople(
+        @Queries() options: GetUserListOptions,
+    ): Promise<GetUserListResponse> {
+        const userList = await this.authentikClient.getUserList(options);
 
         /* Enrich with Avatars */
-        await Promise.all(userList.users.map(async (user) => {
-            user.avatar = await signAvatarUrl(user.pk, user.attributes.avatar);
-        }));
+        await Promise.all(
+            userList.users.map(async (user) => {
+                user.avatar = await signAvatarUrl(
+                    user.pk,
+                    user.attributes.avatar,
+                );
+            }),
+        );
 
         return userList;
     }
@@ -307,7 +385,7 @@ export class OrgController extends Controller {
     /**
      * Fetches basic user information and additional attributes set
      * by People Portal, given the user's primary key ID.
-     * 
+     *
      * @param personId Internal User ID
      * @returns User Information
      */
@@ -315,19 +393,25 @@ export class OrgController extends Controller {
     @Tags("People Management")
     @SuccessResponse(200)
     @Security("oidc")
-    async getPersonInfo(@Path() personId: number): Promise<APIUserInfoResponse> {
-        const authentikUserInfo = await this.authentikClient.getUserInfo(personId)
-        authentikUserInfo.avatar = await signAvatarUrl(personId.toString(), authentikUserInfo.attributes.avatar);
+    async getPersonInfo(
+        @Path() personId: number,
+    ): Promise<APIUserInfoResponse> {
+        const authentikUserInfo =
+            await this.authentikClient.getUserInfo(personId);
+        authentikUserInfo.avatar = await signAvatarUrl(
+            personId.toString(),
+            authentikUserInfo.attributes.avatar,
+        );
 
         return {
-            ...authentikUserInfo
-        }
+            ...authentikUserInfo,
+        };
     }
 
     /**
      * Gets all common teams between the requesting user and
      * another person given their id.
-     * 
+     *
      * @param req express Request object
      * @param personId id of the person to get common teams.
      * @returns APIGetCommonTeamsResponse
@@ -338,30 +422,44 @@ export class OrgController extends Controller {
     @Security("oidc")
     async getCommonTeams(
         @Request() req: express.Request,
-        @Path() personId: number
+        @Path() personId: number,
     ): Promise<APIGetCommonTeamsResponse> {
         // Get user info
-        const userInfo = await this.authentikClient.getUserInfo(personId)
+        const userInfo = await this.authentikClient
+            .getUserInfo(personId)
             .catch((e) => {
-                throw new ResourceAccessError(400, `Failed to fetch user info: ${e}`)
+                throw new ResourceAccessError(
+                    400,
+                    `Failed to fetch user info: ${e}`,
+                );
             });
 
         // Get common teams
         const authorizedUser = req.session.authorizedUser!;
 
         const [userTeams, requesterTeams] = await Promise.all([
-            this.authentikClient.getRootTeamsForUsername(userInfo.username)
+            this.authentikClient
+                .getRootTeamsForUsername(userInfo.username)
                 .catch((e) => {
-                    throw new ResourceAccessError(400, `Failed to fetch user teams: ${e}`)
+                    throw new ResourceAccessError(
+                        400,
+                        `Failed to fetch user teams: ${e}`,
+                    );
                 }),
-            this.authentikClient.getRootTeamsForUsername(authorizedUser.username)
+            this.authentikClient
+                .getRootTeamsForUsername(authorizedUser.username)
                 .catch((e) => {
-                    throw new ResourceAccessError(400, `Failed to fetch user teams: ${e}`)
-                })
+                    throw new ResourceAccessError(
+                        400,
+                        `Failed to fetch user teams: ${e}`,
+                    );
+                }),
         ]);
 
-        const commonTeams = userTeams.teams.filter((t) =>
-            requesterTeams.teams.find((team) => team.pk === t.pk) !== undefined
+        const commonTeams = userTeams.teams.filter(
+            (t) =>
+                requesterTeams.teams.find((team) => team.pk === t.pk) !==
+                undefined,
         );
 
         // Return team info
@@ -371,7 +469,7 @@ export class OrgController extends Controller {
     /**
      * Gets the requestor's review (if it exists) of a user
      * for a certain team.
-     * 
+     *
      * @param req express Request object
      * @param personId id of the target person
      * @param teamId id of the target team
@@ -384,25 +482,34 @@ export class OrgController extends Controller {
     async getReview(
         @Request() req: express.Request,
         @Path() personId: number,
-        @Path() teamId: string
+        @Path() teamId: string,
     ): Promise<APIGetReviewResponse> {
         // 0. Ensure requester and user id are not equal
         if (req.session.authorizedUser!.pk === personId) {
             throw new CustomValidationError(403, "Can not access own reviews.");
         }
         // 1. Ensure user exists
-        const userInfo = await this.authentikClient.getUserInfo(personId)
+        const userInfo = await this.authentikClient
+            .getUserInfo(personId)
             .catch((e) => {
-                throw new ResourceAccessError(400, `Failed to fetch user info: ${e}`)
+                throw new ResourceAccessError(
+                    400,
+                    `Failed to fetch user info: ${e}`,
+                );
             });
 
         // 2. Ensure user is in the target team
         let userTeams: GetTeamsForUsernameResponse;
         try {
-            userTeams = await this.authentikClient.getRootTeamsForUsername(userInfo.username);
+            userTeams = await this.authentikClient.getRootTeamsForUsername(
+                userInfo.username,
+            );
         } catch (e) {
             console.error(e);
-            throw new ResourceAccessError(500, "Failed to get user team membership");
+            throw new ResourceAccessError(
+                500,
+                "Failed to get user team membership",
+            );
         }
 
         if (userTeams.teams.findIndex((team) => team.pk === teamId) === -1) {
@@ -416,7 +523,9 @@ export class OrgController extends Controller {
                 userId: personId,
                 creatorId: req.session.authorizedUser!.pk,
                 teamId: teamId,
-            }).lean().exec();
+            })
+                .lean()
+                .exec();
             return { review: review };
         } catch (e) {
             console.error(e);
@@ -424,13 +533,12 @@ export class OrgController extends Controller {
         }
     }
 
-
     /**
      * Gets a list of reviews made on the given person. Requires
      * executive permissions. Options can be given to filter,
      * sort, and attain aggregate data such as average rating
      * and total review count (with the filters applied).
-     * 
+     *
      * @param personId pk of the person.
      * @param options APIGetReviewsOptions
      * @returns APIGetReviewsResponse
@@ -441,9 +549,8 @@ export class OrgController extends Controller {
     @Security("executive")
     async getReviews(
         @Path() personId: number,
-        @Queries() options: APIGetReviewsOptions
+        @Queries() options: APIGetReviewsOptions,
     ): Promise<APIGetReviewsResponse> {
-
         // Max 100 reviews returned.
         const limit = Math.min(100, options.limit ?? 10);
 
@@ -451,19 +558,29 @@ export class OrgController extends Controller {
             throw new CustomValidationError(400, "Limit can not be negative.");
         }
 
-        if (options.before && options.after && options.before.getTime() < options.after.getTime()) {
-            throw new CustomValidationError(400, "The 'before' timestamp can not be before the 'after' timestamp.");
+        if (
+            options.before &&
+            options.after &&
+            options.before.getTime() < options.after.getTime()
+        ) {
+            throw new CustomValidationError(
+                400,
+                "The 'before' timestamp can not be before the 'after' timestamp.",
+            );
         }
 
         // Build query
         const filters: Record<string, any> = {
             userId: personId,
-            ...(options.before !== undefined || options.after !== undefined) && {
+            ...((options.before !== undefined ||
+                options.after !== undefined) && {
                 updatedAt: {
-                    ...(options.before !== undefined && { $lte: options.before }),
+                    ...(options.before !== undefined && {
+                        $lte: options.before,
+                    }),
                     ...(options.after !== undefined && { $gte: options.after }),
-                }
-            },
+                },
+            }),
             ...(options.teamId !== undefined && { teamId: options.teamId }),
         };
 
@@ -482,25 +599,37 @@ export class OrgController extends Controller {
                                     $group: {
                                         _id: null,
                                         average: { $avg: "$rating" },
-                                        count: { $sum: 1 }
-                                    }
-                                }
-                            ]
-                        }
-                    }
+                                        count: { $sum: 1 },
+                                    },
+                                },
+                            ],
+                        },
+                    },
                 ]).exec();
-                const { average, count } = result[0]?.stats[0] ?? { average: 0, count: 0 };
+                const { average, count } = result[0]?.stats[0] ?? {
+                    average: 0,
+                    count: 0,
+                };
 
-                return { reviews: [], aggregateData: { totalReviews: count, averageRating: average } };
+                return {
+                    reviews: [],
+                    aggregateData: {
+                        totalReviews: count,
+                        averageRating: average,
+                    },
+                };
             } catch (e) {
-                throw new ResourceAccessError(500, `Failed to fetch reviews: ${e}`);
+                throw new ResourceAccessError(
+                    500,
+                    `Failed to fetch reviews: ${e}`,
+                );
             }
         }
 
         let query = UserReview.find(filters);
 
         if (options.sortBy !== undefined) {
-            const ascending = (options.ascending ?? true) ? 'asc' : 'desc';
+            const ascending = (options.ascending ?? true) ? "asc" : "desc";
             query = query.sort({ [options.sortBy]: ascending });
         }
 
@@ -518,21 +647,28 @@ export class OrgController extends Controller {
                     { $match: filters },
                     {
                         $facet: {
-                            stats: [{
-                                $group: {
-                                    _id: null,
-                                    average: { $avg: "$rating" },
-                                    count: { $sum: 1 }
-                                }
-                            }]
-                        }
-                    }
-                ]).exec()
+                            stats: [
+                                {
+                                    $group: {
+                                        _id: null,
+                                        average: { $avg: "$rating" },
+                                        count: { $sum: 1 },
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ]).exec(),
             ]);
 
-            const { average, count } = aggregateResult[0]?.stats[0] ?? { average: 0, count: 0 };
-            return { reviews: results, aggregateData: { totalReviews: count, averageRating: average } };
-
+            const { average, count } = aggregateResult[0]?.stats[0] ?? {
+                average: 0,
+                count: 0,
+            };
+            return {
+                reviews: results,
+                aggregateData: { totalReviews: count, averageRating: average },
+            };
         } catch (e) {
             throw new ResourceAccessError(500, `Failed to fetch reviews: ${e}`);
         }
@@ -542,7 +678,7 @@ export class OrgController extends Controller {
      * Write an internal review for a person. the requestor and person
      * must both be in body.teamId and the requestor must have the
      * corp:reviewaccess bindle in that team.
-     * 
+     *
      * @param req express Request object
      * @param personId pk of the person being reviewed
      * @param body APICreateReviewRequest instance
@@ -556,29 +692,45 @@ export class OrgController extends Controller {
     async writeReview(
         @Request() req: express.Request,
         @Path() personId: number,
-        @Body() body: APICreateReviewRequest
+        @Body() body: APICreateReviewRequest,
     ): Promise<APICreateReviewResponse> {
         // User refers to the personId, requester refers to the user making the request.
 
         // 0. Ensure user and requester aren't the same
         if (personId === req.session.authorizedUser!.pk) {
-            throw new CustomValidationError(403, "You can not review yourself.");
+            throw new CustomValidationError(
+                403,
+                "You can not review yourself.",
+            );
         }
 
         // 1. Ensure user exists
-        const userInfo = await this.authentikClient.getUserInfo(personId)
-            .catch((e) => { throw new ResourceAccessError(400, `Failed to fetch user info: ${e}`) });
+        const userInfo = await this.authentikClient
+            .getUserInfo(personId)
+            .catch((e) => {
+                throw new ResourceAccessError(
+                    400,
+                    `Failed to fetch user info: ${e}`,
+                );
+            });
 
         // 2. Ensure user is in the target team
         let userTeams: GetTeamsForUsernameResponse;
         try {
-            userTeams = await this.authentikClient.getRootTeamsForUsername(userInfo.username);
+            userTeams = await this.authentikClient.getRootTeamsForUsername(
+                userInfo.username,
+            );
         } catch (e) {
             console.error(e);
-            throw new ResourceAccessError(500, "Failed to get user team membership");
+            throw new ResourceAccessError(
+                500,
+                "Failed to get user team membership",
+            );
         }
 
-        if (userTeams.teams.findIndex((team) => team.pk === body.teamId) === -1) {
+        if (
+            userTeams.teams.findIndex((team) => team.pk === body.teamId) === -1
+        ) {
             // User is not in target team.
             throw new CustomValidationError(403, "User is not in target team.");
         }
@@ -589,7 +741,9 @@ export class OrgController extends Controller {
                 userId: personId,
                 creatorId: req.session.authorizedUser!.pk,
                 teamId: body.teamId,
-            }).lean().exec();
+            })
+                .lean()
+                .exec();
             if (existingReview !== null) {
                 throw new CustomValidationError(400, "Review already created.");
             }
@@ -624,7 +778,7 @@ export class OrgController extends Controller {
      * Edit an existing review for a person. The requestor must
      * have the corp:reviewaccess bindle in the team being requested.
      * Only permits the review author to edit the review.
-     * 
+     *
      * @param req express Request object
      * @param personId pk of the person being reviewed
      * @param reviewId ObjectID of the review
@@ -640,16 +794,25 @@ export class OrgController extends Controller {
         @Request() req: express.Request,
         @Path() personId: number,
         @Path() reviewId: string,
-        @Body() body: APICreateReviewRequest
+        @Body() body: APICreateReviewRequest,
     ): Promise<APICreateReviewResponse> {
         // 0. Ensure user and requester aren't the same
         if (personId === req.session.authorizedUser!.pk) {
-            throw new CustomValidationError(403, "You can not review yourself.");
+            throw new CustomValidationError(
+                403,
+                "You can not review yourself.",
+            );
         }
 
         // 1. Get Review
-        const review = await UserReview.findById(reviewId).exec()
-            .catch((e) => { throw new ResourceAccessError(500, `Failed to fetch review: ${e}`) });
+        const review = await UserReview.findById(reviewId)
+            .exec()
+            .catch((e) => {
+                throw new ResourceAccessError(
+                    500,
+                    `Failed to fetch review: ${e}`,
+                );
+            });
 
         if (review === null) {
             throw new CustomValidationError(404, "Review does not exist");
@@ -682,9 +845,9 @@ export class OrgController extends Controller {
 
     /**
      * Delete an existing review for a person.
-     * Permites either the author or any executives to 
+     * Permites either the author or any executives to
      * delete the review.
-     * 
+     *
      * @param req express Request object
      * @param personId pk of the person being reviewed
      * @param reviewId ObjectID of the review
@@ -697,11 +860,17 @@ export class OrgController extends Controller {
     async deleteReview(
         @Request() req: express.Request,
         @Path() personId: number,
-        @Path() reviewId: string
+        @Path() reviewId: string,
     ) {
         // 1. Get Review
-        const review = await UserReview.findById(reviewId).exec()
-            .catch((e) => { throw new ResourceAccessError(500, `Failed to fetch review: ${e}`) });
+        const review = await UserReview.findById(reviewId)
+            .exec()
+            .catch((e) => {
+                throw new ResourceAccessError(
+                    500,
+                    `Failed to fetch review: ${e}`,
+                );
+            });
 
         if (review === null) {
             throw new CustomValidationError(404, "Review does not exist");
@@ -746,7 +915,7 @@ export class OrgController extends Controller {
      * Updates the profile attributes of a user. Only the authenticated user
      * can update their own profile. Supports updating major, expected graduation
      * date, phone number, and avatar.
-     * 
+     *
      * @param req Express Request Object
      * @param personId Internal User ID
      * @param body Update Request Body
@@ -758,20 +927,27 @@ export class OrgController extends Controller {
     async updatePersonInfo(
         @Request() req: express.Request,
         @Path() personId: number,
-        @Body() body: {
+        @Body()
+        body: {
             major?: string;
             expectedGrad?: string;
             phoneNumber?: string;
             linkedinUrl?: string;
             avatarKey?: string;
-        }
+        },
     ): Promise<{ success: boolean }> {
-        const authorizedUser = (req as any).session.authorizedUser as AuthorizedUser;
-        const callerInfo = await this.authentikClient.getUserInfoFromEmail(authorizedUser.email);
+        const authorizedUser = (req as any).session
+            .authorizedUser as AuthorizedUser;
+        const callerInfo = await this.authentikClient.getUserInfoFromEmail(
+            authorizedUser.email,
+        );
 
         if (Number(callerInfo.pk) !== personId) {
             this.setStatus(403);
-            throw new CustomValidationError(403, "You can only update your own profile.");
+            throw new CustomValidationError(
+                403,
+                "You can only update your own profile.",
+            );
         }
 
         const updatePayload: Record<string, any> = {};
@@ -779,7 +955,8 @@ export class OrgController extends Controller {
             if (body.major === "") {
                 updatePayload.major = "";
             } else {
-                if (body.major.length > 100) throw new CustomValidationError(400, "Invalid major.");
+                if (body.major.length > 100)
+                    throw new CustomValidationError(400, "Invalid major.");
                 updatePayload.major = capitalizeString(body.major);
             }
         }
@@ -788,7 +965,11 @@ export class OrgController extends Controller {
             if (body.expectedGrad === "") {
                 updatePayload.expectedGrad = "";
             } else {
-                if (!isValidGradDate(body.expectedGrad)) throw new CustomValidationError(400, "Invalid graduation date.");
+                if (!isValidGradDate(body.expectedGrad))
+                    throw new CustomValidationError(
+                        400,
+                        "Invalid graduation date.",
+                    );
                 updatePayload.expectedGrad = body.expectedGrad;
             }
         }
@@ -798,44 +979,72 @@ export class OrgController extends Controller {
                 updatePayload.phoneNumber = "";
             } else {
                 const digits = body.phoneNumber.replace(/[\s\-().+]/g, "");
-                if (!/^\d{10,15}$/.test(digits)) throw new CustomValidationError(400, "Invalid phone number.");
+                if (!/^\d{10,15}$/.test(digits))
+                    throw new CustomValidationError(
+                        400,
+                        "Invalid phone number.",
+                    );
                 updatePayload.phoneNumber = body.phoneNumber;
             }
         }
 
         if (body.linkedinUrl !== undefined) {
-            const normalizedLinkedinUrl = normalizeLinkedInProfileUrl(body.linkedinUrl);
+            const normalizedLinkedinUrl = normalizeLinkedInProfileUrl(
+                body.linkedinUrl,
+            );
             if (normalizedLinkedinUrl === null) {
-                throw new CustomValidationError(400, "Please enter a valid LinkedIn profile URL.");
+                throw new CustomValidationError(
+                    400,
+                    "Please enter a valid LinkedIn profile URL.",
+                );
             }
             updatePayload.linkedinUrl = normalizedLinkedinUrl;
         }
 
         if (Object.keys(updatePayload).length > 0) {
-            await this.authentikClient.updateUserAttributes(personId, updatePayload);
+            await this.authentikClient.updateUserAttributes(
+                personId,
+                updatePayload,
+            );
         }
 
         // Handle avatar update
         if (body.avatarKey) {
             const avatarKey = path.posix.normalize(body.avatarKey);
             const expectedPrefix = `avatars/temp/profile/${personId}/`;
-            if (!avatarKey.startsWith(expectedPrefix) || avatarKey.includes('..')) {
+            if (
+                !avatarKey.startsWith(expectedPrefix) ||
+                avatarKey.includes("..")
+            ) {
                 throw new CustomValidationError(400, "Invalid avatar key");
             }
 
             try {
                 const filename = path.posix.basename(avatarKey);
-                const ext = filename.includes('.') ? filename.split('.').pop()?.toLowerCase() : '';
-                const allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+                const ext = filename.includes(".")
+                    ? filename.split(".").pop()?.toLowerCase()
+                    : "";
+                const allowedExtensions = ["png", "jpg", "jpeg", "gif", "webp"];
                 if (!ext || !allowedExtensions.includes(ext)) {
-                    throw new CustomValidationError(400, "Invalid avatar file extension.");
+                    throw new CustomValidationError(
+                        400,
+                        "Invalid avatar file extension.",
+                    );
                 }
 
                 const newKey = `avatars/${personId}/avatar.${ext}`;
 
                 // Validate magic bytes
-                const allowedAvatars = [FILE_SIGNATURES.PNG, FILE_SIGNATURES.JPEG, FILE_SIGNATURES.GIF, FILE_SIGNATURES.WEBP];
-                const isValid = await validateS3FileSignature(avatarKey, allowedAvatars);
+                const allowedAvatars = [
+                    FILE_SIGNATURES.PNG,
+                    FILE_SIGNATURES.JPEG,
+                    FILE_SIGNATURES.GIF,
+                    FILE_SIGNATURES.WEBP,
+                ];
+                const isValid = await validateS3FileSignature(
+                    avatarKey,
+                    allowedAvatars,
+                );
                 if (!isValid) {
                     await deleteTempAvatar(avatarKey);
                     throw new CustomValidationError(400, "Invalid image file.");
@@ -844,55 +1053,89 @@ export class OrgController extends Controller {
                 const imageBytes = await getS3ObjectBytes(avatarKey);
                 if (!imageBytes) {
                     await deleteTempAvatar(avatarKey);
-                    throw new CustomValidationError(400, "Upload failed, please try again.");
+                    throw new CustomValidationError(
+                        400,
+                        "Upload failed, please try again.",
+                    );
                 }
 
                 const faceCheckResult = await checkPhotoHasFace(imageBytes);
                 if (faceCheckResult.passed === false) {
                     await deleteTempAvatar(avatarKey);
                     if (faceCheckResult.reason === "file_too_large") {
-                        throw new CustomValidationError(400, "File is too large. Please upload an image smaller than 1 MB.");
+                        throw new CustomValidationError(
+                            400,
+                            "File is too large. Please upload an image smaller than 1 MB.",
+                        );
                     }
-                    if (faceCheckResult.reason === "image_dimensions_too_large") {
-                        throw new CustomValidationError(400, "Image dimensions are too large. Please use an image no larger than 4096 x 4096 pixels.");
+                    if (
+                        faceCheckResult.reason === "image_dimensions_too_large"
+                    ) {
+                        throw new CustomValidationError(
+                            400,
+                            "Image dimensions are too large. Please use an image no larger than 4096 x 4096 pixels.",
+                        );
                     }
-                    throw new CustomValidationError(400, "Please upload a photo of only your face.");
+                    throw new CustomValidationError(
+                        400,
+                        "Please upload a photo of only your face.",
+                    );
                 }
 
                 // Capture old key before overwriting
-                const existingUser = await this.authentikClient.getUserInfo(personId);
+                const existingUser =
+                    await this.authentikClient.getUserInfo(personId);
                 const oldAvatarKey = existingUser.attributes.avatar;
 
                 // Copy new avatar into place
-                await s3Client.send(new CopyObjectCommand({
-                    Bucket: BUCKET_NAME,
-                    CopySource: `${BUCKET_NAME}/${avatarKey}`,
-                    Key: newKey
-                }));
+                await s3Client.send(
+                    new CopyObjectCommand({
+                        Bucket: BUCKET_NAME,
+                        CopySource: `${BUCKET_NAME}/${avatarKey}`,
+                        Key: newKey,
+                    }),
+                );
 
                 // Commit: point DB at new avatar
-                await this.authentikClient.updateUserAttributes(personId, { avatar: newKey });
+                await this.authentikClient.updateUserAttributes(personId, {
+                    avatar: newKey,
+                });
                 invalidateAvatarUrlCache(personId);
 
                 // Best-effort cleanup — failures here are non-fatal
                 if (oldAvatarKey && oldAvatarKey !== newKey) {
                     try {
-                        await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: oldAvatarKey }));
+                        await s3Client.send(
+                            new DeleteObjectCommand({
+                                Bucket: BUCKET_NAME,
+                                Key: oldAvatarKey,
+                            }),
+                        );
                     } catch (e) {
                         console.error("Failed to delete old avatar", e);
                     }
                 }
 
                 try {
-                    await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: avatarKey }));
+                    await s3Client.send(
+                        new DeleteObjectCommand({
+                            Bucket: BUCKET_NAME,
+                            Key: avatarKey,
+                        }),
+                    );
                 } catch (e) {
-                    console.error("Failed to delete temp avatar after commit", e);
+                    console.error(
+                        "Failed to delete temp avatar after commit",
+                        e,
+                    );
                 }
-
             } catch (e) {
                 if (e instanceof CustomValidationError) throw e;
                 console.error("Failed to process avatar update", e);
-                throw new CustomValidationError(500, "Failed to update avatar.");
+                throw new CustomValidationError(
+                    500,
+                    "Failed to update avatar.",
+                );
             }
         }
 
@@ -902,7 +1145,7 @@ export class OrgController extends Controller {
     /**
      * Generates a pre-signed URL for uploading a profile picture for an
      * authenticated user editing their own profile.
-     * 
+     *
      * @param req Express Request Object
      * @param fileName Name of the file
      * @param contentType MIME type of the file
@@ -914,21 +1157,41 @@ export class OrgController extends Controller {
     async getProfileAvatarUploadUrl(
         @Request() req: express.Request,
         @Query() fileName: string,
-        @Query() contentType: string
-    ): Promise<{ uploadUrl: string, key: string, fields: Record<string, string> }> {
-        const authorizedUser = (req as any).session.authorizedUser as AuthorizedUser;
-        const callerInfo = await this.authentikClient.getUserInfoFromEmail(authorizedUser.email);
+        @Query() contentType: string,
+    ): Promise<{
+        uploadUrl: string;
+        key: string;
+        fields: Record<string, string>;
+    }> {
+        const authorizedUser = (req as any).session
+            .authorizedUser as AuthorizedUser;
+        const callerInfo = await this.authentikClient.getUserInfoFromEmail(
+            authorizedUser.email,
+        );
 
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+        ];
         if (!allowedTypes.includes(contentType)) {
-            throw new CustomValidationError(400, "Invalid file type. Only images are allowed.");
+            throw new CustomValidationError(
+                400,
+                "Invalid file type. Only images are allowed.",
+            );
         }
 
         const safeFileName = path.posix.basename(fileName);
-        const ext = safeFileName.includes('.') ? safeFileName.split('.').pop()?.toLowerCase() : '';
-        const allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+        const ext = safeFileName.includes(".")
+            ? safeFileName.split(".").pop()?.toLowerCase()
+            : "";
+        const allowedExtensions = ["png", "jpg", "jpeg", "gif", "webp"];
         if (!ext || !allowedExtensions.includes(ext)) {
-            throw new CustomValidationError(400, "Invalid file name. Only image extensions are allowed.");
+            throw new CustomValidationError(
+                400,
+                "Invalid file name. Only image extensions are allowed.",
+            );
         }
 
         const timestamp = Date.now();
@@ -952,12 +1215,12 @@ export class OrgController extends Controller {
      * Fetches the list of all People Portal teams in the organization that
      * the user is a member of. Uses the username query parameter for user
      * information. **List size is capped to 1000.**
-     * 
+     *
      * **Code Duplication Warning:**
      * This API is the same as `/api/org/myteams` except that the latter uses
      * the session cookie to obtain the username. The latter API is still
      * kept and will not be deprecated considering breaking changes.
-     * 
+     *
      * @param req Express Request Object
      * @param username People Portal Username
      * @returns Teams user is a member of
@@ -966,8 +1229,11 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(200)
     @Security("oidc")
-    async getUserRootTeams(@Request() req: express.Request, @Path() username: string): Promise<GetTeamsForUsernameResponse> {
-        return await this.authentikClient.getRootTeamsForUsername(username)
+    async getUserRootTeams(
+        @Request() req: express.Request,
+        @Path() username: string,
+    ): Promise<GetTeamsForUsernameResponse> {
+        return await this.authentikClient.getRootTeamsForUsername(username);
     }
 
     /**
@@ -977,14 +1243,18 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(200)
     @Security("oidc")
-    async getUserTeamMemberships(@Path() username: string): Promise<GetTeamMembershipsResponse> {
-        return await this.authentikClient.getTeamMembershipsForUsername(username)
+    async getUserTeamMemberships(
+        @Path() username: string,
+    ): Promise<GetTeamMembershipsResponse> {
+        return await this.authentikClient.getTeamMembershipsForUsername(
+            username,
+        );
     }
 
     /**
      * Provides the list of available root team settings supported
      * by People Portal teams.
-     * 
+     *
      * @returns Team Settings List
      */
     @Get("teamsettings")
@@ -999,7 +1269,7 @@ export class OrgController extends Controller {
      * Fetches the list of all People Portal teams in the organization.
      * API includes a Base64-encoded cursor for pagination to assist with
      * post fetch filtering from Authentik and infinite scrolling.
-     * 
+     *
      * @param options Get Team List Options
      * @returns Cursor-Paginated List of Teams
      */
@@ -1007,31 +1277,51 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(200)
     @Security("oidc")
-    async getTeams(@Queries() options: APIGetTeamsListOptions): Promise<GetTeamsListResponse> {
-        return await this.authentikClient.getGroupsList(options)
+    async getTeams(
+        @Queries() options: APIGetTeamsListOptions,
+    ): Promise<GetTeamsListResponse> {
+        return await this.authentikClient.getGroupsList(options);
     }
 
     @Get("orgchart")
     @Tags("Team Management")
     @SuccessResponse(200)
     @Security("oidc")
-    async getOrgChart(@Queries() options?: APIGetOrgChartOptions): Promise<APIGetOrgChartResponse> {
+    async getOrgChart(
+        @Queries() options?: APIGetOrgChartOptions,
+    ): Promise<APIGetOrgChartResponse> {
         const shouldExpandAll = options?.expandAll ?? true;
 
         // 1. Fetch Root Team (Exec Board)
         let execTeam: any;
         try {
-            const pk = await this.authentikClient.getGroupPkFromName("ExecutiveBoardMembers");
-            execTeam = await this.authentikClient.getGroupInfo(pk, { includeUsers: true });
+            const pk = await this.authentikClient.getGroupPkFromName(
+                "ExecutiveBoardMembers",
+            );
+            execTeam = await this.authentikClient.getGroupInfo(pk, {
+                includeUsers: true,
+            });
         } catch {
-            return { root: { id: "error", name: "Exec Board Not Found", type: "ROOT_MEMBER" } };
+            return {
+                root: {
+                    id: "error",
+                    name: "Exec Board Not Found",
+                    type: "ROOT_MEMBER",
+                },
+            };
         }
 
         const execUsers = execTeam.users || [];
         const execTeamName = execTeam.attributes?.friendlyName || execTeam.name;
 
         if (execUsers.length === 0) {
-            return { root: { id: "error", name: "Exec Board Not Found2", type: "ROOT_MEMBER" } };
+            return {
+                root: {
+                    id: "error",
+                    name: "Exec Board Not Found2",
+                    type: "ROOT_MEMBER",
+                },
+            };
         }
 
         // 2. Identify President (Primary Root)
@@ -1048,49 +1338,83 @@ export class OrgController extends Controller {
             name: presidentUser.name,
             type: "ROOT_MEMBER",
             attributes: {
-                role: presidentUser.attributes?.roles?.[execTeam.pk] || "President",
+                role:
+                    presidentUser.attributes?.roles?.[execTeam.pk] ||
+                    "President",
                 email: presidentUser.email,
                 teamContext: [execTeamName],
                 realUserPk: presidentUser.pk,
-                avatar: await signAvatarUrl(presidentUser.pk, presidentUser.attributes.avatar)
+                avatar: await signAvatarUrl(
+                    presidentUser.pk,
+                    presidentUser.attributes.avatar,
+                ),
             },
             siblings: [],
-            children: []
+            children: [],
         };
 
         // 4. Add Other Execs as Siblings
         // We use Promise.all to map async operations
-        await Promise.all(execUsers.map(async (u: any, idx: number) => {
-            if (idx === presidentIndex) return;
-            rootNode.siblings!.push({
-                id: u.pk.toString(), // Siblings are just people
-                name: u.name,
-                type: "ROOT_MEMBER",
-                attributes: {
-                    role: u.attributes?.roles?.[execTeam.pk] || "Executive",
-                    email: u.email,
-                    teamContext: [execTeamName],
-                    avatar: await signAvatarUrl(u.pk, u.attributes.avatar)
-                },
-                children: []
-            });
-        }));
+        await Promise.all(
+            execUsers.map(async (u: any, idx: number) => {
+                if (idx === presidentIndex) return;
+                rootNode.siblings!.push({
+                    id: u.pk.toString(), // Siblings are just people
+                    name: u.name,
+                    type: "ROOT_MEMBER",
+                    attributes: {
+                        role: u.attributes?.roles?.[execTeam.pk] || "Executive",
+                        email: u.email,
+                        teamContext: [execTeamName],
+                        avatar: await signAvatarUrl(u.pk, u.attributes.avatar),
+                    },
+                    children: [],
+                });
+            }),
+        );
 
         // 5. Initialize Divisions
         /* Keyed by TeamType rather than string: Object.keys then yields real
            enum members, so the teamType comparison below is type-checked and a
            bad key fails to compile instead of silently matching no teams. */
         const divisions: Partial<Record<TeamType, OrgChartNode>> = {
-            [TeamType.PROJECT]: { id: "div_project", name: "Projects", type: "DIVISION", children: [], hasChildren: true },
-            [TeamType.BOOTCAMP]: { id: "div_bootcamp", name: "Bootcamp", type: "DIVISION", children: [], hasChildren: true },
-            [TeamType.CORPORATE]: { id: "div_corporate", name: "Corporate", type: "DIVISION", children: [], hasChildren: true },
+            [TeamType.PROJECT]: {
+                id: "div_project",
+                name: "Projects",
+                type: "DIVISION",
+                children: [],
+                hasChildren: true,
+            },
+            [TeamType.BOOTCAMP]: {
+                id: "div_bootcamp",
+                name: "Bootcamp",
+                type: "DIVISION",
+                children: [],
+                hasChildren: true,
+            },
+            [TeamType.CORPORATE]: {
+                id: "div_corporate",
+                name: "Corporate",
+                type: "DIVISION",
+                children: [],
+                hasChildren: true,
+            },
         };
 
         let allTeamsRes: GetTeamsListDetailResponse;
         try {
-            allTeamsRes = await this.authentikClient.getGroupsListDetail({ limit: 500, includeUsers: true });
+            allTeamsRes = await this.authentikClient.getGroupsListDetail({
+                limit: 500,
+                includeUsers: true,
+            });
         } catch (e) {
-            return { root: { id: "error", name: "Could not fetch groups list.", type: "ROOT_MEMBER" } };
+            return {
+                root: {
+                    id: "error",
+                    name: "Could not fetch groups list.",
+                    type: "ROOT_MEMBER",
+                },
+            };
         }
 
         const allTeams = allTeamsRes.teams;
@@ -1099,85 +1423,109 @@ export class OrgController extends Controller {
         // We do this REGARDLESS of expandAll to ensure they are visible.
         // We check for "Roots" of each type.
         for (const type of Object.keys(divisions) as TeamType[]) {
-            const divRoots = allTeams.filter(t =>
-                !t.flaggedForDeletion &&
-                t.teamType === type &&
-                !t.parent // Only "Root" teams of this type
+            const divRoots = allTeams.filter(
+                (t) =>
+                    !t.flaggedForDeletion && t.teamType === type && !t.parent, // Only "Root" teams of this type
             );
 
-            // for (const detailedTeam of divRoots) 
-            const nodes = await Promise.all(divRoots.map(async (detailedTeam) => {
-                // Fetch detailed info to get OWNERS
-                try {
-                    const owners = detailedTeam.users || [];
-                    const teamName = detailedTeam.friendlyName || detailedTeam.name;
+            // for (const detailedTeam of divRoots)
+            const nodes = await Promise.all(
+                divRoots.map(async (detailedTeam) => {
+                    // Fetch detailed info to get OWNERS
+                    try {
+                        const owners = detailedTeam.users || [];
+                        const teamName =
+                            detailedTeam.friendlyName || detailedTeam.name;
 
-                    if (owners.length > 0) {
-                        const primaryOwner = owners[0]!;
+                        if (owners.length > 0) {
+                            const primaryOwner = owners[0]!;
 
-                        // Check if this team has subteams (to set hasChildren for the Owner)
-                        // Use the direct list from detailed info as source of truth
-                        const hasSubteams = (detailedTeam.subteamPkList && detailedTeam.subteamPkList.length > 0) || false;
+                            // Check if this team has subteams (to set hasChildren for the Owner)
+                            // Use the direct list from detailed info as source of truth
+                            const hasSubteams =
+                                (detailedTeam.subteamPkList &&
+                                    detailedTeam.subteamPkList.length > 0) ||
+                                false;
 
-                        const ownerNode: OrgChartNode = {
-                            id: detailedTeam.pk, // USES TEAM PK so expansion fetches Team Members
-                            name: primaryOwner.name,
-                            type: "PERSON",
-                            attributes: {
-                                role: primaryOwner.attributes?.roles?.[detailedTeam.pk] || "Owner",
-                                email: primaryOwner.email,
-                                teamContext: [teamName],
-                                realUserPk: primaryOwner.pk,
-                                avatar: await signAvatarUrl(primaryOwner.pk, primaryOwner.attributes.avatar)
-                            },
-                            siblings: [],
-                            children: [],
-                            hasChildren: hasSubteams // Lazy load indicator
-                        };
+                            const ownerNode: OrgChartNode = {
+                                id: detailedTeam.pk, // USES TEAM PK so expansion fetches Team Members
+                                name: primaryOwner.name,
+                                type: "PERSON",
+                                attributes: {
+                                    role:
+                                        primaryOwner.attributes?.roles?.[
+                                            detailedTeam.pk
+                                        ] || "Owner",
+                                    email: primaryOwner.email,
+                                    teamContext: [teamName],
+                                    realUserPk: primaryOwner.pk,
+                                    avatar: await signAvatarUrl(
+                                        primaryOwner.pk,
+                                        primaryOwner.attributes.avatar,
+                                    ),
+                                },
+                                siblings: [],
+                                children: [],
+                                hasChildren: hasSubteams, // Lazy load indicator
+                            };
 
-                        // Add sibling owners
-                        ownerNode.siblings = await Promise.all(owners.slice(1).map(async (o: any) => ({
-                            id: o.pk.toString(),
-                            name: o.name,
-                            type: "PERSON",
-                            attributes: {
-                                role: o.attributes?.roles?.[detailedTeam.pk] || "Co-Owner",
-                                email: o.email,
-                                avatar: await signAvatarUrl(o.pk, o.attributes.avatar)
+                            // Add sibling owners
+                            ownerNode.siblings = await Promise.all(
+                                owners.slice(1).map(async (o: any) => ({
+                                    id: o.pk.toString(),
+                                    name: o.name,
+                                    type: "PERSON",
+                                    attributes: {
+                                        role:
+                                            o.attributes?.roles?.[
+                                                detailedTeam.pk
+                                            ] || "Co-Owner",
+                                        email: o.email,
+                                        avatar: await signAvatarUrl(
+                                            o.pk,
+                                            o.attributes.avatar,
+                                        ),
+                                    },
+                                })),
+                            );
+
+                            // If expandAll is true, populate children (Subteams)
+                            if (shouldExpandAll && hasSubteams) {
+                                // This part would duplicate the "getOrgChartNode" logic.
+                                // For simplicity/robustness, we can leave it empty and let frontend lazy-load,
+                                // OR implemented the recursive fetching here.
+                                // Given "simplify", let's rely on the lazy load unless user REALLY wants full dump.
+                                // User script: "we just populate them prehand...?"
+                                // Let's populate if requested.
+                                const subMembers =
+                                    await this.getAllSubteamMembers(
+                                        detailedTeam.pk,
+                                        teamName,
+                                        allTeams,
+                                    );
+                                ownerNode.children = subMembers;
                             }
-                        })));
 
-                        // If expandAll is true, populate children (Subteams)
-                        if (shouldExpandAll && hasSubteams) {
-                            // This part would duplicate the "getOrgChartNode" logic. 
-                            // For simplicity/robustness, we can leave it empty and let frontend lazy-load,
-                            // OR implemented the recursive fetching here.
-                            // Given "simplify", let's rely on the lazy load unless user REALLY wants full dump.
-                            // User script: "we just populate them prehand...?"
-                            // Let's populate if requested.
-                            const subMembers = await this.getAllSubteamMembers(detailedTeam.pk, teamName, allTeams);
-                            ownerNode.children = subMembers;
+                            return ownerNode;
                         }
-
-                        return ownerNode;
+                    } catch (e) {
+                        // console.error(`Failed to process team ${team.name}`, e);
                     }
-                } catch (e) {
-                    // console.error(`Failed to process team ${team.name}`, e);
-                }
-            }));
+                }),
+            );
 
             if (divisions[type]) {
-                divisions[type].children = nodes.filter((node) => node !== undefined);
+                divisions[type].children = nodes.filter(
+                    (node) => node !== undefined,
+                );
             }
-
-
         }
-
-
 
         // Attach populated divisions to Root
         // Only attach if they have children (Teams)
-        const activeDivisions = Object.values(divisions).filter(d => d.children && d.children.length > 0);
+        const activeDivisions = Object.values(divisions).filter(
+            (d) => d.children && d.children.length > 0,
+        );
         rootNode.children = activeDivisions;
         rootNode.hasChildren = activeDivisions.length > 0;
 
@@ -1188,7 +1536,7 @@ export class OrgController extends Controller {
      * Gets the expanded Org Chart Node for a specific person/team.
      * Useful for lazy loading subtrees in the Org Chart visualization.
      * Returns people from subteams under the given team.
-     * 
+     *
      * @param teamId Team PK (the team whose subteam members to fetch)
      */
     @Get("orgchart/node/{teamId}")
@@ -1202,10 +1550,15 @@ export class OrgController extends Controller {
         // But let's keep it safe.
         if (teamId.startsWith("div_")) {
             // Re-use logic from getOrgChart to populate specifically this division
-            // For now return empty or implement if needed. 
+            // For now return empty or implement if needed.
             // The frontend "Load Members" on a division triggers this if we returned empty children.
             // Since we pre-populate, this shouldn't be primary path.
-            return { id: teamId, name: "Division", type: "DIVISION", children: [] };
+            return {
+                id: teamId,
+                name: "Division",
+                type: "DIVISION",
+                children: [],
+            };
         }
 
         // Case B: Real Team ID (User clicked on a Team Owner)
@@ -1215,7 +1568,9 @@ export class OrgController extends Controller {
         const safeTeamId = teamId; // It's a GUID
         let teamInfo;
         try {
-            teamInfo = await this.authentikClient.getGroupInfo(safeTeamId, { includeUsers: true });
+            teamInfo = await this.authentikClient.getGroupInfo(safeTeamId, {
+                includeUsers: true,
+            });
         } catch {
             // Fallback/Error
             return { id: safeTeamId, name: "Unknown", type: "PERSON" };
@@ -1227,19 +1582,28 @@ export class OrgController extends Controller {
         /* For now, allTeamsContext is unused in getAllSubteamMembers, so we don't need to make this call. */
         // const allTeamsRes = await this.authentikClient.getGroupsList({ limit: 1000, includeUsers: false });
 
-        // 3. Get Members (Subteams + Direct Members if any not owners?) 
+        // 3. Get Members (Subteams + Direct Members if any not owners?)
         // Logic: "subteam members... added as reporting under"
         // Authentik structure: Root Team has "Owners" (Users) and "Subteams" (Groups). Users in Subteams are the members.
 
         const rootTeamName = teamInfo.attributes?.friendlyName || teamInfo.name;
 
         // const subMembers = await this.getAllSubteamMembers(safeTeamId, rootTeamName, allTeamsRes.teams);
-        const subMembers = await this.getAllSubteamMembers(safeTeamId, rootTeamName, []); // Removed unnecessary allTeamsRes (unused)
+        const subMembers = await this.getAllSubteamMembers(
+            safeTeamId,
+            rootTeamName,
+            [],
+        ); // Removed unnecessary allTeamsRes (unused)
 
         // Re-construct the Parent Node (Team Owner) to return with children
         // The frontend merges this result.
         const owners = teamInfo.users || [];
-        const primaryOwner = owners[0] || { name: "Unknown", pk: 0, email: "", attributes: { avatar: undefined } };
+        const primaryOwner = owners[0] || {
+            name: "Unknown",
+            pk: 0,
+            email: "",
+            attributes: { avatar: undefined },
+        };
 
         return {
             id: safeTeamId,
@@ -1254,20 +1618,30 @@ export class OrgController extends Controller {
                    real pk separately or the UI has no way to link to them. Same
                    reason as the other owner node. */
                 realUserPk: primaryOwner.pk,
-                avatar: await signAvatarUrl(primaryOwner.pk, primaryOwner.attributes.avatar)
+                avatar: await signAvatarUrl(
+                    primaryOwner.pk,
+                    primaryOwner.attributes.avatar,
+                ),
             },
             children: subMembers,
-            hasChildren: subMembers.length > 0
+            hasChildren: subMembers.length > 0,
         };
     }
 
     // Helper to recursively collect all people under a team
-    private async getAllSubteamMembers(rootTeamId: string, rootTeamName: string, allTeamsContext: any[]): Promise<OrgChartNode[]> {
+    private async getAllSubteamMembers(
+        rootTeamId: string,
+        rootTeamName: string,
+        allTeamsContext: any[],
+    ): Promise<OrgChartNode[]> {
         const results: OrgChartNode[] = [];
 
         // Get full tree from Authentik (recursively fetches subteams)
         // Note: getGroupInfo internally recurses if we don't disable it.
-        const rootDetailed = await this.authentikClient.getGroupInfo(rootTeamId, { includeUsers: true });
+        const rootDetailed = await this.authentikClient.getGroupInfo(
+            rootTeamId,
+            { includeUsers: true },
+        );
 
         const processSubteams = async (subteams: any[]) => {
             for (const sub of subteams) {
@@ -1276,21 +1650,26 @@ export class OrgController extends Controller {
                 const subName = sub.attributes?.friendlyName || sub.name;
                 const members = sub.users || [];
 
-                await Promise.all(members.map(async (m: any) => {
-                    results.push({
-                        id: m.pk.toString(), // Members are People
-                        name: m.name,
-                        type: "PERSON",
-                        attributes: {
-                            role: m.attributes?.roles?.[sub.pk] || "Member",
-                            email: m.email,
-                            teamContext: [rootTeamName, subName],
-                            avatar: await signAvatarUrl(m.pk, m.attributes.avatar)
-                        },
-                        children: []
-                        // Members are leaves in this structure
-                    });
-                }));
+                await Promise.all(
+                    members.map(async (m: any) => {
+                        results.push({
+                            id: m.pk.toString(), // Members are People
+                            name: m.name,
+                            type: "PERSON",
+                            attributes: {
+                                role: m.attributes?.roles?.[sub.pk] || "Member",
+                                email: m.email,
+                                teamContext: [rootTeamName, subName],
+                                avatar: await signAvatarUrl(
+                                    m.pk,
+                                    m.attributes.avatar,
+                                ),
+                            },
+                            children: [],
+                            // Members are leaves in this structure
+                        });
+                    }),
+                );
 
                 if (sub.subteams) {
                     await processSubteams(sub.subteams);
@@ -1305,12 +1684,11 @@ export class OrgController extends Controller {
         return results;
     }
 
-
     /**
      * Fetches the list of all People Portal teams in the organization that
      * the user is a member of. Uses the Request Session Cookie for user
      * information. **List size is capped to 1000.**
-     * 
+     *
      * @param req Express Request Object
      * @returns Non-Paginated List of Teams
      */
@@ -1318,8 +1696,12 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(200)
     @Security("oidc")
-    async getMyTeams(@Request() req: express.Request): Promise<GetTeamsForUsernameResponse> {
-        return await this.authentikClient.getRootTeamsForUsername(req.session.authorizedUser!.username)
+    async getMyTeams(
+        @Request() req: express.Request,
+    ): Promise<GetTeamsForUsernameResponse> {
+        return await this.authentikClient.getRootTeamsForUsername(
+            req.session.authorizedUser!.username,
+        );
     }
 
     /**
@@ -1327,18 +1709,18 @@ export class OrgController extends Controller {
      * the user must either be a team owner or have the `corp:membermgmt`
      * bindle. The invitee is automatically sent an email with a unique
      * invite link for onboarding.
-     * 
+     *
      * Bindle Exceptions:
      * - This function supports being called by the ATS Module allowing
      *   the ATS to create invites on behalf of the requester.
-     * 
+     *
      * - The ATS module is enforced to require the `corp:hiringaccess` bindle
      *   to offset for the bindle exception.
-     * 
-     * **Non-Standard Behavior:** We do not check if the subteam is archived 
-     * or not. A team/subteam state can change before someone accepts an invite. 
+     *
+     * **Non-Standard Behavior:** We do not check if the subteam is archived
+     * or not. A team/subteam state can change before someone accepts an invite.
      * Therefore, the check is done during onboarding.
-     * 
+     *
      * @param req Express Request Object
      * @param inviteReq Invite Create Request
      */
@@ -1347,7 +1729,10 @@ export class OrgController extends Controller {
     @SuccessResponse(201)
     @Security("bindles", ["corp:membermgmt"])
     async createInvite(
-        @Request() req: express.Request | ExpressRequestAuthUserShim & ExpressRequestBindleShim,
+        @Request()
+        req:
+            | express.Request
+            | (ExpressRequestAuthUserShim & ExpressRequestBindleShim),
         @Body() inviteReq: APITeamInviteCreateRequest,
         @Path("teamId") _teamId?: string,
     ) {
@@ -1359,35 +1744,46 @@ export class OrgController extends Controller {
         if (!inviteReq.inviteeEmail.endsWith("@terpmail.umd.edu")) {
             throw new CustomValidationError(
                 400,
-                "You can only onboard people with @terpmail.umd.edu addresses!"
-            )
+                "You can only onboard people with @terpmail.umd.edu addresses!",
+            );
         }
 
         /* Check if External User is a part of Org */
         try {
             /* We throw the Validation Error if the user is already in the org */
-            const user = await this.authentikClient.getUserInfoFromEmail(inviteReq.inviteeEmail)
+            const user = await this.authentikClient.getUserInfoFromEmail(
+                inviteReq.inviteeEmail,
+            );
             throw new CustomValidationError(
                 400,
-                `${user.name} is already in the organization! Please use the Existing Members feature to add them to your team.`
-            )
+                `${user.name} is already in the organization! Please use the Existing Members feature to add them to your team.`,
+            );
         } catch (e) {
             /* We Gracefully Handle All But Previous Error! */
-            if (e instanceof CustomValidationError)
-                throw e;
+            if (e instanceof CustomValidationError) throw e;
         }
 
         /* Gather Additional Data */
         const authorizedUser = req.session.authorizedUser!;
-        const invitorInfo = await this.authentikClient.getUserInfoFromEmail(authorizedUser.email)
+        const invitorInfo = await this.authentikClient.getUserInfoFromEmail(
+            authorizedUser.email,
+        );
         const teamInfo = req.bindle!.teamInfo;
-        const destination = await this.authentikClient.getGroupInfo(inviteReq.subteamPk, { includeParentInfo: true });
-        if (!teamInfo.attributes.peoplePortalCreation ||
+        const destination = await this.authentikClient.getGroupInfo(
+            inviteReq.subteamPk,
+            { includeParentInfo: true },
+        );
+        if (
+            !teamInfo.attributes.peoplePortalCreation ||
             !destination.attributes.peoplePortalCreation ||
             teamInfo.attributes.flaggedForDeletion ||
             destination.attributes.flaggedForDeletion ||
-            destination.parentPk !== teamInfo.pk) {
-            throw new CustomValidationError(400, "Invite destination must be an active subteam of the authorized team");
+            destination.parentPk !== teamInfo.pk
+        ) {
+            throw new CustomValidationError(
+                400,
+                "Invite destination must be an active subteam of the authorized team",
+            );
         }
 
         /* Create New Invite */
@@ -1399,8 +1795,10 @@ export class OrgController extends Controller {
             teamPk: teamInfo.pk,
             subteamPk: inviteReq.subteamPk,
             inviterPk: invitorInfo.pk,
-            expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000) /* 48 Hours */
-        })
+            expiresAt: new Date(
+                Date.now() + 48 * 60 * 60 * 1000,
+            ) /* 48 Hours */,
+        });
 
         /* Send an Email to the Invitee and the Invitor */
         const onboardUrl = `${process.env.PEOPLEPORTAL_BASE_URL}/onboard/${createdInvite._id}`;
@@ -1415,16 +1813,16 @@ export class OrgController extends Controller {
                 invitorName: invitorInfo.name,
                 teamName: teamInfo.attributes.friendlyName,
                 roleTitle: inviteReq.roleTitle,
-                onboardUrl
-            }
-        })
+                onboardUrl,
+            },
+        });
     }
 
     /**
      * Generates a pre-signed URL for uploading a profile picture.
      * This endpoint is public to allow users to upload avatars during onboarding
      * (before they have an account).
-     * 
+     *
      * @param inviteId Invite ID for validation and path generation
      * @param fileName Name of the file
      * @param contentType MIME type of the file
@@ -1435,9 +1833,12 @@ export class OrgController extends Controller {
     async getAvatarUploadUrl(
         @Query() inviteId: string,
         @Query() fileName: string,
-        @Query() contentType: string
-    ): Promise<{ uploadUrl: string, key: string, fields: Record<string, string> }> {
-
+        @Query() contentType: string,
+    ): Promise<{
+        uploadUrl: string;
+        key: string;
+        fields: Record<string, string>;
+    }> {
         const invite = await Invite.findById(inviteId).exec();
         if (!invite) {
             throw new CustomValidationError(400, "Invalid Invite ID");
@@ -1447,12 +1848,20 @@ export class OrgController extends Controller {
             throw new CustomValidationError(400, "Invite has expired");
         }
 
-        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif",
+        ];
         if (!allowedTypes.includes(contentType)) {
-            throw new CustomValidationError(400, "Invalid file type. Only images are allowed.");
+            throw new CustomValidationError(
+                400,
+                "Invalid file type. Only images are allowed.",
+            );
         }
 
-        const ext = fileName.split('.').pop();
+        const ext = fileName.split(".").pop();
         const timestamp = Date.now();
         const key = `avatars/temp/${inviteId}/${timestamp}.${ext}`;
 
@@ -1476,15 +1885,16 @@ export class OrgController extends Controller {
     /**
      * Generates a pre-signed URL for downloading a user's avatar.
      * Uses in-memory caching to reduce S3 API calls.
-     * 
+     *
      * @param userPk The PK of the user whose avatar to fetch
      */
     @Get("people/avatar/download-url")
     @Tags("People Management")
     @SuccessResponse(200)
     @Security("oidc")
-    async getAvatarDownloadUrl(@Query() userPk: string): Promise<{ url: string }> {
-
+    async getAvatarDownloadUrl(
+        @Query() userPk: string,
+    ): Promise<{ url: string }> {
         const pkNumber = parseInt(userPk);
         if (isNaN(pkNumber)) {
             throw new CustomValidationError(400, "Invalid User PK");
@@ -1495,29 +1905,33 @@ export class OrgController extends Controller {
 
         const url = await signAvatarUrl(userPk, avatarKey);
 
-        this.setHeader('Cache-Control', 'public, max-age=86400');
+        this.setHeader("Cache-Control", "public, max-age=86400");
         return { url };
     }
 
     /**
      * Public API since Invite IDs are unique and can't be guessed. Additionally,
      * temporary authentication through OTP is supported but would need an overhaul.
-     * 
+     *
      * @param inviteId Invite UUID
      * @returns Invite Information
      */
     @Get("invites/{inviteId}")
     @Tags("User Onboarding")
     @SuccessResponse(200)
-    async getInviteInfo(@Path() inviteId: string): Promise<APITeamInviteGetResponse> {
-        const invite = await Invite.findById(inviteId).lean<APITeamInviteGetResponse>().exec()
+    async getInviteInfo(
+        @Path() inviteId: string,
+    ): Promise<APITeamInviteGetResponse> {
+        const invite = await Invite.findById(inviteId)
+            .lean<APITeamInviteGetResponse>()
+            .exec();
         if (!invite || !invite.teamPk || invite.expiresAt <= new Date())
-            throw new CustomValidationError(400, "Invalid or expired invite")
+            throw new CustomValidationError(400, "Invalid or expired invite");
 
         return {
             ...invite,
-            slackInviteLink: this.slackClient.getSlackInviteLink()
-        }
+            slackInviteLink: this.slackClient.getSlackInviteLink(),
+        };
     }
 
     /**
@@ -1525,32 +1939,40 @@ export class OrgController extends Controller {
      * and major. The invitee is automatically added to the team and given
      * the role specified in the invite. Slack and other verification checks
      * are in place.
-     * 
+     *
      * @param inviteId Invite UUID
      * @param req Accept Invite Request
      */
     @Put("invites/{inviteId}")
     @Tags("User Onboarding")
     @SuccessResponse(201)
-    async acceptInvite(@Path() inviteId: string, @Body() req: APITeamInviteAcceptRequest) {
+    async acceptInvite(
+        @Path() inviteId: string,
+        @Body() req: APITeamInviteAcceptRequest,
+    ) {
         /* Sanitize Request */
         req.major = capitalizeString(req.major);
 
-        const normalizedLinkedinUrl = normalizeLinkedInProfileUrl(req.linkedinUrl ?? "");
+        const normalizedLinkedinUrl = normalizeLinkedInProfileUrl(
+            req.linkedinUrl ?? "",
+        );
         if (normalizedLinkedinUrl === null) {
-            throw new CustomValidationError(400, "Please enter a valid LinkedIn profile URL.");
+            throw new CustomValidationError(
+                400,
+                "Please enter a valid LinkedIn profile URL.",
+            );
         }
 
-        const invite = await Invite.findById(inviteId).exec()
+        const invite = await Invite.findById(inviteId).exec();
         if (!invite || !invite.teamPk || invite.expiresAt <= new Date())
-            throw new CustomValidationError(400, "Invalid or expired invite")
+            throw new CustomValidationError(400, "Invalid or expired invite");
 
         /* Validate Password Complexity */
         if (req.password) {
             if (req.password.length < 12) {
                 throw new CustomValidationError(
                     400,
-                    "Password must be at least 12 characters long"
+                    "Password must be at least 12 characters long",
                 );
             }
 
@@ -1558,26 +1980,36 @@ export class OrgController extends Controller {
             if (strength.score < 2) {
                 throw new CustomValidationError(
                     400,
-                    "Password is too weak. Please choose a stronger password."
+                    "Password is too weak. Please choose a stronger password.",
                 );
             }
         }
 
         /* Check Slack Presence! */
-        const slackPresence = await this.slackClient.validateUserPresence(invite.inviteEmail)
+        const slackPresence = await this.slackClient.validateUserPresence(
+            invite.inviteEmail,
+        );
         if (!slackPresence)
-            throw new Error("User has not joined the Slack Workspace!")
+            throw new Error("User has not joined the Slack Workspace!");
 
         /* Check if Subteam is Valid and Isn't Archived */
-        const rootTeam = await this.authentikClient.getGroupInfo(invite.teamPk)
-        const subteam = await this.authentikClient.getGroupInfo(invite.subteamPk, { includeParentInfo: true })
-        const isSubteamArchived = subteam.attributes.flaggedForDeletion
-        if (!rootTeam.attributes.peoplePortalCreation ||
+        const rootTeam = await this.authentikClient.getGroupInfo(invite.teamPk);
+        const subteam = await this.authentikClient.getGroupInfo(
+            invite.subteamPk,
+            { includeParentInfo: true },
+        );
+        const isSubteamArchived = subteam.attributes.flaggedForDeletion;
+        if (
+            !rootTeam.attributes.peoplePortalCreation ||
             !subteam.attributes.peoplePortalCreation ||
             rootTeam.attributes.flaggedForDeletion ||
             isSubteamArchived ||
-            subteam.parentPk !== invite.teamPk) {
-            throw new CustomValidationError(400, "Invite destination is no longer valid");
+            subteam.parentPk !== invite.teamPk
+        ) {
+            throw new CustomValidationError(
+                400,
+                "Invite destination is no longer valid",
+            );
         }
 
         /* Construct New Request */
@@ -1590,39 +2022,55 @@ export class OrgController extends Controller {
                 expectedGrad: req.expectedGrad,
                 phoneNumber: req.phoneNumber,
                 linkedinUrl: normalizedLinkedinUrl,
-                roles: {}
-            }
-        }
+                roles: {},
+            },
+        };
 
         if (!isSubteamArchived) {
-            createUserRequest.groupPk = invite.subteamPk
+            createUserRequest.groupPk = invite.subteamPk;
             createUserRequest.attributes.roles = {
-                [invite.subteamPk]: invite.roleTitle
-            }
+                [invite.subteamPk]: invite.roleTitle,
+            };
         }
 
         if (req.avatarKey) {
             const normalizedKey = path.posix.normalize(req.avatarKey);
             const expectedPrefix = `avatars/temp/${inviteId}/`;
-            if (!normalizedKey.startsWith(expectedPrefix) || normalizedKey.includes('..')) {
+            if (
+                !normalizedKey.startsWith(expectedPrefix) ||
+                normalizedKey.includes("..")
+            ) {
                 throw new CustomValidationError(400, "Invalid avatar key");
             }
         }
 
-        await this.authentikClient.createNewUser(createUserRequest)
+        await this.authentikClient.createNewUser(createUserRequest);
 
         if (req.avatarKey) {
             try {
-                const createdUser = await this.authentikClient.getUserInfoFromEmail(createUserRequest.email);
+                const createdUser =
+                    await this.authentikClient.getUserInfoFromEmail(
+                        createUserRequest.email,
+                    );
                 const userPk = createdUser.pk;
 
-                const ext = req.avatarKey.split('.').pop();
+                const ext = req.avatarKey.split(".").pop();
                 const newKey = `avatars/${userPk}/avatar.${ext}`;
 
-                const allowedAvatars = [FILE_SIGNATURES.PNG, FILE_SIGNATURES.JPEG, FILE_SIGNATURES.GIF, FILE_SIGNATURES.WEBP];
-                const isValid = await validateS3FileSignature(req.avatarKey, allowedAvatars);
+                const allowedAvatars = [
+                    FILE_SIGNATURES.PNG,
+                    FILE_SIGNATURES.JPEG,
+                    FILE_SIGNATURES.GIF,
+                    FILE_SIGNATURES.WEBP,
+                ];
+                const isValid = await validateS3FileSignature(
+                    req.avatarKey,
+                    allowedAvatars,
+                );
                 if (!isValid) {
-                    console.error("Profile picture was not valid. Account created anyway.");
+                    console.error(
+                        "Profile picture was not valid. Account created anyway.",
+                    );
                     await deleteTempAvatar(req.avatarKey);
                     await invite.deleteOne();
                     return;
@@ -1630,7 +2078,9 @@ export class OrgController extends Controller {
 
                 const imageBytes = await getS3ObjectBytes(req.avatarKey);
                 if (!imageBytes) {
-                    console.error("Failed to fetch avatar bytes. Account created anyway.");
+                    console.error(
+                        "Failed to fetch avatar bytes. Account created anyway.",
+                    );
                     await deleteTempAvatar(req.avatarKey);
                     await invite.deleteOne();
                     return;
@@ -1638,44 +2088,52 @@ export class OrgController extends Controller {
 
                 const faceCheckResult = await checkPhotoHasFace(imageBytes);
                 if (faceCheckResult.passed === false) {
-                    console.error("Avatar failed face check. Account created anyway.");
+                    console.error(
+                        "Avatar failed face check. Account created anyway.",
+                    );
                     await deleteTempAvatar(req.avatarKey);
                     await invite.deleteOne();
                     return;
                 }
 
-                await s3Client.send(new CopyObjectCommand({
-                    Bucket: BUCKET_NAME,
-                    CopySource: `${BUCKET_NAME}/${req.avatarKey}`,
-                    Key: newKey
-                }));
+                await s3Client.send(
+                    new CopyObjectCommand({
+                        Bucket: BUCKET_NAME,
+                        CopySource: `${BUCKET_NAME}/${req.avatarKey}`,
+                        Key: newKey,
+                    }),
+                );
 
-                await this.authentikClient.updateUserAttributes(parseInt(userPk as any), {
-                    avatar: newKey
-                });
+                await this.authentikClient.updateUserAttributes(
+                    parseInt(userPk as any),
+                    {
+                        avatar: newKey,
+                    },
+                );
 
                 /* Second avatar write path; mirror the invalidate the profile-edit
                    path does so the two stay symmetric. */
                 invalidateAvatarUrlCache(parseInt(userPk as any));
 
-                await s3Client.send(new DeleteObjectCommand({
-                    Bucket: BUCKET_NAME,
-                    Key: req.avatarKey
-                }));
-
+                await s3Client.send(
+                    new DeleteObjectCommand({
+                        Bucket: BUCKET_NAME,
+                        Key: req.avatarKey,
+                    }),
+                );
             } catch (e) {
                 // Don't fail the whole request, just log error. User is created.
                 console.error("Failed to process avatar", e);
             }
         }
 
-        await invite.deleteOne()
+        await invite.deleteOne();
     }
 
     /**
      * Verifies if a user is a member of the Slack Workspace. Uses the
      * Slack Shared Resources Client for operations.
-     * 
+     *
      * @param req Verify Slack Request
      * @returns True if the user is a member of the Slack Workspace, false otherwise
      */
@@ -1683,14 +2141,14 @@ export class OrgController extends Controller {
     @Tags("Generic Organization Tools")
     @SuccessResponse(200)
     async verifySlack(@Body() req: { email: string }): Promise<boolean> {
-        return await this.slackClient.validateUserPresence(req.email)
+        return await this.slackClient.validateUserPresence(req.email);
     }
 
     /**
      * Provides information about a specific team in the organization. Includes
      * subteams, users and attributes. Access granted to all OIDC authenticated
      * users without any bindle restrictions.
-     * 
+     *
      * @param teamId Team ID
      * @returns Team Information
      */
@@ -1714,32 +2172,44 @@ export class OrgController extends Controller {
         // }
 
         if (primaryTeam.users) {
-            await Promise.all(primaryTeam.users.map(async (user) => {
-                user.avatar = await signAvatarUrl(user.pk, user.attributes.avatar);
-            }));
+            await Promise.all(
+                primaryTeam.users.map(async (user) => {
+                    user.avatar = await signAvatarUrl(
+                        user.pk,
+                        user.attributes.avatar,
+                    );
+                }),
+            );
         }
 
         if (primaryTeam.subteams) {
-            await Promise.all(primaryTeam.subteams.map(async (sub) => {
-                if (sub.users) {
-                    await Promise.all(sub.users.map(async (user) => {
-                        user.avatar = await signAvatarUrl(user.pk, user.attributes.avatar);
-                    }));
-                }
-            }));
+            await Promise.all(
+                primaryTeam.subteams.map(async (sub) => {
+                    if (sub.users) {
+                        await Promise.all(
+                            sub.users.map(async (user) => {
+                                user.avatar = await signAvatarUrl(
+                                    user.pk,
+                                    user.attributes.avatar,
+                                );
+                            }),
+                        );
+                    }
+                }),
+            );
         }
 
         return {
             team: primaryTeam,
-            subteams: primaryTeam.subteams
-        }
+            subteams: primaryTeam.subteams,
+        };
     }
 
     /**
      * Provides a list of available bindles, collated from shared resources,
      * that are supported by teams. This feature is usually populated and used
      * in a subteam-level context.
-     * 
+     *
      * @param teamId Team ID
      * @returns Bindle Permissions Map
      */
@@ -1747,21 +2217,25 @@ export class OrgController extends Controller {
     @Tags("Team Configuration", "Bindle Authorization Layer")
     @SuccessResponse(200)
     @Security("oidc")
-    async getTeamBindles(@Path() teamId: string): Promise<{ [key: string]: EnabledBindlePermissions }> {
+    async getTeamBindles(
+        @Path() teamId: string,
+    ): Promise<{ [key: string]: EnabledBindlePermissions }> {
         const teamInfo = await this.authentikClient.getGroupInfo(teamId);
-        return teamInfo.attributes.bindlePermissions ?? {}; /* Legacy Teams don't have bindles! */
+        return (
+            teamInfo.attributes.bindlePermissions ?? {}
+        ); /* Legacy Teams don't have bindles! */
     }
 
     /**
      * Updates the bindle permissions for a team. This method is used in a
      * subteam-level context. Team Owners can update subteam level permissions
      * and other members need to hold the `corp:permissionsmgmt` bindle.
-     * 
+     *
      * **WARNING:**
      * This method does not sync the bindles for users across the shared resources.
      * A seperate team bindle sync call needs to be made to sync bindles for all subteams and
      * users in a team.
-     * 
+     *
      * @param teamId Team or Subteam ID
      * @param bindleConf Bindle Permissions Map
      */
@@ -1769,15 +2243,22 @@ export class OrgController extends Controller {
     @Tags("Team Configuration", "Bindle Authorization Layer")
     @SuccessResponse(201)
     @Security("bindles", ["corp:permissionsmgmt"])
-    async updateTeamBindles(@Path() teamId: string, @Body() bindleConf: { [key: string]: EnabledBindlePermissions }) {
-        const bindlePermissions = BindleController.sanitizeBindlePermissions(bindleConf);
-        await this.authentikClient.updateBindlePermissions(teamId, bindlePermissions);
+    async updateTeamBindles(
+        @Path() teamId: string,
+        @Body() bindleConf: { [key: string]: EnabledBindlePermissions },
+    ) {
+        const bindlePermissions =
+            BindleController.sanitizeBindlePermissions(bindleConf);
+        await this.authentikClient.updateBindlePermissions(
+            teamId,
+            bindlePermissions,
+        );
     }
 
     /**
      * Signs the avatar URL for a given user.
      * Uses in-memory caching to reduce S3 API calls.
-     * 
+     *
      * @param userPk User PK
      * @param avatarKey S3 Key for Avatar
      * @returns Signed URL or empty string
@@ -1786,11 +2267,11 @@ export class OrgController extends Controller {
      * Generates a temporary link to access the team's AWS Console. Account Provisioning
      * is handled by AWSClient and Root Team Settings. Access is moderated by the Bindle
      * Authorization Layer.
-     * 
-     * To enable AWS Access, the team owner or `corp:rootsettings` bindle is required. For 
+     *
+     * To enable AWS Access, the team owner or `corp:rootsettings` bindle is required. For
      * generating a console link from this API, the user must either be a Team Owner or
      * hold the corp:awsaccess bindle.
-     * 
+     *
      * @param req Express Request Object
      * @param teamId Team ID
      * @returns Temporary AWS Console Link
@@ -1799,54 +2280,104 @@ export class OrgController extends Controller {
     @Tags("Team External Integrations")
     @SuccessResponse(201)
     @Security("bindles", ["corp:awsaccess"])
-    async fetchAWSAccessCredentials(@Request() req: express.Request, @Path() teamId: string) {
-        const res = (req as any).res as express.Response
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Transfer-Encoding', 'chunked');
+    async fetchAWSAccessCredentials(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+    ) {
+        const res = (req as any).res as express.Response;
+        res.setHeader("Content-Type", "text/plain");
+        res.setHeader("Transfer-Encoding", "chunked");
 
-        const awsRes = Object.values(ENABLED_TEAMSETTING_RESOURCES).find((res) => res.getResourceName() == "AWSClient") as unknown as AWSClient;
+        const awsRes = Object.values(ENABLED_TEAMSETTING_RESOURCES).find(
+            (res) => res.getResourceName() == "AWSClient",
+        ) as unknown as AWSClient;
 
-        res.write(JSON.stringify({ progressPercent: 10, status: "Retrieving Team Credentials..." }))
-        const teamInfo = req.bindle!.teamInfo
+        res.write(
+            JSON.stringify({
+                progressPercent: 10,
+                status: "Retrieving Team Credentials...",
+            }),
+        );
+        const teamInfo = req.bindle!.teamInfo;
 
         // Check if provisioning is enabled
-        const settings = teamInfo.attributes.rootTeamSettings?.[awsRes.getResourceName()];
-        const shouldProvision = settings && settings["awsclient:provision"] === true;
+        const settings =
+            teamInfo.attributes.rootTeamSettings?.[awsRes.getResourceName()];
+        const shouldProvision =
+            settings && settings["awsclient:provision"] === true;
 
         if (!shouldProvision) {
-            res.write(JSON.stringify({ progressPercent: 100, status: "AWS Provisioning is not enabled for this team.", error: true }))
-            res.end()
-            return
+            res.write(
+                JSON.stringify({
+                    progressPercent: 100,
+                    status: "AWS Provisioning is not enabled for this team.",
+                    error: true,
+                }),
+            );
+            res.end();
+            return;
         }
 
         /* Provide Progess Update */
-        res.write(JSON.stringify({ progressPercent: 30, status: "Locating AWS Account..." }))
+        res.write(
+            JSON.stringify({
+                progressPercent: 30,
+                status: "Locating AWS Account...",
+            }),
+        );
 
-        const name = teamInfo.name
+        const name = teamInfo.name;
         const accountId = await awsRes.findAccountIdByName(teamInfo.name);
 
         if (!accountId) {
-            res.write(JSON.stringify({ progressPercent: 100, status: "AWS Account not found! Please contact an administrator.", error: true }))
-            res.end()
-            return
+            res.write(
+                JSON.stringify({
+                    progressPercent: 100,
+                    status: "AWS Account not found! Please contact an administrator.",
+                    error: true,
+                }),
+            );
+            res.end();
+            return;
         }
 
-        res.write(JSON.stringify({ progressPercent: 60, status: "Generating Session..." }))
+        res.write(
+            JSON.stringify({
+                progressPercent: 60,
+                status: "Generating Session...",
+            }),
+        );
         try {
-            const currentUser = req.session.authorizedUser?.name ?? "GenericDashboardUser"
-            const link = await awsRes.generateConsoleLink(accountId, sanitizeUserFullName(currentUser))
-            res.write(JSON.stringify({ progressPercent: 100, status: "Link Generated!", link: link }))
+            const currentUser =
+                req.session.authorizedUser?.name ?? "GenericDashboardUser";
+            const link = await awsRes.generateConsoleLink(
+                accountId,
+                sanitizeUserFullName(currentUser),
+            );
+            res.write(
+                JSON.stringify({
+                    progressPercent: 100,
+                    status: "Link Generated!",
+                    link: link,
+                }),
+            );
         } catch (e: any) {
-            res.write(JSON.stringify({ progressPercent: 100, status: "Failed to generate link: " + e.message, error: true }))
+            res.write(
+                JSON.stringify({
+                    progressPercent: 100,
+                    status: "Failed to generate link: " + e.message,
+                    error: true,
+                }),
+            );
         }
 
-        res.end()
+        res.end();
     }
 
     /**
      * Updates the Root Team Settings for a Team. To perform this action, the user
      * must either be a Team Owner or hold the `corp:rootsettings` bindle.
-     * 
+     *
      * @param teamId Team ID
      * @param conf Root Team Settings Map
      */
@@ -1854,18 +2385,19 @@ export class OrgController extends Controller {
     @Tags("Team Configuration")
     @SuccessResponse(201)
     @Security("bindles", ["corp:rootsettings"])
-    async updateRootTeamSetting(@Path() teamId: string, @Body() conf: { [key: string]: EnabledRootSettings }) {
+    async updateRootTeamSetting(
+        @Path() teamId: string,
+        @Body() conf: { [key: string]: EnabledRootSettings },
+    ) {
         /* Filter for only the available settings */
         const applySettingsList: { [key: string]: EnabledRootSettings } = {};
         for (const client in conf) {
-            if (!this.teamSettingList[client])
-                continue;
+            if (!this.teamSettingList[client]) continue;
 
             const supportedSettings = this.teamSettingList[client];
             const filteredSettings: EnabledRootSettings = {};
             for (const setting in conf[client]) {
-                if (!supportedSettings[setting])
-                    continue;
+                if (!supportedSettings[setting]) continue;
 
                 /* Update Filtered Setting */
                 filteredSettings[setting] = conf[client][setting] ?? false;
@@ -1876,7 +2408,10 @@ export class OrgController extends Controller {
         }
 
         /* Call Authentik to Update the Attributes */
-        await this.authentikClient.updateRootTeamSettings(teamId, applySettingsList);
+        await this.authentikClient.updateRootTeamSettings(
+            teamId,
+            applySettingsList,
+        );
 
         /* Get updated team info and sync each RootTeamSettingClient */
         const updatedTeamInfo = await this.authentikClient.getGroupInfo(teamId);
@@ -1886,9 +2421,9 @@ export class OrgController extends Controller {
     }
 
     /**
-     * Adds an existing member to a team. To perform this action, the user must 
+     * Adds an existing member to a team. To perform this action, the user must
      * either be a Team Owner or hold the `corp:membermgmt` bindle.
-     * 
+     *
      * @param teamId Team ID
      * @param req User PK
      */
@@ -1896,18 +2431,21 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(201)
     @Security("bindles", ["corp:membermgmt"])
-    async addTeamMember(@Path() teamId: string, @Body() req: { userPk: number, roleTitle: string }) {
+    async addTeamMember(
+        @Path() teamId: string,
+        @Body() req: { userPk: number; roleTitle: string },
+    ) {
         await this.addTeamMemberWrapper({
             groupId: teamId,
             userPk: req.userPk,
-            roleTitle: req.roleTitle
-        })
+            roleTitle: req.roleTitle,
+        });
     }
 
     /**
-     * Removes an existing member from a team. To perform this action, the user must 
+     * Removes an existing member from a team. To perform this action, the user must
      * either be a Team Owner or hold the `corp:membermgmt` bindle.
-     * 
+     *
      * @param teamId Team ID
      * @param req User PK
      */
@@ -1915,19 +2453,23 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(201)
     @Security("bindles", ["corp:membermgmt"])
-    async removeTeamMember(@Request() req: express.Request, @Path() teamId: string, @Body() body: { userPk: number }) {
+    async removeTeamMember(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+        @Body() body: { userPk: number },
+    ) {
         /* Needs Is Team owner Middleware?! */
         await this.removeTeamMemberWrapper({
             groupId: teamId,
             groupInfo: req.bindle!.teamInfo,
-            userPk: body.userPk
-        })
+            userPk: body.userPk,
+        });
     }
 
     /**
      * Creates a new subteam inside a team. To perform this action, the user must
      * either be a Team Owner or hold the `corp:subteamaccess` bindle.
-     * 
+     *
      * @param teamId Team ID
      * @param req Subteam Information
      * @returns Created Subteam Information
@@ -1936,7 +2478,11 @@ export class OrgController extends Controller {
     @Tags("Subteam Management")
     @SuccessResponse(201)
     @Security("bindles", ["corp:subteamaccess"])
-    async createSubTeam(@Request() req: express.Request | ExpressRequestBindleShim, @Path() teamId: string, @Body() body: APICreateSubTeamRequest): Promise<GetGroupInfoResponse> {
+    async createSubTeam(
+        @Request() req: express.Request | ExpressRequestBindleShim,
+        @Path() teamId: string,
+        @Body() body: APICreateSubTeamRequest,
+    ): Promise<GetGroupInfoResponse> {
         body.friendlyName = validateTeamName(body.friendlyName);
         body.description = capitalizeString(body.description);
         const parentInfo = req.bindle!.teamInfo;
@@ -1944,7 +2490,7 @@ export class OrgController extends Controller {
         if (parentInfo.subteams && parentInfo.subteams.length >= 15) {
             throw new CustomValidationError(
                 400,
-                "Maximum number of subteams (15) reached for this team."
+                "Maximum number of subteams (15) reached for this team.",
             );
         }
 
@@ -1957,19 +2503,17 @@ export class OrgController extends Controller {
                 seasonType: parentInfo.attributes.seasonType,
                 seasonYear: parentInfo.attributes.seasonYear,
                 description: body.description,
-            }
-        })
+            },
+        });
 
         /* Return the Sub team */
-        return createdSubTeam
+        return createdSubTeam;
     }
-
-
 
     /**
      * Fetches information about a specific Team Creation Request. To access this endpoint,
      * the user must pass the Executive Authorization Layer.
-     * 
+     *
      * @param requestId Request ID
      * @returns Team Creation Request Information
      */
@@ -1977,19 +2521,29 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(200)
     @Security("executive")
-    async getTeamCreationRequest(@Path() requestId: string): Promise<APITeamCreationRequestResponse> {
-        const request = await TeamCreationRequest.findById(requestId).lean<APITeamCreationRequestResponse>().exec();
+    async getTeamCreationRequest(
+        @Path() requestId: string,
+    ): Promise<APITeamCreationRequestResponse> {
+        const request = await TeamCreationRequest.findById(requestId)
+            .lean<APITeamCreationRequestResponse>()
+            .exec();
         if (!request) {
-            throw new CustomValidationError(404, "Team Creation Request not found");
+            throw new CustomValidationError(
+                404,
+                "Team Creation Request not found",
+            );
         }
         /* Manually cast _id to string if needed, though lean() handles it mostly */
-        return { ...request, _id: request._id.toString() } as unknown as APITeamCreationRequestResponse;
+        return {
+            ...request,
+            _id: request._id.toString(),
+        } as unknown as APITeamCreationRequestResponse;
     }
 
     /**
      * Approves a Team Creation Request, creates a new team and notifies the requester via
      * email. To access this endpoint, the user must pass the Executive Authorization Layer.
-     * 
+     *
      * @param req Express Request
      * @param requestId Request ID
      */
@@ -1997,17 +2551,26 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(201, "Team Created & Request Approved")
     @Security("executive")
-    async approveTeamCreationRequest(@Request() req: express.Request, @Path() requestId: string) {
+    async approveTeamCreationRequest(
+        @Request() req: express.Request,
+        @Path() requestId: string,
+    ) {
         const authorizedUser = req.session.authorizedUser!;
         const request = await TeamCreationRequest.findById(requestId);
         if (!request) {
-            throw new CustomValidationError(404, "Team Creation Request not found");
+            throw new CustomValidationError(
+                404,
+                "Team Creation Request not found",
+            );
         }
 
         try {
             /* Create the Team */
             /* We use the requester's PK as the owner, not the approver! */
-            await this.createTeamWrapper(request.createTeamRequest, request.requestorPk);
+            await this.createTeamWrapper(
+                request.createTeamRequest,
+                request.requestorPk,
+            );
 
             /* Send Email Update */
             await this.emailClient.send({
@@ -2016,11 +2579,15 @@ export class OrgController extends Controller {
                 subject: `Update on your Team Creation Request`,
                 templateName: "MgmtTeamRequestUpdate",
                 templateVars: {
-                    requesterName: (await this.authentikClient.getUserInfo(request.requestorPk)).name,
+                    requesterName: (
+                        await this.authentikClient.getUserInfo(
+                            request.requestorPk,
+                        )
+                    ).name,
                     teamName: request.createTeamRequest.friendlyName,
                     status: "approved",
-                    approverName: authorizedUser.name
-                }
+                    approverName: authorizedUser.name,
+                },
             });
         } catch (e) {
             if (e instanceof AuthentikClientError) {
@@ -2031,12 +2598,16 @@ export class OrgController extends Controller {
                     subject: `Team Creation Failed`,
                     templateName: "MgmtTeamRequestFailed",
                     templateVars: {
-                        requesterName: (await this.authentikClient.getUserInfo(request.requestorPk)).name,
+                        requesterName: (
+                            await this.authentikClient.getUserInfo(
+                                request.requestorPk,
+                            )
+                        ).name,
                         teamName: request.createTeamRequest.friendlyName,
                         approverName: authorizedUser.name,
                         errorMessage: e.message,
-                        exceptionTrace: e.stack
-                    }
+                        exceptionTrace: e.stack,
+                    },
                 });
             }
         } finally {
@@ -2047,9 +2618,9 @@ export class OrgController extends Controller {
 
     /**
      * Declines a Team Creation Request, Deletes it from the database and notifies
-     * the requester via email. To access this endpoint, the user must pass the 
+     * the requester via email. To access this endpoint, the user must pass the
      * Executive Authorization Layer.
-     * 
+     *
      * @param req Express Request
      * @param requestId Request ID
      */
@@ -2057,11 +2628,17 @@ export class OrgController extends Controller {
     @Tags("Team Management")
     @SuccessResponse(200, "Request Declined & Deleted")
     @Security("executive")
-    async declineTeamCreationRequest(@Request() req: express.Request, @Path() requestId: string) {
+    async declineTeamCreationRequest(
+        @Request() req: express.Request,
+        @Path() requestId: string,
+    ) {
         const authorizedUser = req.session.authorizedUser!;
         const request = await TeamCreationRequest.findById(requestId);
         if (!request) {
-            throw new CustomValidationError(404, "Team Creation Request not found");
+            throw new CustomValidationError(
+                404,
+                "Team Creation Request not found",
+            );
         }
 
         /* Send Email Update */
@@ -2071,11 +2648,13 @@ export class OrgController extends Controller {
             subject: `Update on your Team Creation Request`,
             templateName: "MgmtTeamRequestUpdate",
             templateVars: {
-                requesterName: (await this.authentikClient.getUserInfo(request.requestorPk)).name,
+                requesterName: (
+                    await this.authentikClient.getUserInfo(request.requestorPk)
+                ).name,
                 teamName: request.createTeamRequest.friendlyName,
                 status: "declined",
-                approverName: authorizedUser.name
-            }
+                approverName: authorizedUser.name,
+            },
         });
 
         /* Delete the Request */
@@ -2084,10 +2663,10 @@ export class OrgController extends Controller {
 
     /**
      * Public API to request the creation of a new team.
-     * 
+     *
      * If the requester is an Executive or Superuser, the team is created immediately (Auto-Approved).
      * Otherwise, a request is submitted for Executive Board review.
-     * 
+     *
      * @param req Express Request
      * @param createTeamReq Team Creation Payload
      * @returns Created Team Info (201) or Pending Status (202)
@@ -2098,13 +2677,20 @@ export class OrgController extends Controller {
     @Security("oidc")
     async createTeam(
         @Request() req: express.Request,
-        @Body() createTeamReq: APICreateTeamRequest
-    ): Promise<GetGroupInfoResponse | { message: string, status: string }> {
+        @Body() createTeamReq: APICreateTeamRequest,
+    ): Promise<GetGroupInfoResponse | { message: string; status: string }> {
         /* Santize Request */
-        createTeamReq.friendlyName = validateTeamName(createTeamReq.friendlyName);
+        createTeamReq.friendlyName = validateTeamName(
+            createTeamReq.friendlyName,
+        );
         createTeamReq.description = capitalizeString(createTeamReq.description);
-        createTeamReq.teamStartDate = createTeamReq.teamStartDate ?? new Date().toISOString().slice(0, 10);
-        this.validateTeamDateRange(createTeamReq.teamStartDate, createTeamReq.teamEndDate);
+        createTeamReq.teamStartDate =
+            createTeamReq.teamStartDate ??
+            new Date().toISOString().slice(0, 10);
+        this.validateTeamDateRange(
+            createTeamReq.teamStartDate,
+            createTeamReq.teamEndDate,
+        );
 
         /* Check for Authorized User */
         const authorizedUser = req.session.authorizedUser!;
@@ -2113,8 +2699,9 @@ export class OrgController extends Controller {
         /* Check for Executive Authority (Auto-Approve) */
         try {
             isExecutive = await executiveAuthVerify(
-                req, [],
-                true /* Skip OIDC Check */
+                req,
+                [],
+                true /* Skip OIDC Check */,
             );
         } catch (e) {
             isExecutive = false;
@@ -2122,26 +2709,35 @@ export class OrgController extends Controller {
 
         if (isExecutive) {
             /* Auto-Approve */
-            const team = await this.createTeamWrapper(createTeamReq, authorizedUser.pk);
+            const team = await this.createTeamWrapper(
+                createTeamReq,
+                authorizedUser.pk,
+            );
             this.setStatus(201);
             return team;
         } else {
             /* Fetch Executive Board (Service Team) Members for CC */
             /* We do this BEFORE creating the request because if we can't notify the Exec Board,
                there is no point in creating the request as it will sit in limbo. */
-            const execTeamPk = await this.authentikClient.getGroupPkFromName("ExecutiveBoardMembers");
-            const execTeamInfo = await this.authentikClient.getGroupInfo(execTeamPk);
-            const execEmails = execTeamInfo.users.map(u => u.email);
+            const execTeamPk = await this.authentikClient.getGroupPkFromName(
+                "ExecutiveBoardMembers",
+            );
+            const execTeamInfo =
+                await this.authentikClient.getGroupInfo(execTeamPk);
+            const execEmails = execTeamInfo.users.map((u) => u.email);
 
             if (execEmails.length < 1)
-                throw new CustomValidationError(500, "No Executive Board Members found. Please contact an Administrator.");
+                throw new CustomValidationError(
+                    500,
+                    "No Executive Board Members found. Please contact an Administrator.",
+                );
             /* Submit Request */
             const teamCreationRequest = await TeamCreationRequest.create({
                 requestorPk: authorizedUser.pk,
                 requestorName: authorizedUser.name,
                 requestorEmail: authorizedUser.email,
                 createTeamRequest: createTeamReq,
-                status: TeamCreationRequestStatus.PENDING
+                status: TeamCreationRequestStatus.PENDING,
             });
 
             /* Send Email to Executive Board */
@@ -2158,14 +2754,15 @@ export class OrgController extends Controller {
                     seasonType: createTeamReq.seasonType,
                     seasonYear: createTeamReq.seasonYear,
                     requesterRole: createTeamReq.requestorRole,
-                    requestUrl: `${process.env.PEOPLEPORTAL_BASE_URL}/org/teamrequests/${teamCreationRequest.id}`
-                }
+                    requestUrl: `${process.env.PEOPLEPORTAL_BASE_URL}/org/teamrequests/${teamCreationRequest.id}`,
+                },
             });
 
             this.setStatus(202);
             return {
-                message: "Your Team Creation Request has been Submitted for Review! Please check your email for updates.",
-                status: "PENDING"
+                message:
+                    "Your Team Creation Request has been Submitted for Review! Please check your email for updates.",
+                status: "PENDING",
             };
         }
     }
@@ -2175,7 +2772,7 @@ export class OrgController extends Controller {
      * `handleOrgBindleSync` for each shared resource that is enabled. For better
      * User experience, this routine emits HTTP Server-Sent Events (SSEs) to the
      * client to provide real-time progress updates.
-     * 
+     *
      * @param req Express Request Object
      * @param teamId Team ID
      */
@@ -2183,49 +2780,63 @@ export class OrgController extends Controller {
     @Tags("Team Configuration", "Bindle Authorization Layer")
     @SuccessResponse(200)
     @Security("bindles", ["corp:bindlesync"])
-    async syncOrgBindles(@Request() req: express.Request, @Path() teamId: string) {
-        const res = (req as any).res as express.Response
-        res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Transfer-Encoding', 'chunked');
+    async syncOrgBindles(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+    ) {
+        const res = (req as any).res as express.Response;
+        res.setHeader("Content-Type", "text/plain");
+        res.setHeader("Transfer-Encoding", "chunked");
 
         /* Obtain Teams and Compute Progress Effort */
-        const teamInfo = req.bindle!.teamInfo
-        const computeEffort = teamInfo.users.length +
-            teamInfo.subteams.reduce((acc, val) => acc + val.users.length, 0)
+        const teamInfo = req.bindle!.teamInfo;
+        const computeEffort =
+            teamInfo.users.length +
+            teamInfo.subteams.reduce((acc, val) => acc + val.users.length, 0);
 
-        let updatedResources = 0
+        let updatedResources = 0;
         let errors: Map<string, Error> = new Map();
 
         for (const sharedResource of this.sharedResources) {
             try {
-                await sharedResource.handleOrgBindleSync(teamInfo, (updatedResourceCount, status) => {
-                    /* Update Progress and Write Output */
-                    updatedResources += updatedResourceCount
+                await sharedResource.handleOrgBindleSync(
+                    teamInfo,
+                    (updatedResourceCount, status) => {
+                        /* Update Progress and Write Output */
+                        updatedResources += updatedResourceCount;
 
-                    /* Add Newline Delimiter to Ensure that client can parse distinct JSON objects, Helps when concurrent callbacks are fired causing TCP coalescing */
-                    res.write(JSON.stringify({ progressPercent: (updatedResources / computeEffort) * 100, status }) + "\n")
-                })
+                        /* Add Newline Delimiter to Ensure that client can parse distinct JSON objects, Helps when concurrent callbacks are fired causing TCP coalescing */
+                        res.write(
+                            JSON.stringify({
+                                progressPercent:
+                                    (updatedResources / computeEffort) * 100,
+                                status,
+                            }) + "\n",
+                        );
+                    },
+                );
             } catch (e) {
                 if (e instanceof Error) {
                     errors.set(sharedResource.getResourceName(), e);
                 } else {
-                    errors.set(sharedResource.getResourceName(), new Error(
-                        `Unknown Error: ${describeUnknownError(e)}`
-                    ));
+                    errors.set(
+                        sharedResource.getResourceName(),
+                        new Error(`Unknown Error: ${describeUnknownError(e)}`),
+                    );
                 }
             }
         }
 
         /* Write All the Errors during the Process... */
         console.log(errors);
-        res.end()
+        res.end();
     }
 
     /**
      * Updates the team's name and description. To perform this action,
      * the user must either be a Team Owner or hold the `corp:rootsettings`
      * bindle.
-     * 
+     *
      * @param teamId Team ID
      * @param conf Team Name and Description Update Payload
      */
@@ -2233,7 +2844,10 @@ export class OrgController extends Controller {
     @Tags("Team Configuration")
     @SuccessResponse(200)
     @Security("bindles", ["corp:rootsettings"])
-    async updateTeamAttributes(@Path() teamId: string, @Body() conf: APIUpdateTeamRequest) {
+    async updateTeamAttributes(
+        @Path() teamId: string,
+        @Body() conf: APIUpdateTeamRequest,
+    ) {
         if (conf.friendlyName) {
             conf.friendlyName = validateTeamName(conf.friendlyName);
         }
@@ -2241,42 +2855,50 @@ export class OrgController extends Controller {
             conf.description = capitalizeString(conf.description);
         }
 
-        if (conf.teamStartDate !== undefined || conf.teamEndDate !== undefined) {
+        if (
+            conf.teamStartDate !== undefined ||
+            conf.teamEndDate !== undefined
+        ) {
             const teamInfo = await this.authentikClient.getGroupInfo(teamId);
-            const effectiveStartDate = conf.teamStartDate ?? teamInfo.attributes.teamStartDate;
-            const effectiveEndDate = conf.teamEndDate ?? teamInfo.attributes.teamEndDate;
+            const effectiveStartDate =
+                conf.teamStartDate ?? teamInfo.attributes.teamStartDate;
+            const effectiveEndDate =
+                conf.teamEndDate ?? teamInfo.attributes.teamEndDate;
 
             if (!effectiveStartDate || !effectiveEndDate) {
-                throw new CustomValidationError(400, "Both team start date and end date are required");
+                throw new CustomValidationError(
+                    400,
+                    "Both team start date and end date are required",
+                );
             }
 
-            this.validateTeamDateRange(
-                effectiveStartDate,
-                effectiveEndDate,
-            );
+            this.validateTeamDateRange(effectiveStartDate, effectiveEndDate);
         }
 
         /* Strictly restrict updates to allowed fields to prevent attribute pollution */
-        await this.authentikClient.updateGroupInformation(teamId, conf as Record<string, string | undefined>);
+        await this.authentikClient.updateGroupInformation(
+            teamId,
+            conf as Record<string, string | undefined>,
+        );
     }
 
     /**
      * Performs a soft-delete by flagging the team for deletion. People Portal teams
      * can never be deleted considering the potential impacts caused by deleted states
      * on Shared Resources. Instead, the soft-delete mechanism follows these rules:
-     * 
-     * - If the team is a subteam (has a parent), it removes 
+     *
+     * - If the team is a subteam (has a parent), it removes
      *   all members to immediately revoke access.
-     * 
+     *
      * - If the team is a root team (has no parent), it is just
      *   flagged for deletion as their deletion is overengineering.
-     * 
-     * To perform this action on a subteam, the user must either be a Team Owner or 
+     *
+     * To perform this action on a subteam, the user must either be a Team Owner or
      * hold the `corp:subteamaccess` bindle.
-     * 
+     *
      * To perform this action on a root team, the user must pass the Executive
      * Authorization Layer as a **Superuser** (`su:exclusive` scope).
-     * 
+     *
      * @param teamId Team ID
      */
     @Delete("teams/{teamId}")
@@ -2289,8 +2911,9 @@ export class OrgController extends Controller {
         /* If Root Team, Enforce Executive Authorization */
         if (!teamInfo.parentPk) {
             await executiveAuthVerify(
-                req, ["su:exclusive"],
-                true /* Skip OIDC Check as its done by Bindles Auth */
+                req,
+                ["su:exclusive"],
+                true /* Skip OIDC Check as its done by Bindles Auth */,
             );
         }
 
@@ -2327,33 +2950,41 @@ export class OrgController extends Controller {
         if (teamInfo.parentPk) {
             throw new CustomValidationError(
                 400,
-                "Only root teams can be archived."
+                "Only root teams can be archived.",
             );
         }
 
         await executiveAuthVerify(
-            req, ["su:exclusive"],
-            true /* Skip OIDC Check as its done by Bindles Auth */
+            req,
+            ["su:exclusive"],
+            true /* Skip OIDC Check as its done by Bindles Auth */,
         );
 
         let errors: Map<string, Error> = new Map();
         const recordError = (resourceName: string, e: unknown) => {
-            errors.set(resourceName, e instanceof Error ? e : new Error(
-                `Unknown Error: ${describeUnknownError(e)}`
-            ));
+            errors.set(
+                resourceName,
+                e instanceof Error
+                    ? e
+                    : new Error(`Unknown Error: ${describeUnknownError(e)}`),
+            );
         };
 
         /* 1. Archive Shared Resources (Gitea repos, Slack channels, etc.) */
         for (const sharedResource of this.sharedResources) {
             try {
-                await sharedResource.archiveTeam(teamInfo, () => { /* progress not streamed */ });
+                await sharedResource.archiveTeam(teamInfo, () => {
+                    /* progress not streamed */
+                });
             } catch (e) {
                 recordError(sharedResource.getResourceName(), e);
             }
         }
 
         /* 2. Archive Root Team Setting Resources (AWS, etc.) */
-        for (const settingResource of Object.values(ENABLED_TEAMSETTING_RESOURCES)) {
+        for (const settingResource of Object.values(
+            ENABLED_TEAMSETTING_RESOURCES,
+        )) {
             try {
                 await settingResource.archiveTeam(teamInfo);
             } catch (e) {
@@ -2362,15 +2993,22 @@ export class OrgController extends Controller {
         }
 
         if (errors.size > 0)
-            console.error("[OrgController] Archive completed with errors:", errors);
+            console.error(
+                "[OrgController] Archive completed with errors:",
+                errors,
+            );
 
         /* 3. Stamp the team as archived */
         const actorEmail = req.session.authorizedUser?.email;
         let archivedBy: string | undefined;
         if (actorEmail) {
             try {
-                archivedBy = (await this.authentikClient.getUserInfoFromEmail(actorEmail)).pk;
-            } catch { /* Audit attribution is best-effort */ }
+                archivedBy = (
+                    await this.authentikClient.getUserInfoFromEmail(actorEmail)
+                ).pk;
+            } catch {
+                /* Audit attribution is best-effort */
+            }
         }
 
         await this.authentikClient.archiveGroup(teamId, archivedBy);
@@ -2382,9 +3020,14 @@ export class OrgController extends Controller {
     }
 
     /* Other Wrapper Functions */
-    private async createTeamWrapper(createTeamReq: APICreateTeamRequest, ownerPk: number): Promise<GetGroupInfoResponse> {
+    private async createTeamWrapper(
+        createTeamReq: APICreateTeamRequest,
+        ownerPk: number,
+    ): Promise<GetGroupInfoResponse> {
         /* Validate Team Name Request */
-        createTeamReq.friendlyName = validateTeamName(createTeamReq.friendlyName);
+        createTeamReq.friendlyName = validateTeamName(
+            createTeamReq.friendlyName,
+        );
 
         /* Create the New Team */
         const newTeam = await this.authentikClient.createNewTeam({
@@ -2394,10 +3037,12 @@ export class OrgController extends Controller {
                 seasonType: createTeamReq.seasonType,
                 seasonYear: createTeamReq.seasonYear,
                 description: createTeamReq.description,
-                teamStartDate: createTeamReq.teamStartDate ?? new Date().toISOString().slice(0, 10),
+                teamStartDate:
+                    createTeamReq.teamStartDate ??
+                    new Date().toISOString().slice(0, 10),
                 teamEndDate: createTeamReq.teamEndDate,
-            }
-        })
+            },
+        });
 
         /* Add the Creator to Team Owners. Awaited: unawaited, creation could
            report success before the owner existed, and a failure vanished as
@@ -2405,30 +3050,37 @@ export class OrgController extends Controller {
         await this.addTeamMemberWrapper({
             groupId: newTeam.pk,
             userPk: ownerPk,
-            roleTitle: createTeamReq.requestorRole
-        })
+            roleTitle: createTeamReq.requestorRole,
+        });
 
         /* Construct Bindle Shim for Optimized Create Sub Team Calls */
         const bindleShim: ExpressRequestBindleShim = {
             bindle: {
                 requestedPermissions: [],
                 teamInfo: newTeam,
-            }
-        }
+            },
+        };
 
         /* Team Templates: Makes Life Easier! */
         const teamConfig = TEAM_TYPE_CONFIGS[createTeamReq.teamType];
         if (teamConfig) {
             for (const subteamConfig of teamConfig.defaultSubteams) {
                 /* Create Subteam */
-                const subteam = await this.createSubTeam(bindleShim, newTeam.pk, {
-                    friendlyName: subteamConfig.friendlyName,
-                    description: subteamConfig.description
-                });
+                const subteam = await this.createSubTeam(
+                    bindleShim,
+                    newTeam.pk,
+                    {
+                        friendlyName: subteamConfig.friendlyName,
+                        description: subteamConfig.description,
+                    },
+                );
 
                 /* Apply Bindles if Defined */
                 if (subteamConfig.bindles) {
-                    await this.updateTeamBindles(subteam.pk, subteamConfig.bindles);
+                    await this.updateTeamBindles(
+                        subteam.pk,
+                        subteamConfig.bindles,
+                    );
                 }
             }
         }
@@ -2436,15 +3088,21 @@ export class OrgController extends Controller {
         return newTeam;
     }
 
-    async addTeamMemberWrapper(request: AddGroupMemberRequest): Promise<APITeamMemberAddResponse> {
+    async addTeamMemberWrapper(
+        request: AddGroupMemberRequest,
+    ): Promise<APITeamMemberAddResponse> {
         const userInfo = await this.authentikClient.getUserInfo(request.userPk);
-        const targetGroupInfo = await this.authentikClient.getGroupInfo(request.groupId);
+        const targetGroupInfo = await this.authentikClient.getGroupInfo(
+            request.groupId,
+        );
         let rootTeamInfo: GetGroupInfoResponse;
 
         /* Identify Root Team */
         if (targetGroupInfo.parentInfo) {
             /* It's a subteam, fetch the parent (Root Team) */
-            rootTeamInfo = await this.authentikClient.getGroupInfo(targetGroupInfo.parentInfo.pk);
+            rootTeamInfo = await this.authentikClient.getGroupInfo(
+                targetGroupInfo.parentInfo.pk,
+            );
         } else {
             /* It is the Root Team */
             rootTeamInfo = targetGroupInfo;
@@ -2453,59 +3111,76 @@ export class OrgController extends Controller {
         /* Collect all Forbidden Group IDs (Root + All Subteams) */
         const familyPks = new Set<string>();
         familyPks.add(rootTeamInfo.pk);
-        rootTeamInfo.subteamPkList.forEach(pk => familyPks.add(pk));
+        rootTeamInfo.subteamPkList.forEach((pk) => familyPks.add(pk));
 
         /* Check for Intersection with User's Current Groups */
         const userGroupPks = userInfo.groups;
         for (const groupPk of userGroupPks) {
             if (familyPks.has(groupPk)) {
                 this.setStatus(409); // Conflict
-                throw new CustomValidationError(409, "User is already a member of this team hierarchy (Root or another Subteam).");
+                throw new CustomValidationError(
+                    409,
+                    "User is already a member of this team hierarchy (Root or another Subteam).",
+                );
             }
         }
 
-        const coreAdditionComplete = await this.authentikClient.addGroupMember(request)
+        const coreAdditionComplete =
+            await this.authentikClient.addGroupMember(request);
 
         /* Update User's Role Attribute. Awaited so the role is persisted before
            the caller is told the member was added. */
         await this.authentikClient.updateUserAttributes(request.userPk, {
             roles: {
                 ...userInfo.attributes.roles,
-                [request.groupId]: request.roleTitle
-            }
-        })
+                [request.groupId]: request.roleTitle,
+            },
+        });
 
         return {
             coreAdditionComplete,
-        }
+        };
     }
 
-    async removeTeamMemberWrapper(request: RemoveGroupMemberRequest): Promise<void> {
-        const userInfo = await this.authentikClient.getUserInfo(request.userPk)
-        const groupInfo = request.groupInfo ?? await this.authentikClient.getGroupInfo(request.groupId)
+    async removeTeamMemberWrapper(
+        request: RemoveGroupMemberRequest,
+    ): Promise<void> {
+        const userInfo = await this.authentikClient.getUserInfo(request.userPk);
+        const groupInfo =
+            request.groupInfo ??
+            (await this.authentikClient.getGroupInfo(request.groupId));
 
         /* Check if we're removing the last owner from a Root Team */
         if (!this.isGroupSubteam(groupInfo)) {
             if (groupInfo.users.length <= 1) {
                 this.setStatus(409);
-                throw new Error("Cannot Remove the last Team Owner. Add someone else to remove yourself.");
+                throw new Error(
+                    "Cannot Remove the last Team Owner. Add someone else to remove yourself.",
+                );
             }
         }
 
         /* Get Parent Team Name if available, otherwise fallback to current group */
-        let teamName = groupInfo.attributes.friendlyName ?? groupInfo.name
+        let teamName = groupInfo.attributes.friendlyName ?? groupInfo.name;
         if (groupInfo.parentPk) {
-            const parentInfo = await this.authentikClient.getGroupInfo(groupInfo.parentPk)
-            teamName = parentInfo.attributes.friendlyName ?? parentInfo.name
+            const parentInfo = await this.authentikClient.getGroupInfo(
+                groupInfo.parentPk,
+            );
+            teamName = parentInfo.attributes.friendlyName ?? parentInfo.name;
         }
 
         /* Remove the Role Attribute from Authentik if it exists */
-        if (userInfo.attributes.roles && userInfo.attributes.roles[request.groupId]) {
-            const updatedRoles = { ...userInfo.attributes.roles }
-            delete updatedRoles[request.groupId]
-            await this.authentikClient.updateUserAttributes(request.userPk, { roles: updatedRoles })
+        if (
+            userInfo.attributes.roles &&
+            userInfo.attributes.roles[request.groupId]
+        ) {
+            const updatedRoles = { ...userInfo.attributes.roles };
+            delete updatedRoles[request.groupId];
+            await this.authentikClient.updateUserAttributes(request.userPk, {
+                roles: updatedRoles,
+            });
         }
 
-        await this.authentikClient.removeGroupMember(request)
+        await this.authentikClient.removeGroupMember(request);
     }
 }

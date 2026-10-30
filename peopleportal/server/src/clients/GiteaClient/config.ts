@@ -1,7 +1,7 @@
 import { GiteaBranchProtection } from "./models";
 
-export const GITEA_DEFAULT_ORG_NAME = "PeoplePortalTeamOwners"
-export const GITEA_DEFAULT_BRANCH_NAME = "main"
+export const GITEA_DEFAULT_ORG_NAME = "PeoplePortalTeamOwners";
+export const GITEA_DEFAULT_BRANCH_NAME = "main";
 export const GITEA_DEFAULT_BRANCH_PROTECTION: GiteaBranchProtection = {
     rule_name: GITEA_DEFAULT_BRANCH_NAME,
     priority: 1,
@@ -18,4 +18,4 @@ export const GITEA_DEFAULT_BRANCH_PROTECTION: GiteaBranchProtection = {
     enable_merge_whitelist: true,
     enable_push: true,
     enable_push_whitelist: true,
-}
+};

@@ -16,16 +16,21 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "../ui/alert-dialog"
-import { Progress } from "../ui/progress"
-
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "../ui/alert-dialog";
+import { Progress } from "../ui/progress";
 
 export interface ProgressUpdateDialogProps {
-    open: boolean,
-    title: string,
-    progressPercent: number,
-    description: string,
-    status: string,
+    open: boolean;
+    title: string;
+    progressPercent: number;
+    description: string;
+    status: string;
 }
 
 export const ProgressUpdateDialog = (props: ProgressUpdateDialogProps) => {
@@ -34,11 +39,16 @@ export const ProgressUpdateDialog = (props: ProgressUpdateDialogProps) => {
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>{props.title}</AlertDialogTitle>
-                    <AlertDialogDescription>{props.description}</AlertDialogDescription>
+                    <AlertDialogDescription>
+                        {props.description}
+                    </AlertDialogDescription>
                 </AlertDialogHeader>
 
                 <div className="flex flex-col">
-                    <Progress value={props.progressPercent} className="w-full bg-muted" />
+                    <Progress
+                        value={props.progressPercent}
+                        className="w-full bg-muted"
+                    />
                     <div className="flex text-muted-foreground text-xs mt-1">
                         <span className="flex-grow-1">{props.status}</span>
                         <span>{props.progressPercent}% Complete</span>
@@ -46,5 +56,5 @@ export const ProgressUpdateDialog = (props: ProgressUpdateDialogProps) => {
                 </div>
             </AlertDialogContent>
         </AlertDialog>
-    )
-}
+    );
+};

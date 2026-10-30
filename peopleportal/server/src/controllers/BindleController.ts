@@ -25,35 +25,39 @@ import { PeoplePortalClient } from "../clients/PeoplePortalClient";
 
 export interface EnabledBindlePermissions {
     /* Name of the Perm (ex. repo:allowcreate) */
-    [key: string]: boolean
+    [key: string]: boolean;
 }
 
 export interface BindlePermissionMap {
-    [key: string]: BindlePermission
+    [key: string]: BindlePermission;
 }
 
 export interface BindlePermission {
-    friendlyName: string,
-    description: string,
+    friendlyName: string;
+    description: string;
 }
 
 @Route("/api/bindles")
 export class BindleController extends Controller {
-    private static bindleDefinition: { [key: string]: BindlePermissionMap } = (() => {
-        const definitions: { [key: string]: BindlePermissionMap } = {};
-        for (const sharedResource of Object.values(ENABLED_SHARED_RESOURCES)) {
-            const resourceName = sharedResource.getResourceName();
-            definitions[resourceName] = sharedResource.getSupportedBindles();
-        }
+    private static bindleDefinition: { [key: string]: BindlePermissionMap } =
+        (() => {
+            const definitions: { [key: string]: BindlePermissionMap } = {};
+            for (const sharedResource of Object.values(
+                ENABLED_SHARED_RESOURCES,
+            )) {
+                const resourceName = sharedResource.getResourceName();
+                definitions[resourceName] =
+                    sharedResource.getSupportedBindles();
+            }
 
-        /* Perform Return for Static Store */
-        return definitions;
-    })();
+            /* Perform Return for Static Store */
+            return definitions;
+        })();
 
     /**
      * Fetches the list of globally available Bindle Settings constructed
      * from enabled shared resources.
-     * 
+     *
      * @returns List of available Bindle Permissions
      */
     @Get("definitions")
@@ -67,25 +71,29 @@ export class BindleController extends Controller {
      * Given a list of bindle permissions, this function will sanitize the input
      * by removing any bindle permissions that are not supported by the enabled
      * shared resources.
-     * 
+     *
      * @param bindlePermissions Input Bindle Permission Map
      * @returns Sanitized Bindle Permission Map
      */
-    public static sanitizeBindlePermissions = (bindlePermissions: { [key: string]: EnabledBindlePermissions }): { [key: string]: EnabledBindlePermissions } => {
-        const sanitizedBindlePermissions: { [key: string]: EnabledBindlePermissions } = {};
+    public static sanitizeBindlePermissions = (bindlePermissions: {
+        [key: string]: EnabledBindlePermissions;
+    }): { [key: string]: EnabledBindlePermissions } => {
+        const sanitizedBindlePermissions: {
+            [key: string]: EnabledBindlePermissions;
+        } = {};
         for (const clientName in bindlePermissions) {
-            const supportedBindles = BindleController.bindleDefinition[clientName];
-            if (!supportedBindles)
-                continue;
+            const supportedBindles =
+                BindleController.bindleDefinition[clientName];
+            if (!supportedBindles) continue;
 
             const filteredBindles: EnabledBindlePermissions = {};
             for (const bindleKey in bindlePermissions[clientName]) {
                 // Check if this bindle key is supported by the client
-                if (!supportedBindles[bindleKey])
-                    continue;
+                if (!supportedBindles[bindleKey]) continue;
 
                 /* Update Filtered Bindle Setting */
-                filteredBindles[bindleKey] = bindlePermissions[clientName][bindleKey] ?? false;
+                filteredBindles[bindleKey] =
+                    bindlePermissions[clientName][bindleKey] ?? false;
             }
 
             /* Apply the Filtered Bindles to the Final List */
@@ -93,18 +101,21 @@ export class BindleController extends Controller {
         }
 
         return sanitizedBindlePermissions;
-    }
+    };
 
     /**
      * Calculates granular permissions from subteam memberships interactively.
      * Team Owners bypass this check in the middleware. Scoped to People Portal
      * bindles only.
-     * 
+     *
      * @param targetTeam Team Information from Authentik Client
      * @param userGroups User's group membership from OIDC Session
      * @returns Set of Bindle Permissions (Ex. corp:membermgmt)
      */
-    public static getEffectivePermissionSet(targetTeam: GetGroupInfoResponse, userGroups: string[]): Set<string> {
+    public static getEffectivePermissionSet(
+        targetTeam: GetGroupInfoResponse,
+        userGroups: string[],
+    ): Set<string> {
         /* Add Group Structures to a Set for O(1) lookup, takes O(n) time */
         const activePermissions = new Set<string>();
         const userGroupSet = new Set(userGroups);
@@ -115,11 +126,15 @@ export class BindleController extends Controller {
                 /* 2. Check if user is in this subteam */
                 if (userGroupSet.has(subteam.name)) {
                     /* 3. Merge Enabled Bindles (PeoplePortal Only) */
-                    const bindlePermissions = subteam.attributes.bindlePermissions;
+                    const bindlePermissions =
+                        subteam.attributes.bindlePermissions;
                     if (bindlePermissions) {
-                        const clientBindles = bindlePermissions[PeoplePortalClient.TAG];
+                        const clientBindles =
+                            bindlePermissions[PeoplePortalClient.TAG];
                         if (clientBindles) {
-                            for (const [bindle, enabled] of Object.entries(clientBindles)) {
+                            for (const [bindle, enabled] of Object.entries(
+                                clientBindles,
+                            )) {
                                 if (enabled) activePermissions.add(bindle);
                             }
                         }

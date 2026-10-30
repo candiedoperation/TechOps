@@ -19,7 +19,14 @@
 import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
@@ -48,18 +55,25 @@ interface TeamCreationRequest {
 export const OrgTeamRequestReview = () => {
     const { requestId } = useParams();
     const navigate = useNavigate();
-    const [request, setRequest] = React.useState<TeamCreationRequest | null>(null);
+    const [request, setRequest] = React.useState<TeamCreationRequest | null>(
+        null,
+    );
     const [loading, setLoading] = React.useState(true);
-    const [processingAction, setProcessingAction] = React.useState<'approve' | 'decline' | null>(null);
+    const [processingAction, setProcessingAction] = React.useState<
+        "approve" | "decline" | null
+    >(null);
 
     React.useEffect(() => {
         if (!requestId) return;
 
-        fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teamrequests/${requestId}`, {
-            headers: {
-                "Content-Type": "application/json"
-            }
-        })
+        fetch(
+            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teamrequests/${requestId}`,
+            {
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            },
+        )
             .then(async (res) => {
                 if (res.ok) {
                     const data = await res.json();
@@ -78,19 +92,19 @@ export const OrgTeamRequestReview = () => {
             });
     }, [requestId, navigate]);
 
-    const handleAction = async (action: 'approve' | 'decline') => {
+    const handleAction = async (action: "approve" | "decline") => {
         if (!requestId || processingAction) return;
 
         setProcessingAction(action);
         const endpoint = `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teamrequests/${requestId}`;
-        const method = action === 'approve' ? 'POST' : 'DELETE';
+        const method = action === "approve" ? "POST" : "DELETE";
 
         try {
             const res = await fetch(endpoint, {
                 method: method,
                 headers: {
-                    "Content-Type": "application/json"
-                }
+                    "Content-Type": "application/json",
+                },
             });
 
             if (res.ok) {
@@ -98,7 +112,9 @@ export const OrgTeamRequestReview = () => {
                 navigate("/org/teams");
             } else {
                 const errorData = await res.json();
-                toast.error(`Failed to ${action} request: ${errorData.message || "Unknown error"}`);
+                toast.error(
+                    `Failed to ${action} request: ${errorData.message || "Unknown error"}`,
+                );
             }
         } catch (e: any) {
             toast.error(`Error processing request: ${e.message}`);
@@ -108,7 +124,7 @@ export const OrgTeamRequestReview = () => {
     };
 
     return (
-        <Dialog open={true} onOpenChange={() => { }}>
+        <Dialog open={true} onOpenChange={() => {}}>
             <DialogContent className="sm:max-w-[600px] [&>button]:hidden outline-none">
                 <DialogHeader>
                     {loading ? (
@@ -118,9 +134,13 @@ export const OrgTeamRequestReview = () => {
                         </>
                     ) : request ? (
                         <>
-                            <DialogTitle>Review Team Creation Request</DialogTitle>
+                            <DialogTitle>
+                                Review Team Creation Request
+                            </DialogTitle>
                             <DialogDescription>
-                                Review the details for the new team request from {request.requestorName ?? request.requestorEmail}
+                                Review the details for the new team request from{" "}
+                                {request.requestorName ??
+                                    request.requestorEmail}
                             </DialogDescription>
                         </>
                     ) : (
@@ -142,29 +162,75 @@ export const OrgTeamRequestReview = () => {
                 ) : request ? (
                     <div className="grid gap-4 py-2">
                         <div className="space-y-4">
-                            <h4 className="font-medium leading-none">Team Details</h4>
+                            <h4 className="font-medium leading-none">
+                                Team Details
+                            </h4>
                             <div className="border rounded-md">
                                 <Table>
                                     <TableBody>
                                         <TableRow>
-                                            <TableCell className="font-bold w-1/4 align-top">Team Name</TableCell>
-                                            <TableCell>{request.createTeamRequest.friendlyName}</TableCell>
+                                            <TableCell className="font-bold w-1/4 align-top">
+                                                Team Name
+                                            </TableCell>
+                                            <TableCell>
+                                                {
+                                                    request.createTeamRequest
+                                                        .friendlyName
+                                                }
+                                            </TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell className="font-bold w-1/4 align-top">Team Type</TableCell>
-                                            <TableCell>{request.createTeamRequest.teamType}</TableCell>
+                                            <TableCell className="font-bold w-1/4 align-top">
+                                                Team Type
+                                            </TableCell>
+                                            <TableCell>
+                                                {
+                                                    request.createTeamRequest
+                                                        .teamType
+                                                }
+                                            </TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell className="font-bold w-1/4 align-top">Season</TableCell>
-                                            <TableCell>{request.createTeamRequest.seasonType} {request.createTeamRequest.seasonYear}</TableCell>
+                                            <TableCell className="font-bold w-1/4 align-top">
+                                                Season
+                                            </TableCell>
+                                            <TableCell>
+                                                {
+                                                    request.createTeamRequest
+                                                        .seasonType
+                                                }{" "}
+                                                {
+                                                    request.createTeamRequest
+                                                        .seasonYear
+                                                }
+                                            </TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell className="font-bold w-1/4 align-top">Team Dates</TableCell>
-                                            <TableCell>{request.createTeamRequest.teamStartDate} to {request.createTeamRequest.teamEndDate}</TableCell>
+                                            <TableCell className="font-bold w-1/4 align-top">
+                                                Team Dates
+                                            </TableCell>
+                                            <TableCell>
+                                                {
+                                                    request.createTeamRequest
+                                                        .teamStartDate
+                                                }{" "}
+                                                to{" "}
+                                                {
+                                                    request.createTeamRequest
+                                                        .teamEndDate
+                                                }
+                                            </TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell className="font-bold w-1/4 align-top">Description</TableCell>
-                                            <TableCell className="whitespace-pre-wrap break-words">{request.createTeamRequest.description}</TableCell>
+                                            <TableCell className="font-bold w-1/4 align-top">
+                                                Description
+                                            </TableCell>
+                                            <TableCell className="whitespace-pre-wrap break-words">
+                                                {
+                                                    request.createTeamRequest
+                                                        .description
+                                                }
+                                            </TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
@@ -172,21 +238,38 @@ export const OrgTeamRequestReview = () => {
                         </div>
 
                         <div className="space-y-4">
-                            <h4 className="font-medium leading-none">Requester Details</h4>
+                            <h4 className="font-medium leading-none">
+                                Requester Details
+                            </h4>
                             <div className="border rounded-md">
                                 <Table>
                                     <TableBody>
                                         <TableRow>
-                                            <TableCell className="font-bold w-1/4 align-top">Name</TableCell>
-                                            <TableCell>{request.requestorName || "N/A"}</TableCell>
+                                            <TableCell className="font-bold w-1/4 align-top">
+                                                Name
+                                            </TableCell>
+                                            <TableCell>
+                                                {request.requestorName || "N/A"}
+                                            </TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell className="font-bold w-1/4 align-top">Email</TableCell>
-                                            <TableCell>{request.requestorEmail}</TableCell>
+                                            <TableCell className="font-bold w-1/4 align-top">
+                                                Email
+                                            </TableCell>
+                                            <TableCell>
+                                                {request.requestorEmail}
+                                            </TableCell>
                                         </TableRow>
                                         <TableRow>
-                                            <TableCell className="font-medium w-1/4">Requested Role</TableCell>
-                                            <TableCell>{request.createTeamRequest.requestorRole}</TableCell>
+                                            <TableCell className="font-medium w-1/4">
+                                                Requested Role
+                                            </TableCell>
+                                            <TableCell>
+                                                {
+                                                    request.createTeamRequest
+                                                        .requestorRole
+                                                }
+                                            </TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
@@ -194,12 +277,16 @@ export const OrgTeamRequestReview = () => {
                         </div>
 
                         <div className="text-xs text-muted-foreground">
-                            Requested on {new Date(request.createdAt).toLocaleString()}
+                            Requested on{" "}
+                            {new Date(request.createdAt).toLocaleString()}
                         </div>
                     </div>
                 ) : (
                     <div className="py-4">
-                        <p className="text-muted-foreground">The request could not be found or has already been processed.</p>
+                        <p className="text-muted-foreground">
+                            The request could not be found or has already been
+                            processed.
+                        </p>
                     </div>
                 )}
 
@@ -213,23 +300,29 @@ export const OrgTeamRequestReview = () => {
                         <>
                             <Button
                                 variant="outline"
-                                onClick={() => handleAction('decline')}
+                                onClick={() => handleAction("decline")}
                                 disabled={!!processingAction}
                                 className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/50"
                             >
-                                {processingAction === 'decline' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {processingAction === "decline" && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
                                 Decline
                             </Button>
                             <Button
-                                onClick={() => handleAction('approve')}
+                                onClick={() => handleAction("approve")}
                                 disabled={!!processingAction}
                             >
-                                {processingAction === 'approve' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {processingAction === "approve" && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
                                 Approve & Create
                             </Button>
                         </>
                     ) : (
-                        <Button onClick={() => navigate("/org/teams")}>Back to Teams</Button>
+                        <Button onClick={() => navigate("/org/teams")}>
+                            Back to Teams
+                        </Button>
                     )}
                 </DialogFooter>
             </DialogContent>

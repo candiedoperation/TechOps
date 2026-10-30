@@ -154,7 +154,11 @@ export interface APITeamMeetingResponse {
 }
 
 /** Generates weekly occurrence start/end pairs from `start`/`end` through `until` (inclusive). */
-function generateWeeklyOccurrences(start: Date, end: Date, until: Date): Array<{ start: Date; end: Date }> {
+function generateWeeklyOccurrences(
+    start: Date,
+    end: Date,
+    until: Date,
+): Array<{ start: Date; end: Date }> {
     const occurrences: Array<{ start: Date; end: Date }> = [];
     const cursorStart = new Date(start);
     const cursorEnd = new Date(end);
@@ -164,7 +168,10 @@ function generateWeeklyOccurrences(start: Date, end: Date, until: Date): Array<{
     untilEnd.setHours(23, 59, 59, 999);
 
     while (cursorStart.getTime() <= untilEnd.getTime()) {
-        occurrences.push({ start: new Date(cursorStart), end: new Date(cursorEnd) });
+        occurrences.push({
+            start: new Date(cursorStart),
+            end: new Date(cursorEnd),
+        });
         /* setDate preserves wall-clock time across DST boundaries */
         cursorStart.setDate(cursorStart.getDate() + 7);
         cursorEnd.setDate(cursorEnd.getDate() + 7);
@@ -172,7 +179,6 @@ function generateWeeklyOccurrences(start: Date, end: Date, until: Date): Array<{
 
     return occurrences;
 }
-
 
 @Route("/api/org/teams")
 export class MeetingsController extends Controller {
@@ -184,7 +190,10 @@ export class MeetingsController extends Controller {
      * all need the same group tree; without this each would re-fan-out 1+N
      * sequential Authentik calls.
      */
-    private readonly groupInfoCache = new Map<string, ReturnType<AuthentikClient["getGroupInfo"]>>();
+    private readonly groupInfoCache = new Map<
+        string,
+        ReturnType<AuthentikClient["getGroupInfo"]>
+    >();
 
     private getGroupInfoCached(groupPk: string) {
         let pending = this.groupInfoCache.get(groupPk);
@@ -199,20 +208,38 @@ export class MeetingsController extends Controller {
      * Flattens a team into its full member roster: the team's own users (owners)
      * plus everyone in its subteams, de-duplicated by Authentik user PK.
      */
-    private async getTeamRoster(teamId: string): Promise<Map<number, APIMeetingRosterMember>> {
+    private async getTeamRoster(
+        teamId: string,
+    ): Promise<Map<number, APIMeetingRosterMember>> {
         const teamInfo = await this.getGroupInfoCached(teamId);
         const members = new Map<number, APIMeetingRosterMember>();
         /* Authentik user PKs arrive as strings here but are numeric everywhere
            attendance is stored (matching authorizedUser.pk); normalize to number. */
-        const add = (u: { pk: string | number; name: string; username: string; email: string } | undefined) => {
+        const add = (
+            u:
+                | {
+                      pk: string | number;
+                      name: string;
+                      username: string;
+                      email: string;
+                  }
+                | undefined,
+        ) => {
             if (!u) return;
             const pk = Number(u.pk);
             if (!members.has(pk)) {
-                members.set(pk, { pk, name: u.name, username: u.username, email: u.email });
+                members.set(pk, {
+                    pk,
+                    name: u.name,
+                    username: u.username,
+                    email: u.email,
+                });
             }
         };
         teamInfo.users.forEach(add);
-        teamInfo.subteams?.forEach((subteam: any) => (subteam.users ?? []).forEach(add));
+        teamInfo.subteams?.forEach((subteam: any) =>
+            (subteam.users ?? []).forEach(add),
+        );
         return members;
     }
 
@@ -221,15 +248,24 @@ export class MeetingsController extends Controller {
      * Subteam invites store only this PK, so membership resolved here always
      * reflects the subteam's present composition.
      */
-    private async getSubteamDirectory(teamId: string): Promise<Map<string, { pk: string; name: string; memberPks: Set<number> }>> {
+    private async getSubteamDirectory(
+        teamId: string,
+    ): Promise<
+        Map<string, { pk: string; name: string; memberPks: Set<number> }>
+    > {
         const teamInfo = await this.getGroupInfoCached(teamId);
-        const directory = new Map<string, { pk: string; name: string; memberPks: Set<number> }>();
+        const directory = new Map<
+            string,
+            { pk: string; name: string; memberPks: Set<number> }
+        >();
         for (const subteam of (teamInfo.subteams ?? []) as any[]) {
             if (subteam.attributes?.flaggedForDeletion) continue;
             directory.set(String(subteam.pk), {
-                pk:        String(subteam.pk),
-                name:      subteam.attributes?.friendlyName ?? subteam.name,
-                memberPks: new Set((subteam.users ?? []).map((u: any) => Number(u.pk))),
+                pk: String(subteam.pk),
+                name: subteam.attributes?.friendlyName ?? subteam.name,
+                memberPks: new Set(
+                    (subteam.users ?? []).map((u: any) => Number(u.pk)),
+                ),
             });
         }
         return directory;
@@ -251,14 +287,22 @@ export class MeetingsController extends Controller {
         const viewerPk = req.session.authorizedUser!.pk;
         const [inviteCount, ownRow, subteamInvites] = await Promise.all([
             MeetingAttendance.countDocuments({ meetingId }),
-            MeetingAttendance.findOne({ meetingId, userPk: viewerPk }).select("_id").lean(),
-            MeetingSubteamAttendance.find({ meetingId }).select("subteamPk").lean(),
+            MeetingAttendance.findOne({ meetingId, userPk: viewerPk })
+                .select("_id")
+                .lean(),
+            MeetingSubteamAttendance.find({ meetingId })
+                .select("subteamPk")
+                .lean(),
         ]);
         if (ownRow) return true;
         if (inviteCount === 0 && subteamInvites.length === 0) return true;
         if (subteamInvites.length > 0) {
             const directory = await this.getSubteamDirectory(teamId);
-            if (subteamInvites.some((invite) => directory.get(invite.subteamPk)?.memberPks.has(viewerPk))) {
+            if (
+                subteamInvites.some((invite) =>
+                    directory.get(invite.subteamPk)?.memberPks.has(viewerPk),
+                )
+            ) {
                 return true;
             }
         }
@@ -275,9 +319,13 @@ export class MeetingsController extends Controller {
         directory: Map<string, { memberPks: Set<number> }>,
         userPk: number,
     ): AttendanceRole | null {
-        const covering = invites.filter((invite) => directory.get(invite.subteamPk)?.memberPks.has(userPk));
+        const covering = invites.filter((invite) =>
+            directory.get(invite.subteamPk)?.memberPks.has(userPk),
+        );
         if (covering.length === 0) return null;
-        return covering.some((invite) => invite.role === "required") ? "required" : "optional";
+        return covering.some((invite) => invite.role === "required")
+            ? "required"
+            : "optional";
     }
 
     /**
@@ -285,7 +333,10 @@ export class MeetingsController extends Controller {
      * (Team Owner, holder of the `corp:meetingsmgmt` bindle, or a superuser).
      * Used by endpoints that allow either a manager or the attendee themselves.
      */
-    private async canManageMeetings(req: express.Request, teamId: string): Promise<boolean> {
+    private async canManageMeetings(
+        req: express.Request,
+        teamId: string,
+    ): Promise<boolean> {
         const user = req.session.authorizedUser!;
         if (user.is_superuser) return true;
 
@@ -294,20 +345,30 @@ export class MeetingsController extends Controller {
            verified by @Security("oidc"), so skip the redundant check. */
         try {
             if (await executiveAuthVerify(req, [], true)) return true;
-        } catch { /* not an executive — fall through to owner/bindle checks */ }
+        } catch {
+            /* not an executive — fall through to owner/bindle checks */
+        }
 
         const teamInfo = await this.getGroupInfoCached(teamId);
 
         /* Owner check mirrors the bindle auth layer: ownership lives on the root team. */
         let authoritativeTeam = teamInfo;
         if (teamInfo.parentPk) {
-            authoritativeTeam = await this.getGroupInfoCached(teamInfo.parentPk);
+            authoritativeTeam = await this.getGroupInfoCached(
+                teamInfo.parentPk,
+            );
         }
-        if (authoritativeTeam.attributes.peoplePortalCreation && new Set(user.groups).has(authoritativeTeam.name)) {
+        if (
+            authoritativeTeam.attributes.peoplePortalCreation &&
+            new Set(user.groups).has(authoritativeTeam.name)
+        ) {
             return true;
         }
 
-        const effective = BindleController.getEffectivePermissionSet(teamInfo, user.groups);
+        const effective = BindleController.getEffectivePermissionSet(
+            teamInfo,
+            user.groups,
+        );
         return effective.has("corp:meetingsmgmt");
     }
 
@@ -342,40 +403,61 @@ export class MeetingsController extends Controller {
             filter.start = range;
         }
 
-        let meetings = await TeamMeeting
-            .find(filter)
+        let meetings = await TeamMeeting.find(filter)
             .sort({ start: 1 })
             .lean()
             .exec();
 
-        if (meetings.length > 0 && !(await this.canManageMeetings(req, teamId))) {
+        if (
+            meetings.length > 0 &&
+            !(await this.canManageMeetings(req, teamId))
+        ) {
             const viewerPk = req.session.authorizedUser!.pk;
             const ids = meetings.map((m) => String(m._id));
             const [invitedIds, viewerRows, subteamInvites] = await Promise.all([
-                MeetingAttendance.distinct("meetingId", { meetingId: { $in: ids } }),
-                MeetingAttendance.find({ meetingId: { $in: ids }, userPk: viewerPk }).select("meetingId").lean(),
-                MeetingSubteamAttendance.find({ meetingId: { $in: ids } }).select("meetingId subteamPk").lean(),
+                MeetingAttendance.distinct("meetingId", {
+                    meetingId: { $in: ids },
+                }),
+                MeetingAttendance.find({
+                    meetingId: { $in: ids },
+                    userPk: viewerPk,
+                })
+                    .select("meetingId")
+                    .lean(),
+                MeetingSubteamAttendance.find({ meetingId: { $in: ids } })
+                    .select("meetingId subteamPk")
+                    .lean(),
             ]);
 
             /* A meeting with any invite (person or subteam) is targeted, not general. */
             const hasInvites = new Set<string>(invitedIds as string[]);
-            subteamInvites.forEach((invite) => hasInvites.add(invite.meetingId));
+            subteamInvites.forEach((invite) =>
+                hasInvites.add(invite.meetingId),
+            );
 
-            const invitedDirectly = new Set(viewerRows.map((row) => row.meetingId));
+            const invitedDirectly = new Set(
+                viewerRows.map((row) => row.meetingId),
+            );
             const directory = await this.getSubteamDirectory(teamId);
             const mySubteams = new Set(
-                [...directory.values()].filter((s) => s.memberPks.has(viewerPk)).map((s) => s.pk),
+                [...directory.values()]
+                    .filter((s) => s.memberPks.has(viewerPk))
+                    .map((s) => s.pk),
             );
             const invitedViaSubteam = new Set(
-                subteamInvites.filter((invite) => mySubteams.has(invite.subteamPk)).map((invite) => invite.meetingId),
+                subteamInvites
+                    .filter((invite) => mySubteams.has(invite.subteamPk))
+                    .map((invite) => invite.meetingId),
             );
 
             meetings = meetings.filter((m) => {
                 const id = String(m._id);
-                return m.visibleToAll
-                    || !hasInvites.has(id)
-                    || invitedDirectly.has(id)
-                    || invitedViaSubteam.has(id);
+                return (
+                    m.visibleToAll ||
+                    !hasInvites.has(id) ||
+                    invitedDirectly.has(id) ||
+                    invitedViaSubteam.has(id)
+                );
             });
         }
 
@@ -383,7 +465,10 @@ export class MeetingsController extends Controller {
            than one occurrence shares its seriesId. The visible week may hold only
            one occurrence of a series, so the count is resolved across all of them. */
         const seriesIds = [...new Set(meetings.map((m) => m.seriesId))];
-        const counts = await TeamMeeting.aggregate<{ _id: string; count: number }>([
+        const counts = await TeamMeeting.aggregate<{
+            _id: string;
+            count: number;
+        }>([
             { $match: { seriesId: { $in: seriesIds } } },
             { $group: { _id: "$seriesId", count: { $sum: 1 } } },
         ]);
@@ -415,7 +500,10 @@ export class MeetingsController extends Controller {
         const start = new Date(body.start);
         const end = new Date(body.end);
         if (start.getTime() >= end.getTime()) {
-            throw new CustomValidationError(400, "Meeting start time must be before end time");
+            throw new CustomValidationError(
+                400,
+                "Meeting start time must be before end time",
+            );
         }
 
         let occurrences: Array<{ start: Date; end: Date }>;
@@ -424,11 +512,17 @@ export class MeetingsController extends Controller {
             const teamInfo = await this.getGroupInfoCached(teamId);
             const teamEndDate = teamInfo.attributes.teamEndDate;
             if (!teamEndDate) {
-                throw new CustomValidationError(400, "Team has no end date set; cannot create a recurring meeting");
+                throw new CustomValidationError(
+                    400,
+                    "Team has no end date set; cannot create a recurring meeting",
+                );
             }
             const until = new Date(`${teamEndDate}T23:59:59`);
             if (until.getTime() < start.getTime()) {
-                throw new CustomValidationError(400, "Team end date is before the meeting start");
+                throw new CustomValidationError(
+                    400,
+                    "Team end date is before the meeting start",
+                );
             }
             occurrences = generateWeeklyOccurrences(start, end, until);
         } else {
@@ -437,13 +531,13 @@ export class MeetingsController extends Controller {
 
         const seriesId = randomUUID();
         const docs = occurrences.map((occurrence) => ({
-            teamPk:       teamId,
+            teamPk: teamId,
             seriesId,
-            name:         body.name,
-            description:  body.description ?? "",
-            start:        occurrence.start,
-            end:          occurrence.end,
-            createdBy:    req.session.authorizedUser!.pk,
+            name: body.name,
+            description: body.description ?? "",
+            start: occurrence.start,
+            end: occurrence.end,
+            createdBy: req.session.authorizedUser!.pk,
             visibleToAll: body.visibleToAll ?? false,
         }));
 
@@ -453,21 +547,29 @@ export class MeetingsController extends Controller {
            copy of the required/optional roster. A person listed as both required
            and optional is kept as required. */
         const required = new Set(body.requiredAttendees ?? []);
-        const optional = new Set((body.optionalAttendees ?? []).filter((pk) => !required.has(pk)));
+        const optional = new Set(
+            (body.optionalAttendees ?? []).filter((pk) => !required.has(pk)),
+        );
         const roster: Array<{ userPk: number; role: AttendanceRole }> = [
-            ...[...required].map((userPk) => ({ userPk, role: "required" as const })),
-            ...[...optional].map((userPk) => ({ userPk, role: "optional" as const })),
+            ...[...required].map((userPk) => ({
+                userPk,
+                role: "required" as const,
+            })),
+            ...[...optional].map((userPk) => ({
+                userPk,
+                role: "optional" as const,
+            })),
         ];
 
         if (roster.length > 0) {
             const attendanceDocs = created.flatMap((meeting) =>
                 roster.map((entry) => ({
                     meetingId: String(meeting._id),
-                    teamPk:    teamId,
+                    teamPk: teamId,
                     seriesId,
-                    userPk:    entry.userPk,
-                    role:      entry.role,
-                    present:   false,
+                    userPk: entry.userPk,
+                    role: entry.role,
+                    present: false,
                 })),
             );
             await MeetingAttendance.insertMany(attendanceDocs);
@@ -476,22 +578,40 @@ export class MeetingsController extends Controller {
         /* Subteam invites are stored by group PK only — membership is resolved
            at read time so the invite follows the subteam as it grows/shrinks.
            Unknown PKs are dropped; a subteam listed as both is kept required. */
-        if ((body.requiredSubteams?.length ?? 0) > 0 || (body.optionalSubteams?.length ?? 0) > 0) {
+        if (
+            (body.requiredSubteams?.length ?? 0) > 0 ||
+            (body.optionalSubteams?.length ?? 0) > 0
+        ) {
             const directory = await this.getSubteamDirectory(teamId);
-            const requiredSubs = new Set((body.requiredSubteams ?? []).filter((pk) => directory.has(pk)));
-            const optionalSubs = new Set((body.optionalSubteams ?? []).filter((pk) => directory.has(pk) && !requiredSubs.has(pk)));
-            const subteamRoster: Array<{ subteamPk: string; role: AttendanceRole }> = [
-                ...[...requiredSubs].map((subteamPk) => ({ subteamPk, role: "required" as const })),
-                ...[...optionalSubs].map((subteamPk) => ({ subteamPk, role: "optional" as const })),
+            const requiredSubs = new Set(
+                (body.requiredSubteams ?? []).filter((pk) => directory.has(pk)),
+            );
+            const optionalSubs = new Set(
+                (body.optionalSubteams ?? []).filter(
+                    (pk) => directory.has(pk) && !requiredSubs.has(pk),
+                ),
+            );
+            const subteamRoster: Array<{
+                subteamPk: string;
+                role: AttendanceRole;
+            }> = [
+                ...[...requiredSubs].map((subteamPk) => ({
+                    subteamPk,
+                    role: "required" as const,
+                })),
+                ...[...optionalSubs].map((subteamPk) => ({
+                    subteamPk,
+                    role: "optional" as const,
+                })),
             ];
             if (subteamRoster.length > 0) {
                 const subteamDocs = created.flatMap((meeting) =>
                     subteamRoster.map((entry) => ({
                         meetingId: String(meeting._id),
-                        teamPk:    teamId,
+                        teamPk: teamId,
                         seriesId,
                         subteamPk: entry.subteamPk,
-                        role:      entry.role,
+                        role: entry.role,
                     })),
                 );
                 await MeetingSubteamAttendance.insertMany(subteamDocs);
@@ -502,7 +622,14 @@ export class MeetingsController extends Controller {
         const recurring = created.length > 1;
 
         this.setStatus(201);
-        return created.map((doc) => ({ ...doc.toObject(), _id: doc._id.toString(), recurring }) as APITeamMeetingResponse);
+        return created.map(
+            (doc) =>
+                ({
+                    ...doc.toObject(),
+                    _id: doc._id.toString(),
+                    recurring,
+                }) as APITeamMeetingResponse,
+        );
     }
 
     /**
@@ -524,16 +651,23 @@ export class MeetingsController extends Controller {
         @Path() meetingId: string,
         @Body() body: APITeamMeetingUpdateRequest,
     ): Promise<APITeamMeetingResponse[]> {
-        const target = await TeamMeeting.findOne({ _id: meetingId, teamPk: teamId });
+        const target = await TeamMeeting.findOne({
+            _id: meetingId,
+            teamPk: teamId,
+        });
         if (!target) throw new CustomValidationError(404, "Meeting not found");
 
-        const newStart = body.start !== undefined ? new Date(body.start) : undefined;
-        const newEnd   = body.end   !== undefined ? new Date(body.end)   : undefined;
+        const newStart =
+            body.start !== undefined ? new Date(body.start) : undefined;
+        const newEnd = body.end !== undefined ? new Date(body.end) : undefined;
 
         const effectiveStart = newStart ?? target.start;
-        const effectiveEnd   = newEnd   ?? target.end;
+        const effectiveEnd = newEnd ?? target.end;
         if (effectiveStart.getTime() >= effectiveEnd.getTime()) {
-            throw new CustomValidationError(400, "Meeting start time must be before end time");
+            throw new CustomValidationError(
+                400,
+                "Meeting start time must be before end time",
+            );
         }
 
         /* A time edit moves/resizes the clicked occurrence; for "following"/"all"
@@ -541,16 +675,19 @@ export class MeetingsController extends Controller {
            they keep their own dates. Omitted fields fall back to the target's
            current values, so a start-only or end-only edit still resizes correctly. */
         const targetNewStart = newStart ?? target.start;
-        const targetNewEnd   = newEnd   ?? target.end;
+        const targetNewEnd = newEnd ?? target.end;
         const startDelta = targetNewStart.getTime() - target.start.getTime();
-        const duration   = targetNewEnd.getTime() - targetNewStart.getTime();
+        const duration = targetNewEnd.getTime() - targetNewStart.getTime();
         const timeChanged = newStart !== undefined || newEnd !== undefined;
 
         /* Editing never reassigns seriesId. A "this"-scope edit therefore keeps the
            occurrence linked to its series (standard calendar behavior: it can still
            be swept by a later "following"/"all" edit) rather than detaching it. */
         const scope: MeetingScope = body.scope ?? "this";
-        const filter: Record<string, unknown> = { seriesId: target.seriesId, teamPk: teamId };
+        const filter: Record<string, unknown> = {
+            seriesId: target.seriesId,
+            teamPk: teamId,
+        };
         if (scope === "this") {
             filter._id = target._id;
         } else if (scope === "following") {
@@ -559,19 +696,34 @@ export class MeetingsController extends Controller {
 
         const occurrences = await TeamMeeting.find(filter);
         for (const occurrence of occurrences) {
-            if (body.name         !== undefined) occurrence.name         = body.name;
-            if (body.description  !== undefined) occurrence.description  = body.description;
-            if (body.visibleToAll !== undefined) occurrence.visibleToAll = body.visibleToAll;
+            if (body.name !== undefined) occurrence.name = body.name;
+            if (body.description !== undefined)
+                occurrence.description = body.description;
+            if (body.visibleToAll !== undefined)
+                occurrence.visibleToAll = body.visibleToAll;
             if (timeChanged) {
-                occurrence.start = new Date(occurrence.start.getTime() + startDelta);
-                occurrence.end   = new Date(occurrence.start.getTime() + duration);
+                occurrence.start = new Date(
+                    occurrence.start.getTime() + startDelta,
+                );
+                occurrence.end = new Date(
+                    occurrence.start.getTime() + duration,
+                );
             }
             await occurrence.save();
         }
 
         /* Series membership is unchanged by an edit, so a single count suffices. */
-        const recurring = await TeamMeeting.countDocuments({ seriesId: target.seriesId }) > 1;
-        return occurrences.map((occurrence) => ({ ...occurrence.toObject(), _id: occurrence._id.toString(), recurring }) as APITeamMeetingResponse);
+        const recurring =
+            (await TeamMeeting.countDocuments({ seriesId: target.seriesId })) >
+            1;
+        return occurrences.map(
+            (occurrence) =>
+                ({
+                    ...occurrence.toObject(),
+                    _id: occurrence._id.toString(),
+                    recurring,
+                }) as APITeamMeetingResponse,
+        );
     }
 
     /**
@@ -592,11 +744,17 @@ export class MeetingsController extends Controller {
         @Path() meetingId: string,
         @Query() scope?: MeetingScope,
     ): Promise<void> {
-        const target = await TeamMeeting.findOne({ _id: meetingId, teamPk: teamId });
+        const target = await TeamMeeting.findOne({
+            _id: meetingId,
+            teamPk: teamId,
+        });
         if (!target) throw new CustomValidationError(404, "Meeting not found");
 
         const effectiveScope: MeetingScope = scope ?? "this";
-        const filter: Record<string, unknown> = { seriesId: target.seriesId, teamPk: teamId };
+        const filter: Record<string, unknown> = {
+            seriesId: target.seriesId,
+            teamPk: teamId,
+        };
         if (effectiveScope === "this") {
             filter._id = target._id;
         } else if (effectiveScope === "following") {
@@ -608,8 +766,12 @@ export class MeetingsController extends Controller {
         const doomedIds = doomed.map((m) => m._id.toString());
         await TeamMeeting.deleteMany(filter);
         if (doomedIds.length > 0) {
-            await MeetingAttendance.deleteMany({ meetingId: { $in: doomedIds } });
-            await MeetingSubteamAttendance.deleteMany({ meetingId: { $in: doomedIds } });
+            await MeetingAttendance.deleteMany({
+                meetingId: { $in: doomedIds },
+            });
+            await MeetingSubteamAttendance.deleteMany({
+                meetingId: { $in: doomedIds },
+            });
         }
     }
 
@@ -633,11 +795,19 @@ export class MeetingsController extends Controller {
            member of any team by walking teamId, so the roster is restricted to
            the team's own members and to meeting managers. */
         const viewerPk = req.session.authorizedUser!.pk;
-        if (!roster.has(viewerPk) && !(await this.canManageMeetings(req, teamId))) {
-            throw new ResourceAccessError(403, "You must be a member of this team to view its roster.");
+        if (
+            !roster.has(viewerPk) &&
+            !(await this.canManageMeetings(req, teamId))
+        ) {
+            throw new ResourceAccessError(
+                403,
+                "You must be a member of this team to view its roster.",
+            );
         }
 
-        return [...roster.values()].sort((a, b) => a.name.localeCompare(b.name));
+        return [...roster.values()].sort((a, b) =>
+            a.name.localeCompare(b.name),
+        );
     }
 
     /**
@@ -678,28 +848,42 @@ export class MeetingsController extends Controller {
         @Query() to?: Date,
     ): Promise<APIMyAttendanceItem[]> {
         const viewerPk = req.session.authorizedUser!.pk;
-        const records = await MeetingAttendance.find({ teamPk: teamId, userPk: viewerPk }).lean();
-        const byMeeting = new Map(records.map((r) => [r.meetingId, r] as const));
+        const records = await MeetingAttendance.find({
+            teamPk: teamId,
+            userPk: viewerPk,
+        }).lean();
+        const byMeeting = new Map(
+            records.map((r) => [r.meetingId, r] as const),
+        );
 
         /* Meetings the viewer attends through a subteam invite, without an own
            row yet: resolved live against current subteam membership. */
         const directory = await this.getSubteamDirectory(teamId);
-        const mySubteamPks = [...directory.values()].filter((s) => s.memberPks.has(viewerPk)).map((s) => s.pk);
+        const mySubteamPks = [...directory.values()]
+            .filter((s) => s.memberPks.has(viewerPk))
+            .map((s) => s.pk);
         const subteamRole = new Map<string, AttendanceRole>();
         if (mySubteamPks.length > 0) {
-            const invites = await MeetingSubteamAttendance
-                .find({ teamPk: teamId, subteamPk: { $in: mySubteamPks } })
-                .lean();
+            const invites = await MeetingSubteamAttendance.find({
+                teamPk: teamId,
+                subteamPk: { $in: mySubteamPks },
+            }).lean();
             for (const invite of invites) {
                 const current = subteamRole.get(invite.meetingId);
-                if (current !== "required") subteamRole.set(invite.meetingId, invite.role);
+                if (current !== "required")
+                    subteamRole.set(invite.meetingId, invite.role);
             }
         }
 
-        const meetingIds = [...new Set([...byMeeting.keys(), ...subteamRole.keys()])];
+        const meetingIds = [
+            ...new Set([...byMeeting.keys(), ...subteamRole.keys()]),
+        ];
         if (meetingIds.length === 0) return [];
 
-        const filter: Record<string, unknown> = { _id: { $in: meetingIds }, teamPk: teamId };
+        const filter: Record<string, unknown> = {
+            _id: { $in: meetingIds },
+            teamPk: teamId,
+        };
         if (from || to) {
             const range: Record<string, Date> = {};
             if (from) range.$gte = from;
@@ -707,9 +891,14 @@ export class MeetingsController extends Controller {
             filter.start = range;
         }
 
-        const meetings = await TeamMeeting.find(filter).sort({ start: 1 }).lean();
+        const meetings = await TeamMeeting.find(filter)
+            .sort({ start: 1 })
+            .lean();
         const seriesIds = [...new Set(meetings.map((m) => m.seriesId))];
-        const counts = await TeamMeeting.aggregate<{ _id: string; count: number }>([
+        const counts = await TeamMeeting.aggregate<{
+            _id: string;
+            count: number;
+        }>([
             { $match: { seriesId: { $in: seriesIds } } },
             { $group: { _id: "$seriesId", count: { $sum: 1 } } },
         ]);
@@ -720,7 +909,10 @@ export class MeetingsController extends Controller {
             return {
                 ...m,
                 recurring: (seriesSize.get(m.seriesId) ?? 1) > 1,
-                role: record?.role ?? subteamRole.get(String(m._id)) ?? "optional",
+                role:
+                    record?.role ??
+                    subteamRole.get(String(m._id)) ??
+                    "optional",
                 present: record?.present ?? false,
             };
         }) as any as APIMyAttendanceItem[];
@@ -742,14 +934,19 @@ export class MeetingsController extends Controller {
         @Path() teamId: string,
         @Path() meetingId: string,
     ): Promise<APITeamMeetingResponse> {
-        const meeting = await TeamMeeting.findOne({ _id: meetingId, teamPk: teamId }).lean();
+        const meeting = await TeamMeeting.findOne({
+            _id: meetingId,
+            teamPk: teamId,
+        }).lean();
         if (!meeting) throw new CustomValidationError(404, "Meeting not found");
         /* Same predicate as the calendar list; 404 (not 403) so an uninvited
            member can't even confirm a hidden meeting exists. */
         if (!(await this.canViewMeeting(req, teamId, meeting))) {
             throw new CustomValidationError(404, "Meeting not found");
         }
-        const recurring = await TeamMeeting.countDocuments({ seriesId: meeting.seriesId }) > 1;
+        const recurring =
+            (await TeamMeeting.countDocuments({ seriesId: meeting.seriesId })) >
+            1;
         return { ...meeting, recurring } as any as APITeamMeetingResponse;
     }
 
@@ -772,34 +969,59 @@ export class MeetingsController extends Controller {
         @Path() teamId: string,
         @Path() meetingId: string,
     ): Promise<APIMeetingAttendee> {
-        const meeting = await TeamMeeting.findOne({ _id: meetingId, teamPk: teamId }).lean();
+        const meeting = await TeamMeeting.findOne({
+            _id: meetingId,
+            teamPk: teamId,
+        }).lean();
         if (!meeting) throw new CustomValidationError(404, "Meeting not found");
 
         /* Check-in is open for the whole calendar day of the meeting, so a code
            can't be scanned on a different day but timing within the day is lenient. */
         const now = Date.now();
-        const opensAt = new Date(meeting.start); opensAt.setHours(0, 0, 0, 0);
-        const closesAt = new Date(meeting.end); closesAt.setHours(23, 59, 59, 999);
-        if (now < opensAt.getTime()) throw new CustomValidationError(400, "Check-in for this meeting is not open yet");
-        if (now > closesAt.getTime()) throw new CustomValidationError(400, "Check-in for this meeting has closed");
+        const opensAt = new Date(meeting.start);
+        opensAt.setHours(0, 0, 0, 0);
+        const closesAt = new Date(meeting.end);
+        closesAt.setHours(23, 59, 59, 999);
+        if (now < opensAt.getTime())
+            throw new CustomValidationError(
+                400,
+                "Check-in for this meeting is not open yet",
+            );
+        if (now > closesAt.getTime())
+            throw new CustomValidationError(
+                400,
+                "Check-in for this meeting has closed",
+            );
 
         const viewerPk = req.session.authorizedUser!.pk;
         const roster = await this.getTeamRoster(teamId);
 
         /* Outsiders may not self-add. Pre-listed attendees are always allowed. */
-        const existing = await MeetingAttendance.findOne({ meetingId, teamPk: teamId, userPk: viewerPk });
+        const existing = await MeetingAttendance.findOne({
+            meetingId,
+            teamPk: teamId,
+            userPk: viewerPk,
+        });
         if (!existing && !roster.has(viewerPk)) {
-            throw new CustomValidationError(403, "You are not a member of this team");
+            throw new CustomValidationError(
+                403,
+                "You are not a member of this team",
+            );
         }
 
         /* First check-in of a subteam invitee materializes their row with the
            subteam's role; anyone else lands as "optional". */
         let insertRole: AttendanceRole = "optional";
         if (!existing) {
-            const invites = await MeetingSubteamAttendance.find({ meetingId, teamPk: teamId }).lean();
+            const invites = await MeetingSubteamAttendance.find({
+                meetingId,
+                teamPk: teamId,
+            }).lean();
             if (invites.length > 0) {
                 const directory = await this.getSubteamDirectory(teamId);
-                insertRole = this.resolveSubteamRole(invites, directory, viewerPk) ?? "optional";
+                insertRole =
+                    this.resolveSubteamRole(invites, directory, viewerPk) ??
+                    "optional";
             }
         }
 
@@ -810,20 +1032,25 @@ export class MeetingsController extends Controller {
             { meetingId, teamPk: teamId, userPk: viewerPk },
             {
                 $setOnInsert: { seriesId: meeting.seriesId, role: insertRole },
-                $set: { present: true, markedBy: viewerPk, markedAt: new Date() },
+                $set: {
+                    present: true,
+                    markedBy: viewerPk,
+                    markedAt: new Date(),
+                },
             },
             { new: true, upsert: true, setDefaultsOnInsert: true },
         );
-        if (!record) throw new CustomValidationError(500, "Failed to record attendance");
+        if (!record)
+            throw new CustomValidationError(500, "Failed to record attendance");
 
         return {
-            userPk:     record.userPk,
-            name:       roster.get(record.userPk)?.name ?? `User ${record.userPk}`,
-            role:       record.role,
-            present:    record.present,
-            markedBy:   record.markedBy ?? null,
-            markedAt:   record.markedAt ?? null,
-            explicit:   true,
+            userPk: record.userPk,
+            name: roster.get(record.userPk)?.name ?? `User ${record.userPk}`,
+            role: record.role,
+            present: record.present,
+            markedBy: record.markedBy ?? null,
+            markedAt: record.markedAt ?? null,
+            explicit: true,
             viaSubteam: null,
         };
     }
@@ -846,7 +1073,10 @@ export class MeetingsController extends Controller {
         @Path() teamId: string,
         @Path() meetingId: string,
     ): Promise<APIMeetingAttendanceResponse> {
-        const meeting = await TeamMeeting.findOne({ _id: meetingId, teamPk: teamId }).lean();
+        const meeting = await TeamMeeting.findOne({
+            _id: meetingId,
+            teamPk: teamId,
+        }).lean();
         if (!meeting) throw new CustomValidationError(404, "Meeting not found");
 
         const [records, invites] = await Promise.all([
@@ -859,21 +1089,25 @@ export class MeetingsController extends Controller {
         /* Attribute each covered person to one invited subteam for display;
            required invites win so the label matches the effective role. */
         const viaSubteam = new Map<number, string>();
-        const sortedInvites = [...invites].sort((a, b) => (a.role === b.role ? 0 : a.role === "required" ? -1 : 1));
+        const sortedInvites = [...invites].sort((a, b) =>
+            a.role === b.role ? 0 : a.role === "required" ? -1 : 1,
+        );
         for (const invite of sortedInvites) {
             const subteam = directory.get(invite.subteamPk);
             if (!subteam) continue;
-            subteam.memberPks.forEach((pk) => { if (!viaSubteam.has(pk)) viaSubteam.set(pk, subteam.name); });
+            subteam.memberPks.forEach((pk) => {
+                if (!viaSubteam.has(pk)) viaSubteam.set(pk, subteam.name);
+            });
         }
 
         const attendees: APIMeetingAttendee[] = records.map((r) => ({
-            userPk:     r.userPk,
-            name:       roster.get(r.userPk)?.name ?? `User ${r.userPk}`,
-            role:       r.role,
-            present:    r.present,
-            markedBy:   r.markedBy ?? null,
-            markedAt:   r.markedAt ?? null,
-            explicit:   true,
+            userPk: r.userPk,
+            name: roster.get(r.userPk)?.name ?? `User ${r.userPk}`,
+            role: r.role,
+            present: r.present,
+            markedBy: r.markedBy ?? null,
+            markedAt: r.markedAt ?? null,
+            explicit: true,
             viaSubteam: viaSubteam.get(r.userPk) ?? null,
         }));
 
@@ -883,28 +1117,34 @@ export class MeetingsController extends Controller {
         for (const [pk, subteamName] of viaSubteam) {
             if (explicitPks.has(pk)) continue;
             attendees.push({
-                userPk:     pk,
-                name:       roster.get(pk)?.name ?? `User ${pk}`,
-                role:       this.resolveSubteamRole(invites, directory, pk)!,
-                present:    false,
-                markedBy:   null,
-                markedAt:   null,
-                explicit:   false,
+                userPk: pk,
+                name: roster.get(pk)?.name ?? `User ${pk}`,
+                role: this.resolveSubteamRole(invites, directory, pk)!,
+                present: false,
+                markedBy: null,
+                markedAt: null,
+                explicit: false,
                 viaSubteam: subteamName,
             });
         }
 
-        attendees.sort((a, b) => (a.role === b.role ? a.name.localeCompare(b.name) : a.role === "required" ? -1 : 1));
+        attendees.sort((a, b) =>
+            a.role === b.role
+                ? a.name.localeCompare(b.name)
+                : a.role === "required"
+                  ? -1
+                  : 1,
+        );
 
         /* Reaching here means the bindle gate passed, so the viewer always manages. */
         return {
-            viewerPk:  req.session.authorizedUser!.pk,
+            viewerPk: req.session.authorizedUser!.pk,
             canManage: true,
             attendees,
-            subteams:  invites.map((invite) => ({
+            subteams: invites.map((invite) => ({
                 subteamPk: invite.subteamPk,
-                name:      directory.get(invite.subteamPk)?.name ?? invite.subteamPk,
-                role:      invite.role,
+                name: directory.get(invite.subteamPk)?.name ?? invite.subteamPk,
+                role: invite.role,
             })),
         };
     }
@@ -926,36 +1166,44 @@ export class MeetingsController extends Controller {
         @Path() meetingId: string,
         @Body() body: APIAddAttendeeRequest,
     ): Promise<APIMeetingAttendee> {
-        const meeting = await TeamMeeting.findOne({ _id: meetingId, teamPk: teamId }).lean();
+        const meeting = await TeamMeeting.findOne({
+            _id: meetingId,
+            teamPk: teamId,
+        }).lean();
         if (!meeting) throw new CustomValidationError(404, "Meeting not found");
 
-        const role: AttendanceRole = body.role === "optional" ? "optional" : "required";
+        const role: AttendanceRole =
+            body.role === "optional" ? "optional" : "required";
         try {
             await MeetingAttendance.create({
                 meetingId,
-                teamPk:   teamId,
+                teamPk: teamId,
                 seriesId: meeting.seriesId,
-                userPk:   body.userPk,
+                userPk: body.userPk,
                 role,
-                present:  false,
+                present: false,
             });
         } catch (e: any) {
             /* The unique (meetingId, userPk) index is the real duplicate guard —
                a pre-check would race with concurrent adds/check-ins. */
-            if (e?.code === 11000) throw new CustomValidationError(409, "Person is already an attendee");
+            if (e?.code === 11000)
+                throw new CustomValidationError(
+                    409,
+                    "Person is already an attendee",
+                );
             throw e;
         }
 
         const roster = await this.getTeamRoster(teamId);
         this.setStatus(201);
         return {
-            userPk:     body.userPk,
-            name:       roster.get(body.userPk)?.name ?? `User ${body.userPk}`,
+            userPk: body.userPk,
+            name: roster.get(body.userPk)?.name ?? `User ${body.userPk}`,
             role,
-            present:    false,
-            markedBy:   null,
-            markedAt:   null,
-            explicit:   true,
+            present: false,
+            markedBy: null,
+            markedAt: null,
+            explicit: true,
             viaSubteam: null,
         };
     }
@@ -979,25 +1227,34 @@ export class MeetingsController extends Controller {
         @Path() meetingId: string,
         @Body() body: APIAddSubteamRequest,
     ): Promise<APIMeetingSubteamRef> {
-        const meeting = await TeamMeeting.findOne({ _id: meetingId, teamPk: teamId }).lean();
+        const meeting = await TeamMeeting.findOne({
+            _id: meetingId,
+            teamPk: teamId,
+        }).lean();
         if (!meeting) throw new CustomValidationError(404, "Meeting not found");
 
         const directory = await this.getSubteamDirectory(teamId);
         const subteam = directory.get(body.subteamPk);
-        if (!subteam) throw new CustomValidationError(400, "Not a subteam of this team");
+        if (!subteam)
+            throw new CustomValidationError(400, "Not a subteam of this team");
 
-        const role: AttendanceRole = body.role === "optional" ? "optional" : "required";
+        const role: AttendanceRole =
+            body.role === "optional" ? "optional" : "required";
         try {
             await MeetingSubteamAttendance.create({
                 meetingId,
-                teamPk:    teamId,
-                seriesId:  meeting.seriesId,
+                teamPk: teamId,
+                seriesId: meeting.seriesId,
                 subteamPk: body.subteamPk,
                 role,
             });
         } catch (e: any) {
             /* The unique (meetingId, subteamPk) index is the real duplicate guard. */
-            if (e?.code === 11000) throw new CustomValidationError(409, "Subteam is already invited");
+            if (e?.code === 11000)
+                throw new CustomValidationError(
+                    409,
+                    "Subteam is already invited",
+                );
             throw e;
         }
 
@@ -1023,8 +1280,16 @@ export class MeetingsController extends Controller {
         @Path() meetingId: string,
         @Path() subteamPk: string,
     ): Promise<void> {
-        const result = await MeetingSubteamAttendance.deleteOne({ meetingId, teamPk: teamId, subteamPk });
-        if (result.deletedCount === 0) throw new CustomValidationError(404, "Subteam is not invited to this meeting");
+        const result = await MeetingSubteamAttendance.deleteOne({
+            meetingId,
+            teamPk: teamId,
+            subteamPk,
+        });
+        if (result.deletedCount === 0)
+            throw new CustomValidationError(
+                404,
+                "Subteam is not invited to this meeting",
+            );
     }
 
     /**
@@ -1053,7 +1318,11 @@ export class MeetingsController extends Controller {
         }
 
         const viewerPk = req.session.authorizedUser!.pk;
-        const markUpdate = { present: body.present, markedBy: viewerPk, markedAt: new Date() };
+        const markUpdate = {
+            present: body.present,
+            markedBy: viewerPk,
+            markedAt: new Date(),
+        };
         let record = await MeetingAttendance.findOneAndUpdate(
             { meetingId, teamPk: teamId, userPk },
             { $set: markUpdate },
@@ -1064,12 +1333,26 @@ export class MeetingsController extends Controller {
                with the role their subteam invite grants. Atomic upsert: the
                person may check themselves in concurrently, and a plain save()
                would trip the unique (meetingId, userPk) index. */
-            const meeting = await TeamMeeting.findOne({ _id: meetingId, teamPk: teamId }).lean();
-            if (!meeting) throw new CustomValidationError(404, "Meeting not found");
-            const invites = await MeetingSubteamAttendance.find({ meetingId, teamPk: teamId }).lean();
-            const directory = invites.length > 0 ? await this.getSubteamDirectory(teamId) : new Map();
+            const meeting = await TeamMeeting.findOne({
+                _id: meetingId,
+                teamPk: teamId,
+            }).lean();
+            if (!meeting)
+                throw new CustomValidationError(404, "Meeting not found");
+            const invites = await MeetingSubteamAttendance.find({
+                meetingId,
+                teamPk: teamId,
+            }).lean();
+            const directory =
+                invites.length > 0
+                    ? await this.getSubteamDirectory(teamId)
+                    : new Map();
             const role = this.resolveSubteamRole(invites, directory, userPk);
-            if (!role) throw new CustomValidationError(404, "This person is not an attendee of the meeting");
+            if (!role)
+                throw new CustomValidationError(
+                    404,
+                    "This person is not an attendee of the meeting",
+                );
             record = await MeetingAttendance.findOneAndUpdate(
                 { meetingId, teamPk: teamId, userPk },
                 {
@@ -1079,17 +1362,18 @@ export class MeetingsController extends Controller {
                 { new: true, upsert: true, setDefaultsOnInsert: true },
             );
         }
-        if (!record) throw new CustomValidationError(500, "Failed to record attendance");
+        if (!record)
+            throw new CustomValidationError(500, "Failed to record attendance");
 
         const roster = await this.getTeamRoster(teamId);
         return {
-            userPk:     record.userPk,
-            name:       roster.get(record.userPk)?.name ?? `User ${record.userPk}`,
-            role:       record.role,
-            present:    record.present,
-            markedBy:   record.markedBy ?? null,
-            markedAt:   record.markedAt ?? null,
-            explicit:   true,
+            userPk: record.userPk,
+            name: roster.get(record.userPk)?.name ?? `User ${record.userPk}`,
+            role: record.role,
+            present: record.present,
+            markedBy: record.markedBy ?? null,
+            markedAt: record.markedAt ?? null,
+            explicit: true,
             viaSubteam: null,
         };
     }
@@ -1111,7 +1395,12 @@ export class MeetingsController extends Controller {
         @Path() meetingId: string,
         @Path() userPk: number,
     ): Promise<void> {
-        const result = await MeetingAttendance.deleteOne({ meetingId, teamPk: teamId, userPk });
-        if (result.deletedCount === 0) throw new CustomValidationError(404, "Attendee not found");
+        const result = await MeetingAttendance.deleteOne({
+            meetingId,
+            teamPk: teamId,
+            userPk,
+        });
+        if (result.deletedCount === 0)
+            throw new CustomValidationError(404, "Attendee not found");
     }
 }

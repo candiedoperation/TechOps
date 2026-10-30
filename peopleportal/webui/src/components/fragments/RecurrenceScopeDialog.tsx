@@ -16,45 +16,67 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog"
-import { Button } from "../ui/button"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
 
-export type RecurrenceScope = "this" | "following" | "all"
+export type RecurrenceScope = "this" | "following" | "all";
 
 export interface RecurrenceScopeDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  action: "edit" | "delete"
-  onSelect: (scope: RecurrenceScope) => void
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    action: "edit" | "delete";
+    onSelect: (scope: RecurrenceScope) => void;
 }
 
 export const RecurrenceScopeDialog = (props: RecurrenceScopeDialogProps) => {
-  const verb = props.action === "delete" ? "Delete" : "Edit"
-  const choose = (scope: RecurrenceScope) => {
-    props.onSelect(scope)
-    props.onOpenChange(false)
-  }
+    const verb = props.action === "delete" ? "Delete" : "Edit";
+    const choose = (scope: RecurrenceScope) => {
+        props.onSelect(scope);
+        props.onOpenChange(false);
+    };
 
-  return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{verb} recurring meeting</DialogTitle>
-          <DialogDescription>
-            This meeting repeats weekly. Which occurrences should be {props.action === "delete" ? "deleted" : "changed"}?
-          </DialogDescription>
-        </DialogHeader>
+    return (
+        <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+            <DialogContent className="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>{verb} recurring meeting</DialogTitle>
+                    <DialogDescription>
+                        This meeting repeats weekly. Which occurrences should be{" "}
+                        {props.action === "delete" ? "deleted" : "changed"}?
+                    </DialogDescription>
+                </DialogHeader>
 
-        <div className="grid gap-2">
-          <Button variant="outline" onClick={() => choose("this")}>This meeting</Button>
-          <Button variant="outline" onClick={() => choose("following")}>This and following meetings</Button>
-          <Button variant="outline" onClick={() => choose("all")}>All meetings</Button>
-        </div>
+                <div className="grid gap-2">
+                    <Button variant="outline" onClick={() => choose("this")}>
+                        This meeting
+                    </Button>
+                    <Button
+                        variant="outline"
+                        onClick={() => choose("following")}
+                    >
+                        This and following meetings
+                    </Button>
+                    <Button variant="outline" onClick={() => choose("all")}>
+                        All meetings
+                    </Button>
+                </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => props.onOpenChange(false)}>Cancel</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
+                <DialogFooter>
+                    <Button
+                        variant="ghost"
+                        onClick={() => props.onOpenChange(false)}
+                    >
+                        Cancel
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
