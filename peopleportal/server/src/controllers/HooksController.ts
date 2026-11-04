@@ -34,6 +34,12 @@ import { AuthentikClient } from "../clients/AuthentikClient";
 
 @Route("/api/webhook")
 export class HooksController extends Controller {
+    /* How recently a personal repository must have been created for its
+       creation event to delete it. Webhooks arrive within seconds; the margin
+       covers queueing and clock skew, and an older repository is never touched
+       by a replayed or forged event. */
+    static readonly PERSONAL_REPO_DELETE_WINDOW_MS = 10 * 60 * 1000;
+
     private readonly giteaClient: GiteaClient;
     private readonly authentikClient: AuthentikClient;
 
@@ -104,6 +110,23 @@ export class HooksController extends Controller {
     }
 
     private async handleRepoCreation(repoEvent: GiteaHookRepositoryTrigger) {
+        /* Gitea fills `organization` with the owner even for personal
+           repositories, so ask the API which kind of owner this is. */
+        let ownerIsOrganization: boolean;
+        try {
+            ownerIsOrganization = await this.giteaClient.isOrganization(
+                repoEvent.repository.owner.username,
+            );
+        } catch (e: any) {
+            console.error(
+                `Failed resolving the owner of ${repoEvent.repository.full_name}: ${e.message}`,
+            );
+            return "OK (Actions Failed)";
+        }
+
+        if (!ownerIsOrganization)
+            return this.handlePersonalRepoCreation(repoEvent);
+
         try {
             const organizationName = repoEvent.organization.username;
             if (repoEvent.repository.owner.username !== organizationName) {
@@ -133,6 +156,52 @@ export class HooksController extends Controller {
             /* Processing failed; leave the repository untouched for an authorized operator to review. */
             console.error(
                 `Failed provisioning repository ${repoEvent.repository.full_name}: ${e.message}`,
+            );
+            return "OK (Actions Failed)";
+        }
+    }
+
+    /**
+     * Team code lives in team organizations, so personal repositories are
+     * deleted as soon as they are created. The delete only happens once the API
+     * confirms the event describes a repository that exists with the same id
+     * and owner, belongs to a user rather than an organization, and was
+     * created within PERSONAL_REPO_DELETE_WINDOW_MS. Anything else is logged
+     * and left alone, so a forged or replayed event cannot delete an older or
+     * different repository.
+     */
+    private async handlePersonalRepoCreation(
+        repoEvent: GiteaHookRepositoryTrigger,
+    ) {
+        const ownerName = repoEvent.repository.owner.username;
+        try {
+            const repository = await this.giteaClient.getRepository(
+                ownerName,
+                repoEvent.repository.name,
+            );
+            if (
+                repository.id !== repoEvent.repository.id ||
+                repository.owner.username !== ownerName
+            ) {
+                throw new Error("Repository does not match webhook event");
+            }
+
+            const age = Date.now() - Date.parse(repository.created_at);
+            if (
+                !Number.isFinite(age) ||
+                Math.abs(age) > HooksController.PERSONAL_REPO_DELETE_WINDOW_MS
+            ) {
+                throw new Error("Repository was not created just now");
+            }
+
+            await this.giteaClient.deleteRepository(ownerName, repository.name);
+            console.warn(
+                `Deleted personal repository ${repository.full_name}: team code belongs in a team organization`,
+            );
+            return "OK (Personal Repository Deleted)";
+        } catch (e: any) {
+            console.error(
+                `Not deleting personal repository ${repoEvent.repository.full_name}: ${e.message}`,
             );
             return "OK (Actions Failed)";
         }

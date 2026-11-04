@@ -666,6 +666,25 @@ export class GiteaClient implements SharedResourceClient {
         }
     }
 
+    /**
+     * Whether `name` is an organization rather than a user. Only a 404 means
+     * "not an organization"; any other failure throws, so callers that act on
+     * the answer fail closed.
+     */
+    public async isOrganization(name: string): Promise<boolean> {
+        try {
+            await axios.request({
+                ...this.GiteaBaseConfig,
+                method: "get",
+                url: `/api/v1/orgs/${encodeURIComponent(name)}`,
+            });
+            return true;
+        } catch (e) {
+            if ((e as AxiosError).response?.status == 404) return false;
+            throw e;
+        }
+    }
+
     /* Repository Management */
     public async getRepository(
         owner: string,
@@ -684,7 +703,7 @@ export class GiteaClient implements SharedResourceClient {
         var RequestConfig: any = {
             ...this.GiteaBaseConfig,
             method: "delete",
-            url: `/api/v1/repos/${owner}/${repo}`,
+            url: `/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
         };
 
         try {
