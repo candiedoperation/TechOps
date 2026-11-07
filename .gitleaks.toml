@@ -1,0 +1,12 @@
+title = "TechOps gitleaks config"
+
+[extend]
+useDefault = true   # keep all built-in rules, only add the allowlist
+
+[[allowlists]]
+description = "Sample API key in gitea webhook auth test"
+condition = "AND"
+paths = ['''test/gitea-webhook-auth\.test\.js''']
+regexes = [
+'''^0123456789abcdef0123456789abcdef$''',
+]
