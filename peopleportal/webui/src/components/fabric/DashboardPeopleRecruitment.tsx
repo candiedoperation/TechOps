@@ -82,13 +82,6 @@ import {
     SelectValue,
 } from "../ui/select";
 import {
-    KanbanBoard,
-    KanbanCard,
-    KanbanCards,
-    KanbanHeader,
-    KanbanProvider,
-} from "../ui/shadcn-io/kanban";
-import {
     Table,
     TableBody,
     TableCell,
@@ -185,7 +178,6 @@ interface ApplicantRow {
 }
 
 const PAGE_SIZE = 12;
-const BOARD_COLUMN_LIMIT = 6;
 const MIN_PANEL_WIDTH = 340;
 const MAX_PANEL_WIDTH = 720;
 const ALL_FILTER = "all";
@@ -276,8 +268,7 @@ export const DashboardPeopleRecruitment = () => {
     const requestedResumes = React.useRef<Set<string>>(new Set());
     const requestedApplicantApps = React.useRef<Set<string>>(new Set());
 
-    /* View & Filters */
-    const [mainTab, setMainTab] = React.useState("table");
+    /* Filters */
     const [search, setSearch] = React.useState("");
     const [orgFilter, setOrgFilter] = React.useState(ALL_FILTER);
     const [statusFilter, setStatusFilter] = React.useState(ALL_FILTER);
@@ -547,23 +538,6 @@ export const DashboardPeopleRecruitment = () => {
         });
     }, [applicants, search, orgFilter, statusFilter]);
 
-    const boardApplications = React.useMemo(
-        () =>
-            filteredApplicants.flatMap((row) =>
-                row.apps.filter(
-                    (app) =>
-                        (orgFilter === ALL_FILTER ||
-                            app.teamPk === orgFilter) &&
-                        (statusFilter === ALL_FILTER ||
-                            app.stage === statusFilter),
-                ),
-            ),
-        [filteredApplicants, orgFilter, statusFilter],
-    );
-
-    const countStage = (stage: string) =>
-        applications.filter((app) => app.stage === stage).length;
-
     const seasons = Array.from(
         new Set(openTeams.map((team) => team.teamInfo.seasonText)),
     );
@@ -722,23 +696,6 @@ export const DashboardPeopleRecruitment = () => {
         setActiveAppId(null);
     }
 
-    /* Clicking a board card takes the reviewer to that applicant in Table view */
-    function goToApplicantFromBoard(app: RecruitmentApplication) {
-        const row = applicants.find((a) => a.applicantId === app.applicantId);
-        if (!row) return;
-
-        /* Clear filters so the applicant is guaranteed to be visible */
-        setSearch("");
-        setOrgFilter(ALL_FILTER);
-        setStatusFilter(ALL_FILTER);
-        setPagination({
-            pageIndex: Math.floor(applicants.indexOf(row) / PAGE_SIZE),
-            pageSize: PAGE_SIZE,
-        });
-        setMainTab("table");
-        openApplicant(row, app);
-    }
-
     /*
      * TODO(endpoint): Private reviewer notes.
      * PUT /api/ats/applications/:teamId/:applicationId/feedback stores notes
@@ -800,30 +757,6 @@ export const DashboardPeopleRecruitment = () => {
         }
     };
 
-    const statCards = [
-        { title: "Applicants", value: applicants.length, className: "" },
-        {
-            title: "Applied",
-            value: countStage("Applied"),
-            className: "text-blue-600",
-        },
-        {
-            title: "Interview",
-            value: countStage("Interview"),
-            className: "text-purple-600",
-        },
-        {
-            title: "Potential Hire",
-            value: countStage("Potential Hire"),
-            className: "text-orange-600",
-        },
-        {
-            title: "Hired",
-            value: countStage("Hired"),
-            className: "text-green-600",
-        },
-    ];
-
     const notesState =
         notesText !== savedNotesText
             ? "Unsaved changes"
@@ -854,227 +787,60 @@ export const DashboardPeopleRecruitment = () => {
                 )}
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5">
-                {statCards.map((stat) => (
-                    <Card key={stat.title} className="gap-0 py-0">
-                        <CardContent className="p-4">
-                            <div className="text-xs text-muted-foreground uppercase tracking-wide">
-                                {stat.title}
-                            </div>
-                            <div
-                                className={cn(
-                                    "text-2xl font-bold mt-1",
-                                    stat.className,
-                                )}
-                            >
-                                {stat.value}
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            <Tabs
-                className="mt-5 flex flex-col flex-grow"
-                value={mainTab}
-                onValueChange={setMainTab}
-            >
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <TabsList>
-                        <TabsTrigger value="board">Board</TabsTrigger>
-                        <TabsTrigger value="table">Table</TabsTrigger>
-                    </TabsList>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Select value={orgFilter} onValueChange={setOrgFilter}>
-                            <SelectTrigger className="w-[200px]">
-                                <SelectValue placeholder="All organizations" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={ALL_FILTER}>
-                                    All organizations
+            <div className="mt-5 flex flex-col flex-grow min-h-0">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Select value={orgFilter} onValueChange={setOrgFilter}>
+                        <SelectTrigger className="w-[200px]">
+                            <SelectValue placeholder="All organizations" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_FILTER}>
+                                All organizations
+                            </SelectItem>
+                            {openTeams.map((team) => (
+                                <SelectItem
+                                    key={team.teamPk}
+                                    value={team.teamPk}
+                                >
+                                    {team.teamInfo.friendlyName}
                                 </SelectItem>
-                                {openTeams.map((team) => (
-                                    <SelectItem
-                                        key={team.teamPk}
-                                        value={team.teamPk}
-                                    >
-                                        {team.teamInfo.friendlyName}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                        <Select
-                            value={statusFilter}
-                            onValueChange={setStatusFilter}
-                        >
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="All statuses" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={ALL_FILTER}>
-                                    All statuses
+                    <Select
+                        value={statusFilter}
+                        onValueChange={setStatusFilter}
+                    >
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="All statuses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_FILTER}>
+                                All statuses
+                            </SelectItem>
+                            {stages.map((stage) => (
+                                <SelectItem key={stage.id} value={stage.id}>
+                                    {stage.name}
                                 </SelectItem>
-                                {stages.map((stage) => (
-                                    <SelectItem key={stage.id} value={stage.id}>
-                                        {stage.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                        <Input
-                            placeholder="Search by name or email..."
-                            value={search}
-                            className="w-72"
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
+                    <Input
+                        placeholder="Search by name or email..."
+                        value={search}
+                        className="w-72"
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
                 </div>
 
-                <div className="mt-2 flex-grow flex flex-col min-h-0">
-                    {/* Board View */}
-                    <TabsContent
-                        className="flex flex-col flex-grow h-full"
-                        value="board"
+                <div className="mt-4 flex flex-col flex-grow min-h-0">
+                    <div
+                        ref={layoutRef}
+                        className="flex gap-0 items-start w-full min-h-0 flex-1"
                     >
-                        <p className="text-xs text-muted-foreground mb-4">
-                            Existing board view. Select an applicant to review
-                            them in the table.
-                        </p>
-                        <KanbanProvider
-                            columns={stages}
-                            data={boardApplications}
-                            columnKey="stage"
-                            sensors={[]}
-                            className="overflow-x-auto flex h-full"
-                        >
-                            {(/* column */ col) => {
-                                const column = col as StageDefinition;
-                                const columnItems = boardApplications.filter(
-                                    (a) => a.stage === column.id,
-                                );
-                                return (
-                                    <div className="w-[250px] shrink-0">
-                                        <KanbanBoard
-                                            id={column.id}
-                                            className="w-full ring-inset"
-                                        >
-                                            <KanbanHeader>
-                                                {column.name} (
-                                                {columnItems.length})
-                                            </KanbanHeader>
-                                            <KanbanCards id={column.id}>
-                                                {(
-                                                    item: RecruitmentApplication,
-                                                ) => {
-                                                    /* Only render the first few cards per column */
-                                                    const cardIndex =
-                                                        columnItems.findIndex(
-                                                            (a) =>
-                                                                a.id ===
-                                                                item.id,
-                                                        );
-                                                    if (
-                                                        cardIndex >=
-                                                        BOARD_COLUMN_LIMIT
-                                                    )
-                                                        return null;
-
-                                                    return (
-                                                        <KanbanCard
-                                                            key={item.id}
-                                                            id={item.id}
-                                                            name={item.name}
-                                                            className="bg-background hover:bg-muted/50 transition-colors border-border p-3 cursor-pointer active:cursor-pointer"
-                                                            onClick={() =>
-                                                                goToApplicantFromBoard(
-                                                                    item,
-                                                                )
-                                                            }
-                                                        >
-                                                            <div className="flex flex-col w-full">
-                                                                <div className="flex items-baseline justify-between gap-2">
-                                                                    <span className="font-semibold text-xs truncate leading-tight">
-                                                                        {
-                                                                            item.name
-                                                                        }
-                                                                    </span>
-                                                                    <span className="text-[9px] text-muted-foreground whitespace-nowrap tabular-nums shrink-0">
-                                                                        {formatShortDate(
-                                                                            item.appliedAt,
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-
-                                                                <div className="text-[10px] text-muted-foreground/80 truncate mt-0.5 leading-tight">
-                                                                    {
-                                                                        item.teamName
-                                                                    }{" "}
-                                                                    ·{" "}
-                                                                    {item.rolePreferences
-                                                                        .map(
-                                                                            (
-                                                                                p,
-                                                                            ) =>
-                                                                                p.role,
-                                                                        )
-                                                                        .join(
-                                                                            ", ",
-                                                                        )}
-                                                                </div>
-
-                                                                <div className="flex items-center gap-0.5 mt-1.5">
-                                                                    <Ratings
-                                                                        variant="yellow"
-                                                                        totalStars={
-                                                                            5
-                                                                        }
-                                                                        value={
-                                                                            item.stars ??
-                                                                            0
-                                                                        }
-                                                                        size={
-                                                                            12
-                                                                        }
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </KanbanCard>
-                                                    );
-                                                }}
-                                            </KanbanCards>
-                                            {columnItems.length >
-                                                BOARD_COLUMN_LIMIT && (
-                                                <div className="text-xs text-muted-foreground px-3 py-2">
-                                                    +
-                                                    {columnItems.length -
-                                                        BOARD_COLUMN_LIMIT}{" "}
-                                                    more
-                                                </div>
-                                            )}
-                                        </KanbanBoard>
-                                    </div>
-                                );
-                            }}
-                        </KanbanProvider>
-                    </TabsContent>
-
-                    {/* Table View */}
-                    <TabsContent className="flex flex-col" value="table">
-                        <p className="text-xs text-muted-foreground mb-4">
-                            Table view is for faster scanning and reviewer
-                            context. Status stays read-only here and continues
-                            to come from the existing recruitment pipeline.
-                        </p>
-
-                        <div
-                            ref={layoutRef}
-                            className="flex gap-0 items-start w-full"
-                        >
-                            <div className="min-w-0 flex-1 pr-2">
+                        <div className="min-w-0 flex-1 pr-2">
                                 <div className="overflow-x-auto rounded-md border">
                                     <Table>
                                         <TableHeader>
@@ -2229,10 +1995,9 @@ export const DashboardPeopleRecruitment = () => {
                                     </Card>
                                 </>
                             )}
-                        </div>
-                    </TabsContent>
+                    </div>
                 </div>
-            </Tabs>
+            </div>
         </div>
     );
 };
