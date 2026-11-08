@@ -136,6 +136,9 @@ interface AllApplicationsEntry {
     }[];
 }
 
+/* Response of GET /api/ats/applicantApplications/:applicantId */
+type ApplicantApplicationsEntry = AllApplicationsEntry["applications"][number];
+
 /* One application, flattened out of an AllApplicationsEntry */
 interface RecruitmentApplication {
     id: string;
@@ -271,6 +274,7 @@ export const DashboardPeopleRecruitment = () => {
     }>({});
     const requestedDetails = React.useRef<Set<string>>(new Set());
     const requestedResumes = React.useRef<Set<string>>(new Set());
+    const requestedApplicantApps = React.useRef<Set<string>>(new Set());
 
     /* View & Filters */
     const [mainTab, setMainTab] = React.useState("table");
@@ -339,11 +343,60 @@ export const DashboardPeopleRecruitment = () => {
             });
     }, []);
 
-    /* Every application across all teams, grouped by applicant */
+    function mapApplicationForApplicant(
+        entry: Pick<
+            AllApplicationsEntry,
+            "applicantId" | "applicantName" | "applicantEmail"
+        >,
+        app: ApplicantApplicationsEntry,
+        stars = 0,
+    ): RecruitmentApplication {
+        return {
+            id: app.id,
+            applicantId: entry.applicantId,
+            name: entry.applicantName,
+            email: entry.applicantEmail,
+            stage: app.stage,
+            appliedAt: app.appliedAt,
+            rolePreferences: (app.rolePreferences ?? []).map((p) => ({
+                role: p.role,
+                subteamPk: p.subteamPk,
+                subteamName: p.subteamName,
+            })),
+            teamPk: app.teamPk,
+            teamName: app.teamName,
+            hiredRole: app.hiredRole,
+            stars,
+        };
+    }
+
+    function mergeApplicantApplications(
+        applicantId: string,
+        name: string,
+        email: string,
+        apps: ApplicantApplicationsEntry[],
+    ) {
+        setApplications((prev) => {
+            const starsById = new Map(
+                prev
+                    .filter((a) => a.applicantId === applicantId)
+                    .map((a) => [a.id, a.stars ?? 0]),
+            );
+            const rest = prev.filter((a) => a.applicantId !== applicantId);
+            const merged = apps.map((app) =>
+                mapApplicationForApplicant(
+                    { applicantId, applicantName: name, applicantEmail: email },
+                    app,
+                    starsById.get(app.id) ?? 0,
+                ),
+            );
+            return [...rest, ...merged];
+        });
+    }
+
+    /* One application per applicant for the table; full list loads on View */
     React.useEffect(() => {
-        fetch(
-            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/allApplications`,
-        )
+        fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/allApplications`)
             .then(async (response) => {
                 const data = await response.json();
                 if (!response.ok)
@@ -353,26 +406,8 @@ export const DashboardPeopleRecruitment = () => {
 
                 setApplications(
                     (data as AllApplicationsEntry[]).flatMap((entry) =>
-                        entry.applications.map(
-                            (app): RecruitmentApplication => ({
-                                id: app.id,
-                                applicantId: entry.applicantId,
-                                name: entry.applicantName,
-                                email: entry.applicantEmail,
-                                stage: app.stage,
-                                appliedAt: app.appliedAt,
-                                rolePreferences: (app.rolePreferences ?? []).map(
-                                    (p) => ({
-                                        role: p.role,
-                                        subteamPk: p.subteamPk,
-                                        subteamName: p.subteamName,
-                                    }),
-                                ),
-                                teamPk: app.teamPk,
-                                teamName: app.teamName,
-                                hiredRole: app.hiredRole,
-                                stars: 0,
-                            }),
+                        entry.applications.map((app) =>
+                            mapApplicationForApplicant(entry, app),
                         ),
                     ),
                 );
@@ -382,6 +417,34 @@ export const DashboardPeopleRecruitment = () => {
             })
             .finally(() => setIsLoading(false));
     }, []);
+
+    function loadApplicantApplications(row: ApplicantRow) {
+        if (requestedApplicantApps.current.has(row.applicantId)) return;
+        requestedApplicantApps.current.add(row.applicantId);
+
+        fetch(
+            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applicantApplications/${row.applicantId}`,
+        )
+            .then(async (res) => {
+                const data = await res.json();
+                if (!res.ok)
+                    throw new Error(
+                        data.message || "Failed to fetch applications",
+                    );
+                mergeApplicantApplications(
+                    row.applicantId,
+                    row.name,
+                    getEmail(row),
+                    data as ApplicantApplicationsEntry[],
+                );
+            })
+            .catch((err) => {
+                requestedApplicantApps.current.delete(row.applicantId);
+                toast.error(
+                    "Failed to load applicant applications: " + err.message,
+                );
+            });
+    }
 
     function loadDetails(app: RecruitmentApplication, notify = false) {
         if (requestedDetails.current.has(app.id)) return;
@@ -648,6 +711,7 @@ export const DashboardPeopleRecruitment = () => {
 
     /* --- Actions --- */
     function openApplicant(row: ApplicantRow, app?: RecruitmentApplication) {
+        loadApplicantApplications(row);
         setSelectedApplicantId(row.applicantId);
         setActiveAppId((app ?? getViewApp(row)).id);
         setDetailTab("overview");
