@@ -1,4 +1,5 @@
-# Development dependencies
--e ../../peopleportal/sdk/python/src
-fastapi[standard]
-uvicorn
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+pydantic-settings>=2.4,<3
+psycopg[binary,pool]>=3.2,<4
+PyJWT[crypto]>=2.10.1,<3
