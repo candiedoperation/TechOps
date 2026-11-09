@@ -7,7 +7,7 @@ be tested exhaustively without a repo anywhere in sight.
 
 Dagster groups use ordered, plain-language stage names so the UI reads in the
 order data moves through it: sources, capture, parse, identity, ownership
-metrics, PR metrics, and database. Identity resolution has its own group because
+metrics, PR metrics, database, and ranking. Identity resolution has its own group because
 it joins blame records and PR commits to the member roster. Ownership and PR
 metrics stay separate because they are distinct branches with different inputs.
 """
@@ -43,10 +43,13 @@ from .persistence import (
     persist_member_repository_ownership,
     persist_pr_linked_commit_messages,
 )
+from .ranking import RankingRun, RankingRunConfig, ranked_members, ranking_run
 from .source import RepositoryConfig, authentik_users, gitea_repository
 
 __all__ = [
     "BlameCapture",
+    "RankingRun",
+    "RankingRunConfig",
     "RepositoryConfig",
     "authentik_users",
     "blame_capture",
@@ -75,4 +78,6 @@ __all__ = [
     "persist_member_repository_ownership",
     "persist_pr_linked_commit_messages",
     "pr_linked_commit_messages",
+    "ranked_members",
+    "ranking_run",
 ]
