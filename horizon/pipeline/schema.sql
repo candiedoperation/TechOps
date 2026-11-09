@@ -356,3 +356,134 @@ CREATE INDEX IF NOT EXISTS pr_linked_commit_messages_run_idx
 CREATE INDEX IF NOT EXISTS pr_linked_commit_messages_member_idx
     ON horizon_gt_features.pr_linked_commit_messages (dagster_run_id, authentik_user_pk)
     WHERE authentik_user_pk IS NOT NULL;
+
+-- Track 4 member ranking. Two layers:
+--   horizon_ranking is the calculation layer: normalized, one row per run per
+--   fact, written while a ranking run is in progress and read only by the
+--   pipeline. Every run is kept for history; volumes stay under 100k rows a
+--   semester, so nothing is partitioned.
+--   horizon_api is the serving layer: read models written only at publish time
+--   and read by the Horizon API. Its shapes are a contract with Track 6.
+-- No grants here; T7.1 adds the API roles and their grants.
+
+CREATE SCHEMA IF NOT EXISTS horizon_ranking;
+
+CREATE TABLE IF NOT EXISTS horizon_ranking.rubric_versions (
+    rubric_version TEXT PRIMARY KEY,
+    definition JSONB NOT NULL,
+    definition_sha256 TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- dagster_run_id is unique so re-running the same Dagster run reuses its row.
+-- source_runs maps "org/repo" to the pipeline_runs.run_id used for that repo;
+-- project_run_id is the Track 5 run published for delivery metrics.
+CREATE TABLE IF NOT EXISTS horizon_ranking.ranking_runs (
+    ranking_run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    dagster_run_id TEXT NOT NULL UNIQUE,
+    season_type TEXT NOT NULL CHECK (season_type IN ('FALL', 'SPRING')),
+    season_year INT NOT NULL,
+    as_of TIMESTAMPTZ NOT NULL,
+    rubric_version TEXT NOT NULL REFERENCES horizon_ranking.rubric_versions,
+    role_mapping_version TEXT NOT NULL,
+    project_run_id TEXT,
+    source_runs JSONB NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('running', 'scored', 'published', 'failed')),
+    failure_reason TEXT,
+    is_final BOOLEAN NOT NULL DEFAULT false,
+    finalized_by TEXT,
+    finalized_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    published_at TIMESTAMPTZ
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ranking_runs_one_final
+    ON horizon_ranking.ranking_runs (season_type, season_year) WHERE is_final;
+CREATE INDEX IF NOT EXISTS ranking_runs_season
+    ON horizon_ranking.ranking_runs (season_type, season_year, as_of DESC);
+
+-- comparison_group is 'project:<project_pk>:engineer' or 'club:tech_lead'.
+CREATE TABLE IF NOT EXISTS horizon_ranking.ranked_members (
+    ranking_run_id UUID REFERENCES horizon_ranking.ranking_runs ON DELETE CASCADE,
+    authentik_user_pk TEXT,
+    project_pk TEXT,
+    role TEXT NOT NULL CHECK (role IN ('engineer', 'tech_lead')),
+    display_name TEXT NOT NULL,
+    role_title TEXT,
+    project_name TEXT NOT NULL,
+    comparison_group TEXT NOT NULL,
+    tenure_semesters INT NOT NULL,
+    window_start DATE NOT NULL,
+    window_end DATE NOT NULL,
+    PRIMARY KEY (ranking_run_id, authentik_user_pk, project_pk)
+);
+
+-- Long format, one row per member per metric per run, so a new metric needs
+-- no migration. A missing value is NULL with a reason, never 0. percentile is
+-- set by scoring with the metric's direction already applied; evidence holds
+-- small ids, counts and links, never raw survey answers.
+CREATE TABLE IF NOT EXISTS horizon_ranking.metric_values (
+    ranking_run_id UUID,
+    authentik_user_pk TEXT,
+    project_pk TEXT,
+    bucket_key TEXT NOT NULL,
+    metric_key TEXT NOT NULL,
+    raw_value DOUBLE PRECISION,
+    missing_reason TEXT,
+    percentile DOUBLE PRECISION CHECK (percentile BETWEEN 0 AND 100),
+    group_size INT,
+    evidence JSONB NOT NULL DEFAULT '{}',
+    PRIMARY KEY (ranking_run_id, authentik_user_pk, project_pk, metric_key),
+    FOREIGN KEY (ranking_run_id, authentik_user_pk, project_pk)
+        REFERENCES horizon_ranking.ranked_members ON DELETE CASCADE,
+    CHECK (raw_value IS NOT NULL OR missing_reason IS NOT NULL)
+);
+
+-- One row per ranked member per run. Bucket scores and the explanation are
+-- always read together and never filtered on, so they live inline as JSONB.
+-- overall_score is NULL unless status = 'ranked'.
+CREATE TABLE IF NOT EXISTS horizon_ranking.member_scores (
+    ranking_run_id UUID,
+    authentik_user_pk TEXT,
+    project_pk TEXT,
+    buckets JSONB NOT NULL,
+    overall_score DOUBLE PRECISION CHECK (overall_score BETWEEN 0 AND 100),
+    coverage DOUBLE PRECISION NOT NULL CHECK (coverage BETWEEN 0 AND 1),
+    status TEXT NOT NULL CHECK (status IN ('ranked', 'insufficient_data', 'group_too_small')),
+    rank_in_group INT,
+    ranked_in_group INT,
+    explanation JSONB,
+    PRIMARY KEY (ranking_run_id, authentik_user_pk, project_pk),
+    FOREIGN KEY (ranking_run_id, authentik_user_pk, project_pk)
+        REFERENCES horizon_ranking.ranked_members ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS member_scores_member_history
+    ON horizon_ranking.member_scores (authentik_user_pk, ranking_run_id);
+
+-- Written by the T4.6 CLI and the T6.7 API.
+CREATE TABLE IF NOT EXISTS horizon_ranking.calibration_notes (
+    note_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ranking_run_id UUID NOT NULL REFERENCES horizon_ranking.ranking_runs,
+    authentik_user_pk TEXT NOT NULL,
+    project_pk TEXT NOT NULL,
+    reviewer_pk TEXT NOT NULL,
+    agrees BOOLEAN NOT NULL,
+    comment TEXT NOT NULL,
+    suggested_change JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE SCHEMA IF NOT EXISTS horizon_api;
+
+-- The website always reads the run named here. Publishing a new run upserts
+-- this row in the same transaction that writes the read models (T4.5, T5.8).
+-- run_id is ranking_run_id::text or a Track 5 project run_id.
+CREATE TABLE IF NOT EXISTS horizon_api.publications (
+    domain TEXT NOT NULL CHECK (domain IN ('ranking', 'ranking_final', 'projects')),
+    season_type TEXT NOT NULL,
+    season_year INT NOT NULL,
+    run_id TEXT NOT NULL,
+    as_of TIMESTAMPTZ NOT NULL,
+    published_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    previous_run_id TEXT,
+    PRIMARY KEY (domain, season_type, season_year)
+);

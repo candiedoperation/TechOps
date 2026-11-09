@@ -101,6 +101,8 @@ In Dagster, start at **Lineage** for the overview. Expand one numbered group at 
 
 **Needs:** Track 1 membership data; Track 2 ownership/contribution outputs; Track 3 survey data. The SOW-based delivery dimension also needs Track 5's SOW API. Build each dimension as its evidence becomes available, then combine and calibrate the scores.
 
+**Dagster stage:** `08_ranking` starts with `ranking_run`, which opens a run in `horizon_ranking.ranking_runs` for one semester. It stores the rubric version from `pipeline/ranking/rubrics/`, the latest complete feature run per project repository, and the published projects run. It fails the run when any repository has no complete run in the 8 days before `as_of`. `ranked_members` then snapshots who is ranked in which role: tech leads in one club-wide group, engineers per project. Rubric weights come from `rubrics/v1.yaml`, not the draft weights below. A published rubric version is immutable; change it by adding a new version file.
+
 ## Track 5 — Project health and SOW analysis
 
 **Suggested owner:** Project health / signals engineer  

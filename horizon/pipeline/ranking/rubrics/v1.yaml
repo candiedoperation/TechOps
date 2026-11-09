@@ -1,0 +1,215 @@
+# Ranking rubric v1 (Fall 2026 pilot: engineers and tech leads only).
+#
+# Bucket weights per role and metric shares per bucket are percentages and must
+# each sum to 100; the loader rejects the file otherwise. Labels are shown on the
+# website. lower_is_better flips a metric's percentile to 100 minus percentile.
+#
+# Event attendance and weekly-report regularity from the original weights doc
+# are left out on purpose (no data yet); their shares were redistributed inside
+# their buckets.
+#
+# Do not edit a published version. A changed file under the same version is
+# rejected at the next run; copy it to v2.yaml instead.
+
+version: v1
+
+rules:
+  min_coverage: 0.60
+  min_group_size: 2
+
+roles:
+  engineer:
+    comparison_group: project
+    buckets:
+      - key: code_ownership
+        label: Code ownership
+        weight: 30
+        metrics:
+          - key: files_majority_owned
+            label: Files majority-owned
+            unit: files
+            share: 40
+            direction: higher_is_better
+          - key: non_boundary_lines
+            label: Surviving lines of code
+            unit: lines
+            share: 35
+            direction: higher_is_better
+          - key: surviving_commits
+            label: Commits with surviving code
+            unit: commits
+            share: 25
+            direction: higher_is_better
+      - key: delivery
+        label: Delivery against the SOW
+        weight: 20
+        metrics:
+          - key: verified_completion
+            label: Verified task completion
+            unit: ratio
+            share: 70
+            direction: higher_is_better
+          - key: on_time_rate
+            label: Tasks completed on time
+            unit: ratio
+            share: 30
+            direction: higher_is_better
+      - key: consistency
+        label: Consistency
+        weight: 15
+        metrics:
+          - key: active_week_ratio
+            label: Weeks with commits
+            unit: ratio
+            share: 62.5
+            direction: higher_is_better
+          - key: end_loading
+            label: Share of code added in the final three weeks
+            unit: ratio
+            share: 37.5
+            direction: lower_is_better
+      - key: review_collaboration
+        label: Review and collaboration
+        weight: 15
+        metrics:
+          - key: prs_reviewed
+            label: Teammate PRs reviewed
+            unit: PRs
+            share: 40
+            direction: higher_is_better
+          - key: review_turnaround_hours
+            label: Median review turnaround
+            unit: hours
+            share: 30
+            direction: lower_is_better
+          - key: collaborative_prs
+            label: PRs with multiple contributors
+            unit: PRs
+            share: 30
+            direction: higher_is_better
+      - key: peer_ratings
+        label: Tech lead ratings
+        weight: 10
+        metrics:
+          - key: eng_timeliness
+            label: Timeliness
+            unit: rating_1_3
+            share: 25
+            direction: higher_is_better
+          - key: eng_proactiveness
+            label: Proactiveness
+            unit: rating_1_3
+            share: 25
+            direction: higher_is_better
+          - key: eng_design
+            label: Design contribution
+            unit: rating_1_3
+            share: 25
+            direction: higher_is_better
+          - key: eng_collaboration
+            label: Collaboration
+            unit: rating_1_3
+            share: 25
+            direction: higher_is_better
+      - key: club_engagement
+        label: Club engagement
+        weight: 10
+        metrics:
+          - key: tenure_semesters
+            label: Semesters in AppDev
+            unit: semesters
+            share: 100
+            direction: higher_is_better
+
+  tech_lead:
+    comparison_group: club
+    buckets:
+      - key: team_delivery
+        label: Team delivery against the SOW
+        weight: 30
+        metrics:
+          - key: team_verified_completion
+            label: Team verified task completion
+            unit: ratio
+            share: 70
+            direction: higher_is_better
+          - key: team_on_time_rate
+            label: Team tasks completed on time
+            unit: ratio
+            share: 30
+            direction: higher_is_better
+      - key: review_unblocking
+        label: Review and unblocking
+        weight: 25
+        metrics:
+          - key: team_prs_reviewed
+            label: Team PRs reviewed
+            unit: PRs
+            share: 35
+            direction: higher_is_better
+          - key: review_turnaround_hours
+            label: Median review turnaround
+            unit: hours
+            share: 35
+            direction: lower_is_better
+          - key: review_spread
+            label: Engineers whose PRs were reviewed
+            unit: ratio
+            share: 30
+            direction: higher_is_better
+      - key: leadership_ratings
+        label: Leadership ratings
+        weight: 25
+        metrics:
+          - key: lead_proactiveness
+            label: Proactiveness
+            unit: rating_1_3
+            share: 25
+            direction: higher_is_better
+          - key: lead_design
+            label: Design contribution
+            unit: rating_1_3
+            share: 25
+            direction: higher_is_better
+          - key: lead_stakeholder
+            label: Stakeholder participation
+            unit: rating_1_3
+            share: 25
+            direction: higher_is_better
+          - key: lead_guidance
+            label: Guidance
+            unit: rating_1_3
+            share: 25
+            direction: higher_is_better
+      - key: team_consistency
+        label: Team consistency
+        weight: 10
+        metrics:
+          - key: team_end_loading
+            label: Share of team code added in the final three weeks
+            unit: ratio
+            share: 100
+            direction: lower_is_better
+      - key: own_code
+        label: Own code
+        weight: 5
+        metrics:
+          - key: files_majority_owned
+            label: Files majority-owned
+            unit: files
+            share: 50
+            direction: higher_is_better
+          - key: non_boundary_lines
+            label: Surviving lines of code
+            unit: lines
+            share: 50
+            direction: higher_is_better
+      - key: club_engagement
+        label: Club engagement
+        weight: 5
+        metrics:
+          - key: tenure_semesters
+            label: Semesters in AppDev
+            unit: semesters
+            share: 100
+            direction: higher_is_better
