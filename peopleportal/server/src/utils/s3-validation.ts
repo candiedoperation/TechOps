@@ -26,6 +26,7 @@ export const FILE_SIGNATURES = {
     GIF: "47494638",
     WEBP: "52494646", // RIFF
     PDF: "25504446", // %PDF
+    ZIP: "504b0304", // PK.. (also every DOCX, XLSX and PPTX)
 };
 
 /**

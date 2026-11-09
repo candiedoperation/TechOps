@@ -74,6 +74,7 @@ import type { GetUserListResponse } from "./DashboardPeopleList";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { ProgressUpdateDialog } from "../fragments/ProgressUpdateDialog";
+import { ProjectSowCard } from "../fragments/ProjectSowCard";
 import {
     SidebarGroup,
     SidebarGroupContent,
@@ -581,6 +582,10 @@ export const DashboardTeamInfo = () => {
                     </Button>
                 </div>
             </div>
+
+            {teamInfo?.attributes.teamType === "PROJECT" && (
+                <ProjectSowCard key={teamInfo.pk} projectPk={teamInfo.pk} />
+            )}
 
             <Tabs
                 key={teamInfo?.pk ?? "loading"}
