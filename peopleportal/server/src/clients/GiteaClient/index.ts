@@ -56,7 +56,34 @@ interface GiteaTeamCreateRequest {
     teamSharedResourceId: string;
     canCreateRespositories: boolean;
     description: string;
-    writeAccess: boolean;
+    permission: GiteaTeamPermission;
+}
+
+/* Gitea team permission levels this client assigns. "owner" is never sent:
+   Gitea does not accept it on team create/edit and silently treats it as none. */
+export type GiteaTeamPermission = "read" | "write" | "admin";
+
+/**
+ * Translates a team's Gitea bindles into the Gitea team permission.
+ * Precedence is admin > write > read. Admin implies repository creation.
+ */
+export function computeGiteaTeamAccess(bindles: { [key: string]: boolean }): {
+    canCreateRespositories: boolean;
+    permission: GiteaTeamPermission;
+} {
+    const adminAccess = bindles["repo:admin"] === true;
+    const canCreateRespositories =
+        adminAccess || bindles["repo:allowcreate"] === true;
+    const writeAccess =
+        canCreateRespositories ||
+        bindles["repo:brprotect-approvals"] === true ||
+        bindles["repo:brprotect-override"] === true ||
+        bindles["repo:brprotect-merge"] === true;
+
+    return {
+        canCreateRespositories,
+        permission: adminAccess ? "admin" : writeAccess ? "write" : "read",
+    };
 }
 
 export class GiteaClient implements SharedResourceClient {
@@ -79,6 +106,12 @@ export class GiteaClient implements SharedResourceClient {
     };
 
     private readonly supportedBindles: BindlePermissionMap = {
+        "repo:admin": {
+            friendlyName: "Repository Administration",
+            description:
+                "Dangerous: Grants Gitea admin access on every repository in the team's organization, including settings, Actions secrets, variables and runners, webhooks, collaborators, branch protection, and repository deletion and transfer",
+        },
+
         "repo:allowcreate": {
             friendlyName: "Allow Repository Creation",
             description:
@@ -246,19 +279,15 @@ export class GiteaClient implements SharedResourceClient {
         /* Dynamically Calculate Capabilities */
         const bindles =
             team.attributes?.bindlePermissions?.[this.getResourceName()] || {};
-        const canCreateRespositories = bindles["repo:allowcreate"] === true;
-        const writeAccess =
-            canCreateRespositories ||
-            bindles["repo:brprotect-approvals"] === true ||
-            bindles["repo:brprotect-override"] === true ||
-            bindles["repo:brprotect-merge"] === true;
+        const { canCreateRespositories, permission } =
+            computeGiteaTeamAccess(bindles);
 
         await this.ensureTeamExists({
             teamSharedResourceId,
             canCreateRespositories,
             description: `Permissions Group Replication for ${teamSharedResourceId}`,
             grpSharedResourceId: orgId,
-            writeAccess,
+            permission,
         });
 
         /* Obtain Current Team Members */
@@ -484,7 +513,7 @@ export class GiteaClient implements SharedResourceClient {
                 req.grpSharedResourceId,
                 req.teamSharedResourceId,
             );
-            const expectedPermission = req.writeAccess ? "write" : "read";
+            const expectedPermission = req.permission;
 
             /* Check for drift and apply updates if necessary */
             if (
@@ -529,7 +558,7 @@ export class GiteaClient implements SharedResourceClient {
             data: {
                 name: req.teamSharedResourceId,
                 description: req.description,
-                permission: req.writeAccess ? "write" : "read",
+                permission: req.permission,
                 can_create_org_repo: req.canCreateRespositories,
                 units: [
                     "repo.actions",
