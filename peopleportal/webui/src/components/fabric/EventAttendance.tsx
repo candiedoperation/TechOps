@@ -423,6 +423,8 @@ export const EventAttendance = () => {
     const [page, setPage] = useState<number>(1);
     const [debouncedPage, setDebouncedPage] = useState<number>(1);
     const [totalPages, setTotalPages] = useState<number>(0);
+    // Bumped after an RSVP submit to refetch the current page of the list.
+    const [listVersion, setListVersion] = useState(0);
     const [showRsvps, setShowRsvps] = useState(false);
     const [rsvpsLoading, setRsvpsLoading] = useState(false);
 
@@ -481,7 +483,7 @@ export const EventAttendance = () => {
         if (rsvpRes.ok) {
             setRsvp((await rsvpRes.json()).rsvp);
             if (showRsvps) {
-                refreshList();
+                setListVersion((v) => v + 1);
             }
         } else {
             toast.error(`Failed to refresh RSVP: ${rsvpRes.statusText}`);
@@ -568,7 +570,14 @@ export const EventAttendance = () => {
         load();
     }, [load]);
 
-    const refreshList = () => {
+    // Refetch the list when the page changes or after an RSVP submit.
+    // load() already fetches page 1, so this skips until the list is shown.
+    React.useEffect(() => {
+        if (!showRsvps) return;
+
+        // Set by the cleanup when a newer fetch starts, so a late
+        // response can't overwrite the page currently shown.
+        let ignore = false;
         setRsvpsLoading(true);
         const queryString = new URLSearchParams({
             page: debouncedPage.toString(),
@@ -585,22 +594,23 @@ export const EventAttendance = () => {
                         rsvpJson.message || "Failed to fetch RSVP data",
                     );
                 }
+                if (ignore) return;
                 setRsvps(rsvpJson.data ?? []);
                 setTotalPages(rsvpJson.pagination.totalPages);
             })
             .catch((e) => {
+                if (ignore) return;
                 toast.error(`Failed to fetch RSVPs: ${e.message}`);
             })
             .finally(() => {
+                if (ignore) return;
                 setRsvpsLoading(false);
             });
-    };
-    React.useEffect(() => {
-        // load() already fetches page 1; only refetch on page changes for users who can see the list
-        if (showRsvps) {
-            refreshList();
-        }
-    }, [debouncedPage]);
+
+        return () => {
+            ignore = true;
+        };
+    }, [debouncedPage, listVersion]);
 
     return (
         <div className="flex min-h-full flex-col gap-6">
