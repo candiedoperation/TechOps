@@ -92,6 +92,7 @@ import {
 } from "../controllers/BindleController";
 import { AuthorizedUser } from "../clients/OpenIdClient";
 import { executiveAuthVerify } from "../auth";
+import { ENABLED_SERVICE_TEAM_NAMES } from "../utils/services";
 import {
     TeamCreationRequest,
     TeamCreationRequestStatus,
@@ -133,6 +134,13 @@ export interface RootTeamSettingInfo {
 
 interface APIGetCommonTeamsResponse {
     teams: TeamInformationBrief[];
+}
+
+interface APITeamPermissionsResponse {
+    /* True when the user bypasses bindle checks (executive or team owner) */
+    unrestricted: boolean;
+    /* Bindles granted through subteam membership (People Portal only) */
+    bindles: string[];
 }
 
 interface APIGetReviewResponse {
@@ -2224,6 +2232,61 @@ export class OrgController extends Controller {
         return (
             teamInfo.attributes.bindlePermissions ?? {}
         ); /* Legacy Teams don't have bindles! */
+    }
+
+    /**
+     * Reports what the requesting user may do on a team, so clients can disable
+     * controls the user would be denied. This mirrors the checks in the bindle
+     * authorization layer (executive override, team ownership, then granular
+     * bindles) but is informational only; enforcement stays on each route.
+     *
+     * @param req Express Request Object
+     * @param teamId Team or Subteam ID
+     * @returns Unrestricted flag and the user's effective bindles
+     */
+    @Get("teams/{teamId}/permissions")
+    @Tags("Team Configuration", "Bindle Authorization Layer")
+    @SuccessResponse(200)
+    @Security("oidc")
+    async getTeamPermissions(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+    ): Promise<APITeamPermissionsResponse> {
+        const authorizedUser = req.session.authorizedUser!;
+        const teamInfo = await this.authentikClient.getGroupInfo(teamId);
+
+        /* Executive Override (Service Teams are Superuser Only) */
+        try {
+            const teamScopes = ENABLED_SERVICE_TEAM_NAMES.has(teamInfo.name)
+                ? ["su:exclusive"]
+                : [];
+            if (await executiveAuthVerify(req, teamScopes, true)) {
+                return { unrestricted: true, bindles: [] };
+            }
+        } catch (e) {
+            /* Not an executive, continue */
+        }
+
+        /* Team Owner (Subteams defer to their Parent) */
+        const authoritativeTeam = teamInfo.parentPk
+            ? await this.authentikClient.getGroupInfo(teamInfo.parentPk)
+            : teamInfo;
+        if (
+            authoritativeTeam.attributes.peoplePortalCreation &&
+            authorizedUser.groups.includes(authoritativeTeam.name)
+        ) {
+            return { unrestricted: true, bindles: [] };
+        }
+
+        return {
+            unrestricted: false,
+            bindles: [
+                ...BindleController.getEffectivePermissionSet(
+                    teamInfo,
+                    authorizedUser.groups,
+                ),
+            ],
+        };
     }
 
     /**
