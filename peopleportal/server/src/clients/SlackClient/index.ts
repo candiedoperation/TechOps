@@ -67,8 +67,11 @@ export class SlackClient implements SharedResourceClient {
         if (!process.env.PEOPLEPORTAL_SLACK_BOT_TOKEN)
             throw new Error("PEOPLEPORTAL_SLACK_BOT_TOKEN is not defined");
 
+        /* The original axios error carries the request, bot token included;
+           keep it off the errors we throw and log. */
         this.slackClient = new WebClient(
             process.env.PEOPLEPORTAL_SLACK_BOT_TOKEN,
+            { attachOriginalToWebAPIRequestError: false },
         );
         this.slackInviteUrl = process.env.PEOPLEPORTAL_SLACK_INVITE_URL;
     }

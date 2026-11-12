@@ -60,22 +60,63 @@ function createDestination(): DestinationStream | undefined {
     }
 }
 
+const DROPPED_ERROR_KEYS = [
+    "config",
+    "request",
+    "response",
+    "headers",
+    "toJSON",
+];
+
+function isErrorLike(value: unknown): value is Error {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        typeof (value as { message?: unknown }).message === "string"
+    );
+}
+
 /**
  * Errors are logged as type, message, stack and (for HTTP failures) the status.
  * Axios and similar errors also carry the whole request - headers with bearer
  * tokens, bodies with passwords - so those properties are dropped, not logged.
+ * The same goes for every error nested inside: AggregateError entries, wrapped
+ * errors such as .original or .inner, and the cause chain.
  */
 export function serializeError(err: unknown): unknown {
+    return serializeErrorTree(err, new Set());
+}
+
+function serializeErrorTree(err: unknown, ancestors: Set<object>): unknown {
     const base = pino.stdSerializers.err(err as Error) as Record<
         string,
         unknown
     >;
-    if (!base || typeof base !== "object") return base;
-    for (const key of ["config", "request", "response", "headers", "toJSON"])
-        delete base[key];
+    if (!base || typeof base !== "object" || !isErrorLike(err)) return base;
+    for (const key of DROPPED_ERROR_KEYS) delete base[key];
     const status = (err as { response?: { status?: number } })?.response
         ?.status;
     if (typeof status === "number") base.status = status;
+
+    /* pino copies nested errors with their requests intact; redo them here.
+       Error-like causes are already folded into message and stack, so only a
+       plain-object cause is left, and that is not worth the risk of logging. */
+    ancestors.add(err);
+    const nested = (value: unknown) =>
+        ancestors.has(value as object)
+            ? "[Circular]"
+            : serializeErrorTree(value, ancestors);
+    const errors = (err as { errors?: unknown }).errors;
+    if (Array.isArray(errors)) {
+        base.aggregateErrors = errors.map(nested);
+        delete base.errors;
+    }
+    const props = err as unknown as Record<string, unknown>;
+    for (const key of Object.keys(base)) {
+        if (key === "cause") delete base[key];
+        else if (isErrorLike(props[key])) base[key] = nested(props[key]);
+    }
+    ancestors.delete(err);
     return base;
 }
 
@@ -125,6 +166,12 @@ export const logger: Logger = pino(
     createDestination(),
 );
 
+const rawLevel = process.env.LOG_LEVEL?.trim();
+if (rawLevel && !LEVELS.includes(rawLevel.toLowerCase()))
+    logger.warn(
+        `LOG_LEVEL "${rawLevel}" is not a valid level, using "${level}"`,
+    );
+
 /* A few clients still log through loglevel. Drive it from the same LOG_LEVEL so
    there is a single knob, instead of a hardcoded level in app.ts. */
 loglevel.setLevel(
@@ -142,8 +189,8 @@ declare module "express-serve-static-core" {
 
 /**
  * Logs one line per request when it finishes: method, route, status, duration
- * and user id. The route is the matched pattern (/teams/:teamId), not the raw
- * URL, so query strings and ids never end up in the message and the field
+ * and user id. The route is the matched pattern (/api/teams/:teamId), not the
+ * raw URL, so query strings and ids never end up in the message and the field
  * stays searchable. The request id is returned in X-Request-Id and is added to
  * every log line written while the request is in flight, which ties error lines
  * to the request that produced them.
@@ -160,23 +207,29 @@ export function requestLogger(
     res.setHeader("X-Request-Id", req.id);
 
     res.on("finish", () => {
-        const route = req.route?.path
-            ? `${req.baseUrl}${req.route.path}`
-            : undefined;
+        const isApi = /^\/api(\/|\?|$)/.test(req.originalUrl ?? "");
+        /* Express gives the pattern as a string, or an array when a handler is
+           registered for several paths; the first one names it well enough. */
+        const pattern: unknown = req.route?.path;
+        const matched = Array.isArray(pattern) ? pattern[0] : pattern;
+        const route =
+            typeof matched === "string"
+                ? `${req.baseUrl}${matched}`
+                : undefined;
         const fields = {
             requestId: req.id,
             method: req.method,
-            route: route ?? "(unmatched)",
+            route: route ?? (isApi ? "(unmatched)" : "(static)"),
             status: res.statusCode,
             durationMs: Number(process.hrtime.bigint() - start) / 1e6,
             userId: req.session?.authorizedUser?.pk,
         };
 
-        /* Static assets and the SPA fallback match no API route; keep their
-           successful hits out of the way at debug. */
+        /* Anything outside /api (the UI pages such as /onboard and /apply, the
+           SPA fallback and static assets) is only logged at debug on success. */
         if (res.statusCode >= 500) logger.error(fields, "request failed");
         else if (res.statusCode >= 400) logger.warn(fields, "request rejected");
-        else if (!route) logger.debug(fields, "request completed");
+        else if (!isApi) logger.debug(fields, "request completed");
         else logger.info(fields, "request completed");
     });
 
