@@ -7,6 +7,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!.env.debug.example
 data/
 .live-test-token
 goodreturns.json
