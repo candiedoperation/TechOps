@@ -916,7 +916,10 @@ export class EventController extends Controller {
                 },
             });
         } catch (error) {
-            log.error("Failed to send confirmation email for RSVP.");
+            log.error(
+                { err: error },
+                "Failed to send confirmation email for RSVP.",
+            );
             issues.push("Failed to send confirmation email.");
         }
 

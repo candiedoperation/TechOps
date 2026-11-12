@@ -752,10 +752,10 @@ export class OrgController extends Controller {
                 throw new CustomValidationError(400, "Review already created.");
             }
         } catch (e) {
-            log.error({ err: e }, "writeReview failed");
             if (e instanceof CustomValidationError) {
                 throw e;
             }
+            log.error({ err: e }, "writeReview failed");
             throw new ResourceAccessError(500, "Failed to fetch review.");
         }
 

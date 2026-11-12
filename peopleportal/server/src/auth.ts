@@ -477,8 +477,12 @@ async function bindlesAuthVerify(
             ),
         );
     } catch (e) {
+        /* An access refusal is expected traffic, not a server fault. */
+        if (e instanceof ResourceAccessError) {
+            log.warn({ err: e }, "Bindle Permission Check Failed");
+            return Promise.reject(e);
+        }
         log.error({ err: e }, "Bindle Permission Check Failed");
-        if (e instanceof ResourceAccessError) return Promise.reject(e);
         return Promise.reject(
             new ResourceAccessError(403, "Bindle Permission Check Failed"),
         );
