@@ -1,6 +1,6 @@
 """Settings for the pipeline.
 
-Scoped to exactly the three values a blame run reads, rather than a shared
+Scoped to the source APIs and feature-store connection, rather than a shared
 settings object that accumulates every service's configuration.
 
 The dotenv path is resolved once at import from ``HORIZON_ENV_FILE``, so
@@ -38,7 +38,10 @@ class PipelineSettings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="",
         case_sensitive=False,
-        populate_by_name=True,
+        # BaseSettings otherwise accepts `database_url` as an implicit alias
+        # for the process-wide DATABASE_URL, which may point at People Portal.
+        # Only the explicit Horizon/legacy feature-store names are valid.
+        populate_by_name=False,
         extra="ignore",
         env_file=_ENV_FILE,
         env_file_encoding="utf-8",
@@ -58,13 +61,29 @@ class PipelineSettings(BaseSettings):
         validation_alias=AliasChoices("HORIZON_GITEA_API_TOKEN", "PHI_GITEA_API_TOKEN"),
         description="Read-only Gitea API token.",
     )
+    authentik_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "HORIZON_AUTHENTIK_URL",
+            "PEOPLEPORTAL_AUTHENTIK_ENDPOINT",
+        ),
+        description="Base URL of the Authentik instance used by People Portal.",
+    )
+    authentik_api_token: str | None = Field(
+        default=None,
+        repr=False,
+        validation_alias=AliasChoices(
+            "HORIZON_AUTHENTIK_API_TOKEN",
+            "PEOPLEPORTAL_AUTHENTIK_TOKEN",
+        ),
+        description="Read-only Authentik API token for the People Portal roster.",
+    )
     database_url: str | None = Field(
         default=None,
         repr=False,
         validation_alias=AliasChoices(
             "HORIZON_DATABASE_URL",
             "GITEA_ANALYTICS_DATABASE_URL",
-            "DATABASE_URL",
         ),
         description="Postgres URL for the Horizon ownership feature store.",
     )
@@ -74,6 +93,12 @@ class PipelineSettings(BaseSettings):
 
     def require_gitea_api_token(self) -> str:
         return _required(self.gitea_api_token, "HORIZON_GITEA_API_TOKEN")
+
+    def require_authentik_url(self) -> str:
+        return _required(self.authentik_url, "HORIZON_AUTHENTIK_URL")
+
+    def require_authentik_api_token(self) -> str:
+        return _required(self.authentik_api_token, "HORIZON_AUTHENTIK_API_TOKEN")
 
     def require_database_url(self) -> str:
         return _required(self.database_url, "HORIZON_DATABASE_URL")

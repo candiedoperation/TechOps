@@ -1,4 +1,4 @@
-"""The Horizon data pipeline: git blame into Postgres, as a Dagster asset graph.
+"""The Horizon data pipeline: git blame into Postgres-backed feature assets.
 
 This package only moves and shapes data: it defines no HTTP surface and owns
 no request handling, so it can be run from a scheduler without starting a

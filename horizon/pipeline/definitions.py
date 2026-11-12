@@ -1,42 +1,87 @@
-"""The Dagster entrypoint: ``dagster dev -m pipeline.definitions``.
-
-Assets are listed explicitly rather than swept up by module: a graph is worth
-being able to read off one screen, and an import that silently adds an asset is
-how the legacy 13-assets-in-one-file pilot happened.
-"""
+"""The Dagster entrypoint: ``dagster dev -m pipeline.definitions``."""
 
 from __future__ import annotations
 
 from dagster import Definitions
 
 from .assets import (
+    authentik_users,
     blame_capture,
     blame_records,
+    eligible_file_ownership,
+    engineering_contribution,
     file_ownership,
+    gitea_pull_request_commits,
+    gitea_pull_request_reviews,
     gitea_repository,
+    identity_clusters,
     member_ownership,
+    member_pr_review_counts,
     member_repository_ownership,
+    pr_linked_commit_messages,
+    feature_store_schema,
+    pipeline_run_completed,
+    pipeline_run_started,
+    persist_blame_records,
+    persist_authentik_roster_snapshot,
+    persist_engineering_contribution,
+    persist_eligible_file_ownership,
+    persist_file_ownership,
+    persist_git_identity_mapping,
+    persist_member_ownership,
+    persist_member_pr_review_counts,
+    persist_member_repository_ownership,
+    persist_pr_linked_commit_messages,
 )
 from .checks import (
     capture_is_non_empty,
+    capture_accounts_for_every_tracked_file,
+    git_identity_mappings_need_review,
+    roster_is_non_empty,
     records_carry_every_field,
     records_parse_completely,
+    pr_reviewers_resolve_or_need_review,
 )
 from .resources import build_resources
 
 defs = Definitions(
     assets=[
         gitea_repository,
+        authentik_users,
         blame_capture,
         blame_records,
         file_ownership,
         member_repository_ownership,
         member_ownership,
+        identity_clusters,
+        eligible_file_ownership,
+        engineering_contribution,
+        gitea_pull_request_reviews,
+        member_pr_review_counts,
+        gitea_pull_request_commits,
+        pr_linked_commit_messages,
+        feature_store_schema,
+        pipeline_run_started,
+        persist_blame_records,
+        persist_authentik_roster_snapshot,
+        persist_git_identity_mapping,
+        persist_file_ownership,
+        persist_member_repository_ownership,
+        persist_member_ownership,
+        persist_eligible_file_ownership,
+        persist_engineering_contribution,
+        persist_member_pr_review_counts,
+        persist_pr_linked_commit_messages,
+        pipeline_run_completed,
     ],
     asset_checks=[
         capture_is_non_empty,
+        capture_accounts_for_every_tracked_file,
+        roster_is_non_empty,
         records_carry_every_field,
         records_parse_completely,
+        git_identity_mappings_need_review,
+        pr_reviewers_resolve_or_need_review,
     ],
     resources=build_resources(),
 )

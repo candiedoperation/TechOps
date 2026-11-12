@@ -1,4 +1,4 @@
-"""L2 capture: clone the repository and write raw ``git blame`` text to disk.
+"""Blame capture: clone the repository and write raw ``git blame`` text to disk.
 
 The only asset in the graph that touches the network or the filesystem, which
 is the point of the cut: everything slow or flaky lives here, and everything
@@ -11,6 +11,7 @@ down. Parsing is PR 3's job, and it is pure.
 """
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 
 # No `from __future__ import annotations` in this module: Dagster resolves the
@@ -52,12 +53,16 @@ class BlameCapture:
     org: str
     repo: str
     default_branch: str
+    source_commit_sha: str
+    retrieved_at: datetime
     path: Path
     files_tracked: int
     files_captured: int
     files_skipped_binary: int
+    files_empty: int
     files_failed: int
     bytes_written: int
+    captured_paths: tuple[str, ...] = field(default_factory=tuple)
     failed_paths: tuple[str, ...] = field(default_factory=tuple)
 
     @property
@@ -71,19 +76,23 @@ CAPTURE_SCHEMA = table_schema_from(
         "org": ("string", "Gitea organization the capture is of."),
         "repo": ("string", "Repository the capture is of."),
         "default_branch": ("string", "Branch that was cloned and blamed."),
+        "source_commit_sha": ("string", "Exact tip commit cloned and blamed."),
+        "retrieved_at": ("datetime", "UTC time the blame capture completed."),
         "path": ("path", "File on disk holding the raw blame text."),
         "files_tracked": ("int", "Files git tracks in the clone, before any skipping."),
         "files_captured": ("int", "Files that produced blame output and reached the capture."),
         "files_skipped_binary": ("int", "Files skipped as binary -- no lines to attribute."),
+        "files_empty": ("int", "Tracked text files with no blameable lines."),
         "files_failed": ("int", "Files git could not blame. Counted, never silently dropped."),
         "bytes_written": ("int", "Size of the capture file."),
+        "captured_paths": ("list[string]", "Exact file set represented in the raw capture."),
         "failed_paths": ("list[string]", "First few files that failed, for diagnosis."),
     },
 )
 
 
 @asset(
-    group_name="l2_capture",
+    group_name="02_capture",
     kinds={"git"},
     description=(
         "Raw `git blame --line-porcelain -w -M -C` text for every tracked file, "
@@ -118,18 +127,27 @@ def blame_capture(
     tracked = 0
     captured = 0
     skipped_binary = 0
+    empty = 0
     failed: list[str] = []
+    captured_paths: list[str] = []
+    source_commit_sha = ""
 
     with workspace.clone(gitea_repository) as clone:
         paths = workspace.list_tracked_files(clone)
         tracked = len(paths)
+        source_commit_sha = workspace.head_commit_sha(clone)
         context.log.info("%s: %d tracked files", gitea_repository.slug, tracked)
 
         with destination.open("w", encoding="utf-8") as handle:
             handle.write(_PREAMBLE)
 
             for path in paths:
-                if _is_binary(clone / path):
+                try:
+                    is_binary = _is_binary(clone / path)
+                except OSError:
+                    failed.append(path)
+                    continue
+                if is_binary:
                     skipped_binary += 1
                     continue
 
@@ -141,22 +159,38 @@ def blame_capture(
                     # An empty file blames to nothing. Writing an empty section
                     # would trip PR 3's "every file yields records" check for a
                     # reason that is not a failure.
+                    empty += 1
                     continue
 
                 handle.write(f"\n===== git blame {_FLAG_TEXT} -- {gitea_repository.slug}:{path} =====\n")
                 handle.write(blamed)
                 captured += 1
+                captured_paths.append(path)
 
+    if tracked != captured + skipped_binary + empty + len(failed):
+        raise Failure(
+            description=(
+                f"Capture accounting failed for {gitea_repository.slug}: "
+                f"{tracked} tracked files but {captured} captured, {skipped_binary} "
+                f"binary, {empty} empty, and {len(failed)} failed."
+            )
+        )
+
+    retrieved_at = datetime.now(timezone.utc)
     capture = BlameCapture(
         org=gitea_repository.org,
         repo=gitea_repository.name,
         default_branch=gitea_repository.default_branch,
+        source_commit_sha=source_commit_sha,
+        retrieved_at=retrieved_at,
         path=destination,
         files_tracked=tracked,
         files_captured=captured,
         files_skipped_binary=skipped_binary,
+        files_empty=empty,
         files_failed=len(failed),
         bytes_written=destination.stat().st_size,
+        captured_paths=tuple(captured_paths),
         failed_paths=tuple(failed[:_MAX_REPORTED_FAILURES]),
     )
 
@@ -168,15 +202,19 @@ def blame_capture(
     context.add_output_metadata(
         {
             "repository": MetadataValue.text(capture.slug),
+            "source_commit_sha": MetadataValue.text(capture.source_commit_sha),
+            "retrieved_at": MetadataValue.text(capture.retrieved_at.isoformat()),
             "capture_path": MetadataValue.path(str(capture.path)),
             "files_tracked": MetadataValue.int(capture.files_tracked),
             "files_captured": MetadataValue.int(capture.files_captured),
             "files_skipped_binary": MetadataValue.int(capture.files_skipped_binary),
+            "files_empty": MetadataValue.int(capture.files_empty),
             "files_failed": MetadataValue.int(capture.files_failed),
             "bytes_written": MetadataValue.int(capture.bytes_written),
             "failed_paths": MetadataValue.text(
                 ", ".join(capture.failed_paths) if capture.failed_paths else "none"
             ),
+            "captured_paths": MetadataValue.json(capture.captured_paths),
         }
     )
     return capture
@@ -185,13 +223,9 @@ def blame_capture(
 def _is_binary(path: Path) -> bool:
     """Git's heuristic: a NUL byte near the start means binary.
 
-    A path that cannot be read at all -- a broken symlink, a permission
-    problem -- counts as binary too: either way there are no lines to attribute,
-    and the alternative is an exception that loses the whole repository.
+    Read errors propagate so the capture asset counts the path as failed rather
+    than silently classifying an unreadable source file as binary.
     """
 
-    try:
-        with path.open("rb") as handle:
-            return b"\0" in handle.read(_BINARY_SNIFF_BYTES)
-    except OSError:
-        return True
+    with path.open("rb") as handle:
+        return b"\0" in handle.read(_BINARY_SNIFF_BYTES)
