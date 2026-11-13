@@ -1,0 +1,265 @@
+/**
+  People Portal Server
+  Copyright (C) 2026  Atheesh Thirumalairajan
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+import { AsyncLocalStorage } from "async_hooks";
+import { randomUUID } from "crypto";
+import type { NextFunction, Request, Response } from "express";
+import loglevel from "loglevel";
+import pino, { type DestinationStream, type Logger } from "pino";
+import {
+    ENVIRONMENT,
+    isProduction,
+    isTest,
+    loadEnvironmentFiles,
+} from "../config/environment";
+
+/* Imports are hoisted above app.ts's own env loading, so make sure LOG_LEVEL
+   from the .env files is visible before we read it. Loading is idempotent. */
+loadEnvironmentFiles();
+
+const LEVELS = ["trace", "debug", "info", "warn", "error", "fatal", "silent"];
+
+/**
+ * LOG_LEVEL picks how chatty the server is. Unset means "info", except under
+ * test where the default is "silent" so test output stays readable.
+ */
+export function resolveLogLevel(raw = process.env.LOG_LEVEL): string {
+    const wanted = raw?.trim().toLowerCase();
+    if (wanted && LEVELS.includes(wanted)) return wanted;
+    return isTest ? "silent" : "info";
+}
+
+/**
+ * Production writes one JSON object per line so logs can be searched and
+ * filtered by field. Everywhere else gets readable, colourised output through
+ * pino-pretty (a devDependency, so it is simply skipped if absent).
+ */
+function createDestination(): DestinationStream | undefined {
+    if (isProduction || isTest) return undefined;
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const pretty = require("pino-pretty");
+        return pretty({ colorize: true, ignore: "pid,hostname" });
+    } catch {
+        return undefined;
+    }
+}
+
+const DROPPED_ERROR_KEYS = [
+    "config",
+    "request",
+    "response",
+    "headers",
+    "toJSON",
+    /* body-parser attaches the raw, unparsed request body to its errors, so a
+       malformed login would otherwise log the password in plain text. */
+    "body",
+    "rawBody",
+    "data",
+];
+
+function isErrorLike(value: unknown): value is Error {
+    return (
+        typeof value === "object" &&
+        value !== null &&
+        typeof (value as { message?: unknown }).message === "string"
+    );
+}
+
+/**
+ * Errors are logged as type, message, stack and (for HTTP failures) the status.
+ * Axios and similar errors also carry the whole request - headers with bearer
+ * tokens, bodies with passwords - so those properties are dropped, not logged.
+ * The same goes for every error nested inside: AggregateError entries, wrapped
+ * errors such as .original or .inner, and the cause chain.
+ */
+export function serializeError(err: unknown): unknown {
+    return serializeErrorTree(err, new Set());
+}
+
+function serializeErrorTree(err: unknown, ancestors: Set<object>): unknown {
+    const base = pino.stdSerializers.err(err as Error) as Record<
+        string,
+        unknown
+    >;
+    if (!base || typeof base !== "object" || !isErrorLike(err)) return base;
+    for (const key of DROPPED_ERROR_KEYS) delete base[key];
+    const status = (err as { response?: { status?: number } })?.response
+        ?.status;
+    if (typeof status === "number") base.status = status;
+
+    /* pino copies nested errors with their requests intact; redo them here.
+       Error-like causes are already folded into message and stack, so only a
+       plain-object cause is left, and that is not worth the risk of logging. */
+    ancestors.add(err);
+    const nested = (value: unknown) =>
+        ancestors.has(value as object)
+            ? "[Circular]"
+            : serializeErrorTree(value, ancestors);
+    const errors = (err as { errors?: unknown }).errors;
+    if (Array.isArray(errors)) {
+        base.aggregateErrors = errors.map(nested);
+        delete base.errors;
+    }
+    const props = err as unknown as Record<string, unknown>;
+    for (const key of Object.keys(base)) {
+        if (key === "cause") delete base[key];
+        else if (isErrorLike(props[key])) base[key] = nested(props[key]);
+    }
+    ancestors.delete(err);
+    return base;
+}
+
+/* Each key is covered at the top level and one level down: pino's "*.x" only
+   matches nested keys, so a bare { password } would otherwise slip through. */
+const SENSITIVE_KEYS = [
+    "token",
+    "accessToken",
+    "refreshToken",
+    "secret",
+    "password",
+];
+export const REDACT = {
+    paths: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        ...SENSITIVE_KEYS,
+        ...SENSITIVE_KEYS.map((key) => `*.${key}`),
+    ],
+    censor: "[redacted]",
+};
+
+const level = resolveLogLevel();
+
+/** The request currently being served, so any log line can be tied back to it. */
+const requestContext = new AsyncLocalStorage<{ id: string; req: Request }>();
+
+export const logger: Logger = pino(
+    {
+        level,
+        base: { env: ENVIRONMENT },
+        /* Anything logged while a request is in flight (controllers, clients,
+           the error handler) automatically carries its request id and user. */
+        mixin() {
+            const ctx = requestContext.getStore();
+            if (!ctx) return {};
+            return {
+                requestId: ctx.id,
+                userId: ctx.req.session?.authorizedUser?.pk,
+            };
+        },
+        /* Errors passed as { err } are expanded into type, message and stack. */
+        serializers: { err: serializeError },
+        /* Never let credentials reach a log line, whatever gets logged. */
+        redact: REDACT,
+    },
+    createDestination(),
+);
+
+const rawLevel = process.env.LOG_LEVEL?.trim();
+if (rawLevel && !LEVELS.includes(rawLevel.toLowerCase()))
+    logger.warn(
+        `LOG_LEVEL "${rawLevel}" is not a valid level, using "${level}"`,
+    );
+
+/* A few clients still log through loglevel. Drive it from the same LOG_LEVEL so
+   there is a single knob, instead of a hardcoded level in app.ts. */
+loglevel.setLevel(
+    (level === "fatal"
+        ? "error"
+        : level) as loglevel.LogLevelDesc /* pino and loglevel share names */,
+);
+
+/** Request augmentation: every request carries an id. */
+declare module "express-serve-static-core" {
+    interface Request {
+        id: string;
+    }
+}
+
+/* A caller or proxy may supply its own id so a request can be traced across
+   services. Only short, plain tokens are accepted, so a header cannot inject
+   odd characters or oversized values into every log line. */
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,64}$/;
+
+function incomingRequestId(req: Request): string | undefined {
+    const header = req.headers?.["x-request-id"];
+    const value = Array.isArray(header) ? header[0] : header;
+    return typeof value === "string" && REQUEST_ID_PATTERN.test(value)
+        ? value
+        : undefined;
+}
+
+/**
+ * Logs one line per request when it finishes: method, route, status, duration
+ * and user id. The route is the matched pattern (/api/teams/:teamId), not the
+ * raw URL, so query strings and ids never end up in the message and the field
+ * stays searchable. The request id is returned in X-Request-Id and is added to
+ * every log line written while the request is in flight, which ties error lines
+ * to the request that produced them.
+ *
+ * Register this before every other middleware so timing covers all of them.
+ */
+export function requestLogger(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+): void {
+    const start = process.hrtime.bigint();
+    req.id = incomingRequestId(req) ?? randomUUID();
+    res.setHeader("X-Request-Id", req.id);
+
+    res.on("finish", () => {
+        const isApi = /^\/api(\/|\?|$)/.test(req.originalUrl ?? "");
+        /* Express gives the pattern as a string, or an array when a handler is
+           registered for several paths; the first one names it well enough. */
+        const pattern: unknown = req.route?.path;
+        const matched = Array.isArray(pattern) ? pattern[0] : pattern;
+        const route =
+            typeof matched === "string"
+                ? `${req.baseUrl}${matched}`
+                : undefined;
+        const fields = {
+            requestId: req.id,
+            method: req.method,
+            route: route ?? (isApi ? "(unmatched)" : "(static)"),
+            status: res.statusCode,
+            durationMs: Number(process.hrtime.bigint() - start) / 1e6,
+            userId: req.session?.authorizedUser?.pk,
+        };
+
+        /* Anything outside /api (the UI pages such as /onboard and /apply, the
+           SPA fallback and static assets) is only logged at debug on success. */
+        if (res.statusCode >= 500) logger.error(fields, "request failed");
+        else if (res.statusCode >= 400) logger.warn(fields, "request rejected");
+        else if (!isApi) logger.debug(fields, "request completed");
+        else logger.info(fields, "request completed");
+    });
+
+    requestContext.run({ id: req.id, req }, next);
+}
+
+/**
+ * Flattens a Map of named failures into { name: message } so it logs as
+ * structured fields rather than an opaque Map dump.
+ */
+export function errorMap(errors: Map<string, Error>): Record<string, string> {
+    return Object.fromEntries(
+        [...errors].map(([name, error]) => [name, error.message]),
+    );
+}

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "app-dev-horizon"
 version = "0.1.0"
-description = "Horizon data pipeline: git blame into Postgres, as a Dagster asset graph."
+description = "Horizon data pipeline: git blame into Dagster feature assets."
 requires-python = ">=3.11"
 dependencies = [
   "pydantic>=2.8,<3.0",

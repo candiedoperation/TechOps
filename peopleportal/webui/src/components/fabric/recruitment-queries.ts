@@ -32,7 +32,6 @@ export interface RecruitmentEmailDelivery {
     attemptCount: number;
     lastAttemptAt: string;
 }
-
 /** Application information returned by the detail endpoint. */
 export interface RecruitmentDetails extends RecruitmentApplication {
     email: string;
@@ -107,6 +106,7 @@ export function useRecruitmentQueries(
                 signal,
             }),
         staleTime: metadataFreshness,
+
         refetchInterval: (query) =>
             query.state.data?.some(
                 (application) =>
@@ -223,6 +223,7 @@ export function useRecruitmentQueries(
                 client.invalidateQueries({ queryKey: keys.history(teamId) }),
             ]),
     });
+
     const emailRetry = useMutation({
         mutationFn: async ({
             applicationId,

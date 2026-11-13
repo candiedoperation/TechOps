@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1520 900" width="1520" height="900" role="img" aria-label="Horizon blame pipeline architecture in six layers: gitea_repository feeds blame_capture, which feeds the pure parser blame_records; records load into blame_commits_table and blame_attribution_table; those two core tables fan out to eight independent feature families in PRs 5 through 12, which converge into the member_profile mart in PR 13.">
+<rect width="1520" height="900" fill="#FFFFFF"/>
+<defs><marker id="a" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7.5" markerHeight="6.5" orient="auto"><polygon points="0 0, 10 4, 0 8" fill="#46525F"/></marker></defs>
+<rect x="40" y="26" width="1440" height="50" rx="9" fill="#F1F4F7" stroke="#D8DEE4" stroke-width="1.2" stroke-dasharray="6 5"/>
+<text x="58" y="48" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#5E6A78" text-anchor="start" letter-spacing="1.1">RESOURCES</text>
+<text x="58" y="66" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5E6A78" text-anchor="start">shared — never assets</text>
+<text x="1462" y="58" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="13.5" font-weight="500" fill="#111820" text-anchor="end">GiteaClient  ·  AuthentikClient  ·  GitWorkspace  ·  PostgresResource</text>
+<text x="40" y="108" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="12.5" font-weight="600" fill="#0E6E8C" text-anchor="start" letter-spacing="0.6">L1</text>
+<text x="68" y="108" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#5E6A78" text-anchor="start">source</text>
+<text x="420" y="108" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="12.5" font-weight="600" fill="#0E6E8C" text-anchor="start" letter-spacing="0.6">L2</text>
+<text x="448" y="108" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#5E6A78" text-anchor="start">capture</text>
+<text x="800" y="108" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="12.5" font-weight="600" fill="#0E6E8C" text-anchor="start" letter-spacing="0.6">L3</text>
+<text x="828" y="108" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#5E6A78" text-anchor="start">parse</text>
+<text x="1180" y="108" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="12.5" font-weight="600" fill="#0E6E8C" text-anchor="start" letter-spacing="0.6">L1</text>
+<text x="1208" y="108" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#5E6A78" text-anchor="start">source — directory</text>
+<rect x="40" y="122" width="300" height="106" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="58" y="154" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="14" font-weight="600" fill="#111820" text-anchor="start">gitea_repository</text>
+<text x="58" y="180" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#5E6A78" text-anchor="start">one API call</text>
+<text x="58" y="204" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5E6A78" text-anchor="start">names the repo and its default branch</text>
+<rect x="420" y="122" width="300" height="106" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="438" y="154" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="14" font-weight="600" fill="#111820" text-anchor="start">blame_capture</text>
+<text x="438" y="180" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#5E6A78" text-anchor="start">clone + blame  →  raw text to disk</text>
+<text x="438" y="204" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5E6A78" text-anchor="start">the only asset touching network or disk</text>
+<rect x="800" y="122" width="300" height="106" rx="8" fill="#FFFFFF" stroke="#0E6E8C" stroke-width="1.9"/>
+<text x="818" y="154" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="14" font-weight="600" fill="#111820" text-anchor="start">blame_records</text>
+<text x="818" y="180" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#5E6A78" text-anchor="start">text → records</text>
+<text x="818" y="204" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="600" fill="#0E6E8C" text-anchor="start">PURE — no I/O, all 14 blame fields</text>
+<rect x="1180" y="122" width="300" height="106" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="1198" y="154" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="14" font-weight="600" fill="#111820" text-anchor="start">authentik_users</text>
+<text x="1198" y="180" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#5E6A78" text-anchor="start">the roster — user PK, username, email</text>
+<text x="1198" y="204" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5E6A78" text-anchor="start">blame cannot supply a user identity</text>
+<line x1="340" y1="175.0" x2="410" y2="175.0" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<line x1="720" y1="175.0" x2="790" y2="175.0" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="165.0" y="241" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="190.0" y="255" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 2</text>
+<rect x="545.0" y="241" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="570.0" y="255" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 2</text>
+<rect x="925.0" y="241" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="950.0" y="255" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 3</text>
+<rect x="1305.0" y="241" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="1330.0" y="255" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 12</text>
+<text x="40" y="278" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="12.5" font-weight="600" fill="#0E6E8C" text-anchor="start" letter-spacing="0.6">L4</text>
+<text x="68" y="278" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#5E6A78" text-anchor="start">load — the only layer that writes the core tables</text>
+<path d="M 950.0 268 L 950.0 298 L 190.0 298 L 190.0 312" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a)"/>
+<text x="936.0" y="292" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="400" fill="#5E6A78" text-anchor="end">records</text>
+<rect x="40" y="322" width="300" height="98" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="58" y="356" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="14" font-weight="600" fill="#111820" text-anchor="start">blame_commits_table</text>
+<text x="58" y="382" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#5E6A78" text-anchor="start">one row per surviving commit</text>
+<text x="58" y="404" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5E6A78" text-anchor="start">per-commit fields live here, not on every line</text>
+<rect x="420" y="322" width="300" height="98" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="438" y="356" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="14" font-weight="600" fill="#111820" text-anchor="start">blame_attribution_table</text>
+<text x="438" y="382" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#5E6A78" text-anchor="start">surviving lines per file per commit</text>
+<text x="438" y="404" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5E6A78" text-anchor="start">source_path differs from path under -M / -C</text>
+<line x1="340" y1="371.0" x2="410" y2="371.0" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="761.0" y="362.0" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="786" y="376.0" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 4</text>
+<path d="M 190.0 420 L 190.0 498" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 570.0 420 L 570.0 498" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="40" y="454" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="12.5" font-weight="600" fill="#0E6E8C" text-anchor="start" letter-spacing="0.6" stroke="#FFFFFF" stroke-width="4.5" paint-order="stroke">L5</text>
+<text x="68" y="454" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#5E6A78" text-anchor="start" stroke="#FFFFFF" stroke-width="4.5" paint-order="stroke">features — one family per PR, narrow and independently re-materializable</text>
+<text x="40" y="473" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5E6A78" text-anchor="start" stroke="#FFFFFF" stroke-width="4.5" paint-order="stroke">every feature reads the two core tables and never another feature, so a broken calculation blocks nothing else</text>
+<line x1="123.0" y1="498" x2="1397.0" y2="498" stroke="#46525F" stroke-width="1.9" stroke-linecap="round"/>
+<path d="M 1450 228 L 1450 534" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#a)"/>
+<text x="1442" y="488" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="400" fill="#5E6A78" text-anchor="end">user PK</text>
+<line x1="123.0" y1="498" x2="123.0" y2="534" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="40" y="544" width="166" height="124" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="53" y="572" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">file_ownership</text>
+<text x="53" y="589" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">member_ownership</text>
+<text x="53" y="652" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#5E6A78" text-anchor="start">share per file</text>
+<rect x="98.0" y="681" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="123.0" y="695" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 5</text>
+<line x1="305.0" y1="498" x2="305.0" y2="534" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="222" y="544" width="166" height="124" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="235" y="572" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">member_repo_</text>
+<text x="235" y="589" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">  ownership</text>
+<text x="235" y="652" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#5E6A78" text-anchor="start">share per repo</text>
+<rect x="280.0" y="681" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="305.0" y="695" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 6</text>
+<line x1="487.0" y1="498" x2="487.0" y2="534" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="404" y="544" width="166" height="124" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="417" y="572" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">repo_</text>
+<text x="417" y="589" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">  concentration</text>
+<text x="417" y="652" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#5E6A78" text-anchor="start">bus factor, HHI</text>
+<rect x="462.0" y="681" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="487.0" y="695" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 7</text>
+<line x1="669.0" y1="498" x2="669.0" y2="534" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="586" y="544" width="166" height="124" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="599" y="572" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">path_classification</text>
+<text x="599" y="589" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">member_file_mix</text>
+<text x="599" y="652" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#5E6A78" text-anchor="start">code vs docs vs data</text>
+<rect x="644.0" y="681" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="669.0" y="695" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 8</text>
+<line x1="851.0" y1="498" x2="851.0" y2="534" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="768" y="544" width="166" height="124" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="781" y="572" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">member_activity</text>
+<text x="781" y="652" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#5E6A78" text-anchor="start">first / last, timezone</text>
+<rect x="826.0" y="681" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="851.0" y="695" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 9</text>
+<line x1="1033.0" y1="498" x2="1033.0" y2="534" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="950" y="544" width="166" height="124" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="963" y="572" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">member_durability</text>
+<text x="963" y="652" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#5E6A78" text-anchor="start">what survived</text>
+<rect x="1008.0" y="681" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="1033.0" y="695" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 10</text>
+<line x1="1215.0" y1="498" x2="1215.0" y2="534" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="1132" y="544" width="166" height="124" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="1145" y="572" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">member_process</text>
+<text x="1145" y="589" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">  _signals</text>
+<text x="1145" y="652" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#5E6A78" text-anchor="start">non_boundary_lines</text>
+<rect x="1190.0" y="681" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="1215.0" y="695" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 11</text>
+<line x1="1397.0" y1="498" x2="1397.0" y2="534" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="1314" y="544" width="166" height="124" rx="8" fill="#FFFFFF" stroke="#B5C0CB" stroke-width="1.4"/>
+<text x="1327" y="572" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">identity_candidates</text>
+<text x="1327" y="589" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#111820" text-anchor="start">identity_clusters</text>
+<text x="1327" y="652" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="10.5" font-weight="400" fill="#5E6A78" text-anchor="start">git identity → user PK</text>
+<rect x="1372.0" y="681" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="1397.0" y="695" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 12–13</text>
+<path d="M 123.0 704 L 123.0 720" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 305.0 704 L 305.0 720" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 487.0 704 L 487.0 720" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 669.0 704 L 669.0 720" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 851.0 704 L 851.0 720" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1033.0 704 L 1033.0 720" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1215.0 704 L 1215.0 720" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1397.0 704 L 1397.0 720" fill="none" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="123.0" y1="720" x2="1397.0" y2="720" stroke="#46525F" stroke-width="1.9" stroke-linecap="round"/>
+<text x="40" y="748" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="12.5" font-weight="600" fill="#0E6E8C" text-anchor="start" letter-spacing="0.6">L6</text>
+<text x="68" y="748" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="500" fill="#5E6A78" text-anchor="start">mart</text>
+<line x1="190.0" y1="720" x2="190.0" y2="758" stroke="#46525F" stroke-width="1.6" stroke-linecap="round" marker-end="url(#a)"/>
+<rect x="40" y="768" width="300" height="84" rx="8" fill="#E6F1F5" stroke="#0E6E8C" stroke-width="1.9"/>
+<text x="58" y="802" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="14" font-weight="600" fill="#111820" text-anchor="start">member_profile</text>
+<text x="58" y="828" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12" font-weight="400" fill="#5E6A78" text-anchor="start">keyed on authentik_user_pk</text>
+<rect x="371.0" y="789" width="50" height="19" rx="4" fill="#E6F1F5"/>
+<text x="396" y="803" font-family="Menlo, DejaVu Sans Mono, Consolas, monospace" font-size="11" font-weight="600" fill="#0E6E8C" text-anchor="middle">PR 14</text>
+<text x="440" y="798" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#111820" text-anchor="start">Joins every feature table through identity_clusters, so consumers never write an eight-way join.</text>
+<text x="440" y="820" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#111820" text-anchor="start">Raw git identity stays visible beside the canonical one.</text>
+<text x="440" y="844" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="11.5" font-weight="400" fill="#5E6A78" text-anchor="start">Unmatched git identities keep a null PK so totals still reconcile.  PR 15 adds no assets: it re-keys this graph as dynamic partitions on org/repo.</text>
+</svg>

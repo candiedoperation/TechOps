@@ -1,4 +1,4 @@
-"""L1 source: what the pipeline is about to blame.
+"""Source inputs: what the pipeline is about to capture.
 
 One API call. No git, no disk, no Postgres -- so when a run fails here, the
 cause is Gitea or the token, and nothing else.
@@ -11,10 +11,16 @@ partition key instead; nothing else about it changes.
 # No `from __future__ import annotations` in this module: Dagster resolves the
 # context and asset-input annotations at decoration time, and PEP 563 turns them
 # into strings it then refuses.
-from dagster import AssetExecutionContext, Config, MetadataValue, asset
+from dagster import AssetExecutionContext, Config, MetadataValue, TableRecord, asset
 
 from ..metadata import table_schema_from
-from ..resources import GiteaClient, Repository
+from ..resources import (
+    AuthentikClient,
+    AuthentikRoster,
+    AuthentikUser,
+    GiteaClient,
+    Repository,
+)
 
 REPOSITORY_SCHEMA = table_schema_from(
     Repository,
@@ -40,7 +46,7 @@ class RepositoryConfig(Config):
 
 
 @asset(
-    group_name="l1_source",
+    group_name="01_sources",
     kinds={"gitea"},
     description=(
         "Clone URL and default branch for one repository. Exactly one Gitea API "
@@ -69,3 +75,60 @@ def gitea_repository(
         }
     )
     return repository
+
+
+AUTHENTIK_USER_SCHEMA = table_schema_from(
+    AuthentikUser,
+    {
+        "authentik_user_pk": ("string", "Authentik user PK; Horizon's canonical member ID."),
+        "username": ("string", "Authentik username; a cross-system matching attribute."),
+        "email": ("string", "Authentik email; used for exact Git author attribution."),
+        "name": ("string", "Display name returned by the People Portal roster source."),
+        "active": ("bool", "Whether the Authentik user is active."),
+        "retrieved_at": ("datetime", "UTC time Horizon fetched this roster snapshot."),
+    },
+)
+
+
+@asset(
+    group_name="01_sources",
+    kinds={"authentik"},
+    description=(
+        "Complete People Portal-managed user roster from Authentik. Mirrors the "
+        "People Portal client filter and fails rather than accepting a partial page set."
+    ),
+    metadata={
+        "dagster/column_schema": AUTHENTIK_USER_SCHEMA,
+        "endpoint": "GET /api/v3/core/users/",
+        "path_filter": "peopleportal.atheesh.org/onboardeduser",
+        "pagination": "all pages required",
+    },
+)
+def authentik_users(
+    context: AssetExecutionContext,
+    authentik: AuthentikClient,
+) -> AuthentikRoster:
+    roster = authentik.get_peopleportal_roster()
+    context.add_output_metadata(
+        {
+            "users": MetadataValue.int(len(roster.users)),
+            "source_retrieved_at": MetadataValue.text(roster.retrieved_at.isoformat()),
+            "sample": MetadataValue.table(
+                records=[
+                    TableRecord(
+                        {
+                            "authentik_user_pk": user.authentik_user_pk,
+                            "username": user.username,
+                            "email": user.email,
+                            "name": user.name,
+                            "active": user.active,
+                            "retrieved_at": user.retrieved_at.isoformat(),
+                        }
+                    )
+                    for user in roster.users[:5]
+                ],
+                schema=AUTHENTIK_USER_SCHEMA,
+            ),
+        }
+    )
+    return roster

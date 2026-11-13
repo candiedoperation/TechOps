@@ -85,6 +85,10 @@ import {
     wrapCacheValue,
 } from "../utils/cache-envelope";
 
+import { logger } from "../utils/logger";
+
+const log = logger.child({ module: "ATSController" });
+
 // ====================
 // Type Definitions
 // ====================
@@ -340,7 +344,7 @@ export class ATSController extends Controller {
             this.setHeader("Location", downloadUrl);
             return;
         } catch (error) {
-            console.error("Error generating download URL:", error);
+            log.error({ err: error }, "Error generating download URL");
             this.setStatus(404); // Or 500
             return {
                 error: "NotFound",
@@ -522,8 +526,9 @@ export class ATSController extends Controller {
            here would take the process down for a stale cache entry. */
         void this.buildAndCacheOpenTeams()
             .catch((e: any) =>
-                console.error(
-                    `Background refresh of the open-teams cache failed: ${e?.message ?? e}`,
+                log.error(
+                    { err: e },
+                    "Background refresh of the open-teams cache failed",
                 ),
             )
             .finally(() => {
@@ -645,8 +650,9 @@ export class ATSController extends Controller {
          * one query rather than one delete per team inside the render loop.
          */
         if (missingTeamPks.length > 0) {
-            console.warn(
-                `Recruiting Teams with PKs ${missingTeamPks.join(", ")} not found in Authentik. Cleaning up.`,
+            log.warn(
+                { teamPks: missingTeamPks },
+                "Recruiting teams not found in Authentik; cleaning up",
             );
             await TeamRecruitingStatus.deleteMany({
                 teamPk: { $in: missingTeamPks },
@@ -812,7 +818,7 @@ export class ATSController extends Controller {
 
             return kanbanData;
         } catch (err) {
-            console.error("Error fetching applications:", err);
+            log.error({ err: err }, "Error fetching applications");
             this.setStatus(500);
             throw new Error("Failed to fetch applications");
         }
@@ -878,7 +884,7 @@ export class ATSController extends Controller {
                     : {}),
             };
         } catch (err) {
-            console.error("Error fetching application details:", err);
+            log.error({ err: err }, "Error fetching application details");
             this.setStatus(500);
             return {
                 error: "ServerError",
@@ -1066,7 +1072,7 @@ export class ATSController extends Controller {
                         ); // 15 mins
                     }
                 } catch (s3Error) {
-                    console.error("Error signing S3 URL:", s3Error);
+                    log.error({ err: s3Error }, "Error signing S3 URL");
                     // Fallback or just ignore, maybe client can deal with the raw key or empty string?
                     // We'll leave it undefined if signing fails.
                 }
@@ -1076,7 +1082,7 @@ export class ATSController extends Controller {
                 resumeUrl: resumeDownloadUrl,
             };
         } catch (err) {
-            console.error("Error fetching applicant URLs:", err);
+            log.error({ err: err }, "Error fetching applicant URLs");
             this.setStatus(500);
             return {
                 error: "ServerError",
@@ -1365,7 +1371,7 @@ export class ATSController extends Controller {
                 },
             };
         } catch (err) {
-            console.error("Error updating application stage:", err);
+            log.error({ err: err }, "Error updating application stage");
             this.setStatus(500);
             return {
                 error: "ServerError",
@@ -1574,9 +1580,9 @@ export class ATSController extends Controller {
                             teamName = teamInfo.name;
                         }
                     } catch (e) {
-                        console.error(
-                            `Failed to fetch team info for ${app.teamPk}`,
-                            e,
+                        log.error(
+                            { err: e, teamPk: app.teamPk },
+                            "Failed to fetch team info",
                         );
                     }
 
@@ -1593,9 +1599,9 @@ export class ATSController extends Controller {
                                     subteamInfo.attributes?.friendlyName ||
                                     subteamInfo.name;
                             } catch (e) {
-                                console.error(
-                                    `Failed to fetch subteam info for ${pref.subteamPk}`,
-                                    e,
+                                log.error(
+                                    { err: e, subteamPk: pref.subteamPk },
+                                    "Failed to fetch subteam info",
                                 );
                             }
                             return { ...pref, subteamName };
@@ -1616,7 +1622,7 @@ export class ATSController extends Controller {
 
             return results;
         } catch (err) {
-            console.error("Error fetching applicant applications:", err);
+            log.error({ err: err }, "Error fetching applicant applications");
             this.setStatus(500);
             return {
                 error: "ServerError",
@@ -1909,7 +1915,7 @@ export class ATSController extends Controller {
                     };
                 }
             } catch (e) {
-                console.error("Failed to validate resume", e);
+                log.error({ err: e }, "Failed to validate resume");
                 this.setStatus(500);
                 return {
                     error: "FileProcessingError",
@@ -1975,7 +1981,7 @@ export class ATSController extends Controller {
                 id: application._id,
             };
         } catch (err) {
-            console.error("Application submission error:", err);
+            log.error({ err: err }, "Application submission error");
             this.setStatus(500);
             return {
                 error: "ServerError",
@@ -2062,7 +2068,7 @@ export class ATSController extends Controller {
 
             return { message: "Profile updated successfully" };
         } catch (err) {
-            console.error("Error updating profile:", err);
+            log.error({ err: err }, "Error updating profile");
             this.setStatus(500);
             return {
                 error: "ServerError",

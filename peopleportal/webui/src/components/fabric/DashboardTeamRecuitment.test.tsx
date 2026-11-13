@@ -200,7 +200,7 @@ describe("recruitment review", () => {
         expect(confirm).toHaveBeenCalled();
         expect(retryRequests[0].body).toEqual({ confirmUncertain: true });
     });
-
+  
     it("uses URL selection, browser history and cached data without losing other parameters", async () => {
         const { router } = openBoard("?filter=interview");
         await openA();
