@@ -43,6 +43,10 @@ import { signAvatarUrl } from "../utils/avatars";
 import { executiveAuthVerify } from "../auth";
 import { describeUnknownError } from "../utils/errors";
 
+import { logger } from "../utils/logger";
+
+const log = logger.child({ module: "AuthController" });
+
 export interface CorpUserInfoResponse extends UserInfoResponse {
     avatar: string;
     isExecutive: boolean;
@@ -185,79 +189,71 @@ export class AuthController extends Controller {
     @Tags("Core Authentication")
     @SuccessResponse(302, "Redirect")
     async handleRedirect(@Request() req: express.Request) {
-        try {
-            const fullURL =
-                req.protocol + "://" + req.get("host") + req.originalUrl;
-            let authorizationStamp =
-                await OpenIdClient.issueAuthorizationStamps(
-                    new URL(fullURL),
-                    req.session.oidcState!,
-                );
-            req.session.accessToken = authorizationStamp.accessToken;
-            req.session.authorizedUser = authorizationStamp.user;
-            req.session.tokenExpiry = authorizationStamp.expiry.getTime();
-            if (authorizationStamp.refreshToken)
-                req.session.refreshToken = authorizationStamp.refreshToken;
-            if (authorizationStamp.idToken)
-                req.session.idToken = authorizationStamp.idToken;
+        /* Failures go to the global error handler, which logs them. */
+        const fullURL =
+            req.protocol + "://" + req.get("host") + req.originalUrl;
+        let authorizationStamp = await OpenIdClient.issueAuthorizationStamps(
+            new URL(fullURL),
+            req.session.oidcState!,
+        );
+        req.session.accessToken = authorizationStamp.accessToken;
+        req.session.authorizedUser = authorizationStamp.user;
+        req.session.tokenExpiry = authorizationStamp.expiry.getTime();
+        if (authorizationStamp.refreshToken)
+            req.session.refreshToken = authorizationStamp.refreshToken;
+        if (authorizationStamp.idToken)
+            req.session.idToken = authorizationStamp.idToken;
 
-            /* Redirect Logic */
-            const res = (req as any).res as express.Response;
-            const tempsession = req.session.tempsession;
+        /* Redirect Logic */
+        const res = (req as any).res as express.Response;
+        const tempsession = req.session.tempsession;
 
-            /* Case 0: Simple Return To (App Navigation) */
-            if (tempsession?.return_to) {
-                const returnTo = tempsession.return_to;
-                delete req.session.tempsession?.return_to;
-                return res.redirect(302, returnTo);
-            }
-
-            /* Case 1: OAuth2 Passthrough (API Docs Portal, Postman, etc.) */
-            if (tempsession?.redirect_uri) {
-                const redirectUri = new URL(tempsession.redirect_uri);
-                const currentOrigin = req.protocol + "://" + req.get("host");
-
-                /* Implicit Flow Injection for OAuth2 Docs */
-                /* If the redirect is for our own docs, we inject the dummy token directly using hash fragment */
-                if (
-                    redirectUri.origin === currentOrigin &&
-                    redirectUri.pathname.startsWith("/api/docs")
-                ) {
-                    const hashParams = new URLSearchParams();
-                    hashParams.append("access_token", "SessionCookieShimToken");
-                    hashParams.append("token_type", "Bearer");
-                    hashParams.append("expires_in", "3600");
-
-                    if (tempsession.state)
-                        hashParams.append("state", tempsession.state);
-
-                    redirectUri.hash = hashParams.toString();
-                } else {
-                    /* Standard Code Flow for others (if needed later) or External Redirects */
-                    /* Note: We essentially only support our own docs for now */
-                    redirectUri.searchParams.append(
-                        "code",
-                        generateSecureRandomString(16),
-                    );
-                    if (tempsession.state)
-                        redirectUri.searchParams.append(
-                            "state",
-                            tempsession.state,
-                        );
-                }
-
-                /* Cleanup */
-                delete req.session.tempsession?.redirect_uri;
-                delete req.session.tempsession?.state;
-                return res.redirect(302, redirectUri.toString());
-            }
-
-            /* Case 3: Default */
-            return res.redirect(302, "/");
-        } catch (e) {
-            console.log(e);
-            throw e;
+        /* Case 0: Simple Return To (App Navigation) */
+        if (tempsession?.return_to) {
+            const returnTo = tempsession.return_to;
+            delete req.session.tempsession?.return_to;
+            return res.redirect(302, returnTo);
         }
+
+        /* Case 1: OAuth2 Passthrough (API Docs Portal, Postman, etc.) */
+        if (tempsession?.redirect_uri) {
+            const redirectUri = new URL(tempsession.redirect_uri);
+            const currentOrigin = req.protocol + "://" + req.get("host");
+
+            /* Implicit Flow Injection for OAuth2 Docs */
+            /* If the redirect is for our own docs, we inject the dummy token directly using hash fragment */
+            if (
+                redirectUri.origin === currentOrigin &&
+                redirectUri.pathname.startsWith("/api/docs")
+            ) {
+                const hashParams = new URLSearchParams();
+                hashParams.append("access_token", "SessionCookieShimToken");
+                hashParams.append("token_type", "Bearer");
+                hashParams.append("expires_in", "3600");
+
+                if (tempsession.state)
+                    hashParams.append("state", tempsession.state);
+
+                redirectUri.hash = hashParams.toString();
+            } else {
+                /* Standard Code Flow for others (if needed later) or External Redirects */
+                /* Note: We essentially only support our own docs for now */
+                redirectUri.searchParams.append(
+                    "code",
+                    generateSecureRandomString(16),
+                );
+                if (tempsession.state)
+                    redirectUri.searchParams.append("state", tempsession.state);
+            }
+
+            /* Cleanup */
+            delete req.session.tempsession?.redirect_uri;
+            delete req.session.tempsession?.state;
+            return res.redirect(302, redirectUri.toString());
+        }
+
+        /* Case 3: Default */
+        return res.redirect(302, "/");
     }
 
     /**
@@ -443,9 +439,9 @@ export class AuthController extends Controller {
                         teamName =
                             teamInfo.attributes?.friendlyName || teamInfo.name;
                     } catch (e) {
-                        console.error(
-                            `Failed to fetch team info for ${app.teamPk}`,
-                            e,
+                        log.error(
+                            { err: e, teamPk: app.teamPk },
+                            "Failed to fetch team info",
                         );
                     }
 
@@ -462,9 +458,9 @@ export class AuthController extends Controller {
                                     subteamInfo.attributes?.friendlyName ||
                                     subteamInfo.name;
                             } catch (e) {
-                                console.error(
-                                    `Failed to fetch subteam info for ${pref.subteamPk}`,
-                                    e,
+                                log.error(
+                                    { err: e, subteamPk: pref.subteamPk },
+                                    "Failed to fetch subteam info",
                                 );
                             }
                             return { ...pref, subteamName };
@@ -529,9 +525,9 @@ export class AuthController extends Controller {
         } catch (e: unknown) {
             /* A provider problem must not strand the user in a logged-in
                session: fall through to the local logout below. */
-            console.error(
-                "Failed building provider logout URL:",
-                describeUnknownError(e),
+            log.error(
+                { err: describeUnknownError(e) },
+                "Failed building provider logout URL",
             );
         }
 
