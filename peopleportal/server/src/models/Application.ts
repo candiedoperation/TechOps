@@ -36,6 +36,7 @@ export enum ApplicationEmailStatus {
 
 export interface IApplicationEmailDelivery {
     status: ApplicationEmailStatus;
+    attemptId?: string;
     stage: ApplicationStage;
     request: EmailSendRequest;
     error?: string;
@@ -84,6 +85,7 @@ const EmailDeliverySchema = new Schema<IApplicationEmailDelivery>(
             enum: Object.values(ApplicationEmailStatus),
             required: true,
         },
+        attemptId: { type: String },
         stage: {
             type: String,
             enum: Object.values(ApplicationStage),

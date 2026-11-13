@@ -334,3 +334,99 @@ test("an uncertain email requires confirmation and retries without another stage
   assert.equal(saved.stageHistory.length, 1);
   assert.equal(saved.emailDelivery.status, "accepted");
 });
+
+test("a late email failure cannot overwrite the result of a newer retry", async () => {
+  const { application } = await seedApplication();
+  const { controller } = controllerWithCapturedEmail();
+
+  let markFirstSendStarted;
+  let rejectFirstSend;
+  const firstSendStarted = new Promise((resolve) => {
+    markFirstSendStarted = resolve;
+  });
+  let sendCount = 0;
+  controller.emailClient.send = async (message) => {
+    sendCount += 1;
+    if (sendCount === 1) {
+      markFirstSendStarted();
+      return new Promise((_, reject) => {
+        rejectFirstSend = reject;
+      });
+    }
+    return { kind: "sent", accepted: [message.to], rejected: [] };
+  };
+
+  const firstAttempt = controller.updateApplicationStage(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    {
+      stage: ApplicationStage.INTERVIEW,
+      interviewLink: "https://example.invalid/interview",
+      interviewGuidelines: "Please prepare a short introduction and discuss your experience.",
+    }
+  );
+  await firstSendStarted;
+
+  await Application.updateOne(
+    { _id: application._id },
+    { $set: { "emailDelivery.lastAttemptAt": new Date(Date.now() - 6 * 60 * 1000) } }
+  );
+  const newerAttempt = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    { confirmUncertain: true }
+  );
+  assert.equal(newerAttempt.application.emailDelivery.status, "accepted");
+
+  rejectFirstSend(
+    Object.assign(new Error("550 recipient rejected"), {
+      responseCode: 550,
+      command: "DATA",
+    })
+  );
+  await firstAttempt;
+
+  const saved = await Application.findById(application._id).lean();
+  assert.equal(saved.emailDelivery.status, "accepted");
+  assert.equal(saved.emailDelivery.attemptCount, 2);
+});
+
+test("a stale pending email is uncertain and requires confirmation to retry", async () => {
+  const { application } = await seedApplication();
+  await Application.updateOne(
+    { _id: application._id },
+    {
+      $set: {
+        emailDelivery: {
+          status: "pending",
+          attemptId: "stale-attempt",
+          stage: ApplicationStage.INTERVIEW,
+          request: {
+            to: "applicant@example.invalid",
+            subject: "Interview",
+            templateName: "RecruitInterviewRequest",
+            templateVars: {},
+          },
+          attemptCount: 1,
+          lastAttemptAt: new Date(Date.now() - 6 * 60 * 1000),
+        },
+      },
+    }
+  );
+  const { controller, sent } = controllerWithCapturedEmail();
+
+  const unconfirmed = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id), {}
+  );
+  assert.equal(unconfirmed.error, "BadRequest");
+  assert.equal(sent.length, 0);
+
+  const markedUncertain = await Application.findById(application._id).lean();
+  assert.equal(markedUncertain.emailDelivery.status, "uncertain");
+  assert.match(markedUncertain.emailDelivery.error, /may already have been delivered/);
+
+  const retried = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    { confirmUncertain: true }
+  );
+  assert.equal(retried.application.emailDelivery.status, "accepted");
+  assert.equal(retried.application.emailDelivery.attemptCount, 2);
+});

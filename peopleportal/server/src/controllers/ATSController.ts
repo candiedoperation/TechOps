@@ -76,6 +76,7 @@ import {
 } from "../utils/s3-validation";
 import MarkdownIt from "markdown-it";
 import { RedisClient } from "../clients/RedisClient";
+import { randomUUID } from "node:crypto";
 import { mapWithConcurrency } from "../utils/concurrency";
 import {
     CacheEnvelope,
@@ -1309,6 +1310,7 @@ export class ATSController extends Controller {
             if (stageEmailRequest) {
                 application.emailDelivery = {
                     status: ApplicationEmailStatus.PENDING,
+                    attemptId: randomUUID(),
                     stage,
                     request: stageEmailRequest,
                     attemptCount: 1,
@@ -1408,13 +1410,46 @@ export class ATSController extends Controller {
                 };
             }
 
-            const delivery = application.emailDelivery;
+            let delivery = application.emailDelivery;
             if (!delivery) {
                 this.setStatus(409);
                 return {
                     error: "Conflict",
                     message: "This application has no email to retry",
                 };
+            }
+            if (
+                delivery.status === ApplicationEmailStatus.PENDING &&
+                delivery.lastAttemptAt.getTime() <=
+                    Date.now() - 5 * 60 * 1000
+            ) {
+                const staleDelivery = await Application.findOneAndUpdate(
+                    {
+                        _id: applicationId,
+                        teamPk: teamId,
+                        "emailDelivery.status": ApplicationEmailStatus.PENDING,
+                        "emailDelivery.lastAttemptAt": {
+                            $lte: new Date(Date.now() - 5 * 60 * 1000),
+                        },
+                    },
+                    {
+                        $set: {
+                            "emailDelivery.status":
+                                ApplicationEmailStatus.UNCERTAIN,
+                            "emailDelivery.error":
+                                "The previous email attempt did not finish; it may already have been delivered.",
+                        },
+                    },
+                    { new: true },
+                );
+                if (!staleDelivery?.emailDelivery) {
+                    this.setStatus(409);
+                    return {
+                        error: "Conflict",
+                        message: "The email status changed; refresh and try again",
+                    };
+                }
+                delivery = staleDelivery.emailDelivery;
             }
             if (
                 delivery.status !== ApplicationEmailStatus.FAILED &&
@@ -1438,6 +1473,7 @@ export class ATSController extends Controller {
                 };
             }
 
+            const attemptId = randomUUID();
             const claimedApplication = await Application.findOneAndUpdate(
                 {
                     _id: applicationId,
@@ -1447,6 +1483,7 @@ export class ATSController extends Controller {
                 {
                     $set: {
                         "emailDelivery.status": ApplicationEmailStatus.PENDING,
+                        "emailDelivery.attemptId": attemptId,
                         "emailDelivery.lastAttemptAt": new Date(),
                     },
                     $unset: { "emailDelivery.error": 1 },
@@ -2055,7 +2092,15 @@ export class ATSController extends Controller {
                 "Cannot send an application email without a saved request",
             );
         }
+        const { attemptId } = delivery;
+        if (!attemptId) {
+            throw new Error(
+                "Cannot send an application email without an attempt id",
+            );
+        }
 
+        let status: ApplicationEmailStatus;
+        let errorMessage: string | undefined;
         try {
             const request = delivery.request;
             const result = await this.emailClient.send({
@@ -2068,7 +2113,10 @@ export class ATSController extends Controller {
                 templateVars: request.templateVars,
                 ...(request.from !== undefined ? { from: request.from } : {}),
             });
-            this.applyEmailSendResult(delivery, result);
+            ({ status, error: errorMessage } = this.applyEmailSendResult(
+                delivery,
+                result,
+            ));
         } catch (error) {
             const errorDetails =
                 error instanceof Error ? error.message : String(error);
@@ -2101,24 +2149,46 @@ export class ATSController extends Controller {
                 (typeof smtpError.command === "string" &&
                     definiteFailureCommands.has(smtpError.command));
 
-            delivery.status = definiteFailure
+            status = definiteFailure
                 ? ApplicationEmailStatus.FAILED
                 : ApplicationEmailStatus.UNCERTAIN;
-            delivery.error = errorDetails.slice(0, 1000);
+            errorMessage = errorDetails.slice(0, 1000);
         }
 
-        await application.save();
+        const filter = {
+            _id: application._id,
+            "emailDelivery.attemptId": attemptId,
+            "emailDelivery.status": ApplicationEmailStatus.PENDING,
+        };
+        if (errorMessage) {
+            await Application.updateOne(filter, {
+                $set: {
+                    "emailDelivery.status": status,
+                    "emailDelivery.error": errorMessage,
+                },
+            });
+        } else {
+            await Application.updateOne(filter, {
+                $set: { "emailDelivery.status": status },
+                $unset: { "emailDelivery.error": 1 },
+            });
+        }
+
+        const latestApplication = await Application.findById(application._id);
+        if (latestApplication?.emailDelivery) {
+            application.emailDelivery = latestApplication.emailDelivery;
+        }
     }
 
     private applyEmailSendResult(
         delivery: IApplicationEmailDelivery,
         result: EmailSendResult,
-    ): void {
+    ): { status: ApplicationEmailStatus; error?: string } {
         if (result.kind === "intercepted") {
-            delivery.status = ApplicationEmailStatus.FAILED;
-            delivery.error =
-                "Email was intercepted by development configuration and was not sent.";
-            return;
+            return {
+                status: ApplicationEmailStatus.FAILED,
+                error: "Email was intercepted by development configuration and was not sent.",
+            };
         }
 
         const recipient = delivery.request.to.toLowerCase();
@@ -2127,20 +2197,21 @@ export class ATSController extends Controller {
                 (accepted) => accepted.toLowerCase() === recipient,
             )
         ) {
-            delivery.status = ApplicationEmailStatus.ACCEPTED;
-            delete delivery.error;
+            return { status: ApplicationEmailStatus.ACCEPTED };
         } else if (
             result.rejected.some(
                 (rejected) => rejected.toLowerCase() === recipient,
             )
         ) {
-            delivery.status = ApplicationEmailStatus.FAILED;
-            delivery.error =
-                "The SMTP server rejected the applicant's email address.";
+            return {
+                status: ApplicationEmailStatus.FAILED,
+                error: "The SMTP server rejected the applicant's email address.",
+            };
         } else {
-            delivery.status = ApplicationEmailStatus.UNCERTAIN;
-            delivery.error =
-                "The SMTP server did not confirm whether it accepted the applicant's email.";
+            return {
+                status: ApplicationEmailStatus.UNCERTAIN,
+                error: "The SMTP server did not confirm whether it accepted the applicant's email.",
+            };
         }
     }
 

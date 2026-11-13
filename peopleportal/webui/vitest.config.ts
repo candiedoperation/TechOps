@@ -11,6 +11,10 @@ export default defineConfig({
     },
   },
   test: {
+    // Match Vite's handling of the tag input's ESM/tslib dependency chain.
+    server: {
+      deps: { inline: ["emblor-maintained", "react-easy-sort", "tslib"] },
+    },
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
