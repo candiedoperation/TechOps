@@ -16,12 +16,19 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-export function computeStringArrStateDiff(finalState: string[], currentState: string[]) {
-  const finalSet = new Set(finalState);
-  const currentSet = new Set(currentState);
+export function computeStringArrStateDiff(
+    finalState: string[],
+    currentState: string[],
+) {
+    const finalSet = new Set(finalState);
+    const currentSet = new Set(currentState);
 
-  const additions = Array.from(finalSet).filter(user => !currentSet.has(user));
-  const deletions = Array.from(currentSet).filter(user => !finalSet.has(user));
+    const additions = Array.from(finalSet).filter(
+        (user) => !currentSet.has(user),
+    );
+    const deletions = Array.from(currentSet).filter(
+        (user) => !finalSet.has(user),
+    );
 
-  return { additions, deletions };
+    return { additions, deletions };
 }

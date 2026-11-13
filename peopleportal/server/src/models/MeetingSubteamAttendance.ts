@@ -16,8 +16,8 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Schema, model, Document } from 'mongoose';
-import { AttendanceRole } from './MeetingAttendance';
+import { Schema, model, Document } from "mongoose";
+import { AttendanceRole } from "./MeetingAttendance";
 
 /**
  * Invites an entire subteam to a meeting occurrence *by reference*: membership
@@ -38,15 +38,24 @@ export interface IMeetingSubteamAttendance extends Document {
     updatedAt: Date;
 }
 
-const MeetingSubteamAttendanceSchema = new Schema<IMeetingSubteamAttendance>({
-    meetingId: { type: String, required: true, index: true },
-    teamPk:    { type: String, required: true, index: true },
-    seriesId:  { type: String, required: true, index: true },
-    subteamPk: { type: String, required: true, index: true },
-    role:      { type: String, enum: ['required', 'optional'], required: true },
-}, { timestamps: true });
+const MeetingSubteamAttendanceSchema = new Schema<IMeetingSubteamAttendance>(
+    {
+        meetingId: { type: String, required: true, index: true },
+        teamPk: { type: String, required: true, index: true },
+        seriesId: { type: String, required: true, index: true },
+        subteamPk: { type: String, required: true, index: true },
+        role: { type: String, enum: ["required", "optional"], required: true },
+    },
+    { timestamps: true },
+);
 
 /* A subteam can appear at most once on a given meeting occurrence. */
-MeetingSubteamAttendanceSchema.index({ meetingId: 1, subteamPk: 1 }, { unique: true });
+MeetingSubteamAttendanceSchema.index(
+    { meetingId: 1, subteamPk: 1 },
+    { unique: true },
+);
 
-export const MeetingSubteamAttendance = model<IMeetingSubteamAttendance>('MeetingSubteamAttendance', MeetingSubteamAttendanceSchema);
+export const MeetingSubteamAttendance = model<IMeetingSubteamAttendance>(
+    "MeetingSubteamAttendance",
+    MeetingSubteamAttendanceSchema,
+);

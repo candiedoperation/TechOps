@@ -1,7 +1,8 @@
-const LINKEDIN_PROFILE_HOSTS = new Set(['linkedin.com', 'www.linkedin.com']);
+const LINKEDIN_PROFILE_HOSTS = new Set(["linkedin.com", "www.linkedin.com"]);
 const LINKEDIN_PROFILE_PATH = /^\/in\/([^/]+)\/?$/i;
 
-export const LINKEDIN_PROFILE_ERROR = 'Enter a valid LinkedIn profile URL, such as https://www.linkedin.com/in/your-name.';
+export const LINKEDIN_PROFILE_ERROR =
+    "Enter a valid LinkedIn profile URL, such as https://www.linkedin.com/in/your-name.";
 
 /**
  * Validates and normalizes an optional LinkedIn profile URL.
@@ -9,7 +10,7 @@ export const LINKEDIN_PROFILE_ERROR = 'Enter a valid LinkedIn profile URL, such 
  */
 export function normalizeLinkedInProfileUrl(value: string): string | null {
     const trimmed = value.trim();
-    if (!trimmed) return '';
+    if (!trimmed) return "";
     if (trimmed.length > 300) return null;
 
     const candidate = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed)
@@ -21,7 +22,7 @@ export function normalizeLinkedInProfileUrl(value: string): string | null {
         const pathMatch = url.pathname.match(LINKEDIN_PROFILE_PATH);
 
         if (
-            url.protocol !== 'https:' ||
+            url.protocol !== "https:" ||
             !LINKEDIN_PROFILE_HOSTS.has(url.hostname.toLowerCase()) ||
             url.username ||
             url.password ||

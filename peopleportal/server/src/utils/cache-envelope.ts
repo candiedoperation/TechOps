@@ -18,12 +18,17 @@ export interface CacheEnvelope<T> {
     value: T;
 }
 
-export function wrapCacheValue<T>(value: T, now: number = Date.now()): CacheEnvelope<T> {
+export function wrapCacheValue<T>(
+    value: T,
+    now: number = Date.now(),
+): CacheEnvelope<T> {
     return { cachedAt: now, value };
 }
 
 /** Guards against entries written before this format existed, or hand-edited. */
-export function isCacheEnvelope<T>(candidate: unknown): candidate is CacheEnvelope<T> {
+export function isCacheEnvelope<T>(
+    candidate: unknown,
+): candidate is CacheEnvelope<T> {
     return (
         typeof candidate === "object" &&
         candidate !== null &&
@@ -37,6 +42,10 @@ export function isCacheEnvelope<T>(candidate: unknown): candidate is CacheEnvelo
  * `cachedAt` (clock skew between servers) counts as fresh rather than
  * triggering a refresh storm.
  */
-export function isCacheStale(envelope: CacheEnvelope<unknown>, softTtlSeconds: number, now: number = Date.now()): boolean {
+export function isCacheStale(
+    envelope: CacheEnvelope<unknown>,
+    softTtlSeconds: number,
+    now: number = Date.now(),
+): boolean {
     return now - envelope.cachedAt > softTtlSeconds * 1000;
 }

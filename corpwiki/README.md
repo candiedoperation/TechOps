@@ -1,41 +1,26 @@
-# Website
+# App Dev Wiki
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+The App Dev Club wiki, served at [wiki.appdevclub.com](https://wiki.appdevclub.com). It is a [Docusaurus](https://docusaurus.io/) site, and every page lives under `docs/`.
 
-## Installation
-
-```bash
-yarn
-```
-
-## Local Development
+## Local development
 
 ```bash
-yarn start
+npm ci
+npm start
 ```
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
+The dev server runs on [localhost:3001](http://localhost:3001), so it does not collide with the People Portal server on port 3000. Most edits reload without a restart.
 
 ## Build
 
 ```bash
-yarn build
+npm run build
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+This writes the static site to `build/`. Broken internal links fail the build. If it runs out of memory, set `NODE_OPTIONS=--max-old-space-size=4096`.
+
+Search is enabled only when `ALGOLIA_APP_ID` and `ALGOLIA_API_KEY` are set, so local builds have no search box.
 
 ## Deployment
 
-Using SSH:
-
-```bash
-USE_SSH=true yarn deploy
-```
-
-Not using SSH:
-
-```bash
-GIT_USER=<Your GitHub username> yarn deploy
-```
-
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+Pushing changes under `corpwiki/` to `master` runs `.github/workflows/deploy_corpwiki.yml`, which builds the site and deploys it to Cloudflare Pages. There is no manual deploy step.

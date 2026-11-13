@@ -16,23 +16,29 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document } from "mongoose";
 
 export interface ISubteamConfig extends Document {
-  subteamPk: string;
-  isRecruiting: boolean;
-  roles: string[];
-  roleSpecificQuestions: Record<string, string[]>; // role -> array of questions
+    subteamPk: string;
+    isRecruiting: boolean;
+    roles: string[];
+    roleSpecificQuestions: Record<string, string[]>; // role -> array of questions
 }
 
-const SubteamConfigSchema = new Schema<ISubteamConfig>({
-  subteamPk: { type: String, required: true, unique: true, index: true },
-  isRecruiting: { type: Boolean, required: true, default: false },
-  roles: [{ type: String, required: true }],
-  roleSpecificQuestions: {
-    type: Schema.Types.Mixed,
-    default: {}
-  }
-}, { timestamps: true });
+const SubteamConfigSchema = new Schema<ISubteamConfig>(
+    {
+        subteamPk: { type: String, required: true, unique: true, index: true },
+        isRecruiting: { type: Boolean, required: true, default: false },
+        roles: [{ type: String, required: true }],
+        roleSpecificQuestions: {
+            type: Schema.Types.Mixed,
+            default: {},
+        },
+    },
+    { timestamps: true },
+);
 
-export const SubteamConfig = model<ISubteamConfig>('SubteamConfig', SubteamConfigSchema);
+export const SubteamConfig = model<ISubteamConfig>(
+    "SubteamConfig",
+    SubteamConfigSchema,
+);

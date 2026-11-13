@@ -117,7 +117,8 @@ const Footer = () => {
       {/* bottom text */}
       <div className="w-full absolute inset-x-0 bottom-5 text-center text-black">
         © {year} App Dev Club<br />
-        App Dev Club is a registered 501(c)(3) nonprofit organization (EIN: 93-3692144)
+        App Dev Club is a registered 501(c)(3) nonprofit organization (EIN: 93-3692144)<br/>
+        Registered Address: 1600 Stockton Road, Joppa, MD 21085
       </div>
     </footer>
   );

@@ -25,14 +25,14 @@ import { GetGroupInfoResponse } from "./AuthentikClient/models";
  * Gitea, Slack, etc.
  */
 export interface SharedResourceClient {
-    init(): Promise<void>
-    getResourceName(): string
-    getSupportedBindles(): BindlePermissionMap
+    init(): Promise<void>;
+    getResourceName(): string;
+    getSupportedBindles(): BindlePermissionMap;
 
     handleOrgBindleSync(
         org: GetGroupInfoResponse,
-        callback: (updatedResourceCount: number, status: string) => void
-    ): Promise<boolean>
+        callback: (updatedResourceCount: number, status: string) => void,
+    ): Promise<boolean>;
 
     /**
      * Archives the team's resources, making them read-only while preserving
@@ -41,8 +41,8 @@ export interface SharedResourceClient {
      */
     archiveTeam(
         org: GetGroupInfoResponse,
-        callback: (updatedResourceCount: number, status: string) => void
-    ): Promise<boolean>
+        callback: (updatedResourceCount: number, status: string) => void,
+    ): Promise<boolean>;
 }
 
 /**
@@ -50,13 +50,13 @@ export interface SharedResourceClient {
  * changes like, AWS accounts, etc.
  */
 export interface RootTeamSettingClient {
-    getResourceName(): string
-    getSupportedSettings(): RootTeamSettingMap
-    syncSettingUpdate(org: GetGroupInfoResponse): Promise<boolean>
+    getResourceName(): string;
+    getSupportedSettings(): RootTeamSettingMap;
+    syncSettingUpdate(org: GetGroupInfoResponse): Promise<boolean>;
 
     /**
      * Archives the team's root setting resources, preserving their data
      * (Ex. an extension point for suspending a provisioned AWS account).
      */
-    archiveTeam(org: GetGroupInfoResponse): Promise<boolean>
+    archiveTeam(org: GetGroupInfoResponse): Promise<boolean>;
 }

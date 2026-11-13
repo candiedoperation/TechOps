@@ -5,7 +5,7 @@ sidebar_position: 1
 
 # Branching Strategy
 
-The default branch will be main which should always be stable and deployable. Changes to main can
+The default branch is `master`, which should always be stable and deployable. Changes to `master` can
 only occur through PRs.
 
 ## Branch Naming

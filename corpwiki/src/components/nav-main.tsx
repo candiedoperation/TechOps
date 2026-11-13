@@ -19,11 +19,19 @@ import {
 
 // Helper to recursively check if an item or its children are active
 const checkIsActive = (item: any, pathname: string): boolean => {
-  const normalize = (str: string) => str.replace(/\/$/, "");
+  /* Strip a trailing slash, but never reduce "/" to "". The site root is a real
+     route (docs/intro.md carries slug: /), and collapsing it to the empty string
+     made it equal the empty href of every category that has no `link` in its
+     _category_.json. On "/" alone, those categories all reported active and the
+     sidebar opened them, along with their parents. */
+  const normalize = (str: string) =>
+    str.length > 1 ? str.replace(/\/$/, "") : str;
   const normalizedHref = normalize(item.href || "");
   const normalizedPath = normalize(pathname);
 
-  if (normalizedHref === normalizedPath) return true;
+  /* A link-less category has no href; it is never the active page itself, only
+     possibly the parent of one. */
+  if (normalizedHref && normalizedHref === normalizedPath) return true;
   if (item.items && item.items.length > 0) {
     return item.items.some((child: any) => checkIsActive(child, pathname));
   }

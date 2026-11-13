@@ -26,18 +26,21 @@ interface _JobData {
 
 export interface JobSchedulingData extends _JobData {
     runAt: Date | string; // runAt also accepts times as strings in English.
-                          // See Agenda docs for schedule function.
+    // See Agenda docs for schedule function.
 }
 
 export interface RecurringJobSchedulingData extends _JobData {
     schedule: string;
 }
 
-
 // Helper functions
 class JobHelperFunctions {
-    public static async sendEventReminderEmail(event: HydratedDocument<IEvent> | DocumentJSON<IEvent>, emailClient: EmailClient, relativeTime: string) {
-        const emails = await EventRsvp.distinct('email', {
+    public static async sendEventReminderEmail(
+        event: HydratedDocument<IEvent> | DocumentJSON<IEvent>,
+        emailClient: EmailClient,
+        relativeTime: string,
+    ) {
+        const emails = await EventRsvp.distinct("email", {
             eventId: event._id,
             status: RsvpStatus.ACCEPT,
         }).exec();
@@ -58,18 +61,27 @@ class JobHelperFunctions {
                 relativeTime: relativeTime,
                 eventName: event.eventName,
                 eventDescription: event.eventDescription,
-                startTime: event.startTime.toLocaleString("en-US", { timeZone: "America/New_York" }),
-                endTime: event.endTime.toLocaleString("en-US", { timeZone: "America/New_York" }),
+                startTime: event.startTime.toLocaleString("en-US", {
+                    timeZone: "America/New_York",
+                }),
+                endTime: event.endTime.toLocaleString("en-US", {
+                    timeZone: "America/New_York",
+                }),
                 location: event.location,
                 inviteLink: inviteLink,
                 googleCalendarLink: gCalendarLink,
-            }
+            },
         });
     }
 
-    public static async sendEventReminderSlack(event: HydratedDocument<IEvent> | DocumentJSON<IEvent>, relativeTime: string) {
+    public static async sendEventReminderSlack(
+        event: HydratedDocument<IEvent> | DocumentJSON<IEvent>,
+        relativeTime: string,
+    ) {
         const slackClient = ENABLED_SHARED_RESOURCES.slackClient as SlackClient;
-        const announcementsChannel = await slackClient.getChannelFromName(EventController.SLACK_EVENT_ANNOUNCEMENT_CHANNEL);
+        const announcementsChannel = await slackClient.getChannelFromName(
+            EventController.SLACK_EVENT_ANNOUNCEMENT_CHANNEL,
+        );
         if (announcementsChannel === null) {
             return false;
         }
@@ -78,42 +90,54 @@ class JobHelperFunctions {
             relativeTime += "s";
         }
         const inviteLink = EventController.generateEventInviteLink(event);
-        const message = `*Reminder*\n` + 
-                        `${event.eventName} starts in ${relativeTime}.\n\n` + 
-                        `RSVP here: ${inviteLink}`;
+        const message =
+            `*Reminder*\n` +
+            `${event.eventName} starts in ${relativeTime}.\n\n` +
+            `RSVP here: ${inviteLink}`;
 
-        return await slackClient.sendMessageInChannel(announcementsChannel.id!, message);
+        return await slackClient.sendMessageInChannel(
+            announcementsChannel.id!,
+            message,
+        );
     }
 
-    public static async sendEventReminderDiscord(event: HydratedDocument<IEvent> | DocumentJSON<IEvent>, relativeTime: string) {
-        const discordClient = ENABLED_SHARED_RESOURCES.discordClient as DiscordClient;
+    public static async sendEventReminderDiscord(
+        event: HydratedDocument<IEvent> | DocumentJSON<IEvent>,
+        relativeTime: string,
+    ) {
+        const discordClient =
+            ENABLED_SHARED_RESOURCES.discordClient as DiscordClient;
         const inviteLink = EventController.generateEventInviteLink(event);
         if (relativeTime === "2 Hour") {
             relativeTime += "s";
         }
-        const message = `## Reminder\n` + 
-                        `**${event.eventName}** starts in ${relativeTime}.\n\n` + 
-                        `RSVP here: ${inviteLink}`;
-        
+        const message =
+            `## Reminder\n` +
+            `**${event.eventName}** starts in ${relativeTime}.\n\n` +
+            `RSVP here: ${inviteLink}`;
+
         try {
-            const announcementsChannel = await discordClient.getChannelFromName(EventController.DISCORD_EVENT_ANNOUNCEMENT_CHANNEL);
+            const announcementsChannel = await discordClient.getChannelFromName(
+                EventController.DISCORD_EVENT_ANNOUNCEMENT_CHANNEL,
+            );
             if (announcementsChannel === undefined) {
                 return false;
             }
-            await discordClient.sendMessageInChannel(announcementsChannel, message);
+            await discordClient.sendMessageInChannel(
+                announcementsChannel,
+                message,
+            );
             return true;
         } catch (error) {
             return false;
         }
-        
     }
 }
-
 
 // Define job payloads
 
 // Empty payload parent interface (for typing)
-export interface JobPayload { }
+export interface JobPayload {}
 
 export interface SendEmailJobPayload extends JobPayload {
     request: EmailSendRequest;
@@ -123,20 +147,34 @@ export interface SendEventRemindersPayload extends JobPayload {
     eventId: string;
 }
 
-
 // Define Agenda jobs here
-export const DefinedJobs: Record<string, {
-    workerFunction: (argument: Job<any>) => Promise<void>,
-    options?: Partial<Pick<JobDefinition, "lockLimit" | "lockLifetime" | "concurrency" | "backoff" | "removeOnComplete" | "logging">>;
-}> = {
+export const DefinedJobs: Record<
+    string,
+    {
+        workerFunction: (argument: Job<any>) => Promise<void>;
+        options?: Partial<
+            Pick<
+                JobDefinition,
+                | "lockLimit"
+                | "lockLifetime"
+                | "concurrency"
+                | "backoff"
+                | "removeOnComplete"
+                | "logging"
+            >
+        >;
+    }
+> = {
     sendEventRemindersDaily: {
         workerFunction: async (job: Job<JobPayload>) => {
             const emailClient = new EmailClient();
-            
 
             const ny8AM = DateTime.now().setZone("America/New_York").set({
-                hour: 8, minute: 0, second: 0, millisecond: 0
-            })
+                hour: 8,
+                minute: 0,
+                second: 0,
+                millisecond: 0,
+            });
 
             const today8AM = ny8AM.toUTC().toJSDate();
             const oneDay = 1000 * 60 * 60 * 24; // Day in Milliseconds
@@ -148,77 +186,126 @@ export const DefinedJobs: Record<string, {
                     $gte: tomorrow8AM,
                     $lt: new Date(tomorrow8AM.getTime() + oneDay),
                 },
-            }).lean().exec();
+            })
+                .lean()
+                .exec();
 
             const nextWeekEvents = await Event.find({
                 startTime: {
                     $gte: nextWeek8AM,
                     $lt: new Date(nextWeek8AM.getTime() + oneDay),
                 },
-            }).lean().exec();
+            })
+                .lean()
+                .exec();
 
             const totalEvents = [...tomorrowEvents, ...nextWeekEvents];
-            for(const event of totalEvents) {
-                const relTime = event.startTime < nextWeek8AM ? "1 Day" : "1 Week";
+            for (const event of totalEvents) {
+                const relTime =
+                    event.startTime < nextWeek8AM ? "1 Day" : "1 Week";
 
                 if (event.marketingChannels.includes("email")) {
                     try {
-                        await JobHelperFunctions.sendEventReminderEmail(event, emailClient, relTime);
+                        await JobHelperFunctions.sendEventReminderEmail(
+                            event,
+                            emailClient,
+                            relTime,
+                        );
                     } catch (error) {
-                        console.error(`Failed to send email reminders for event ${event._id}:`, error);
+                        console.error(
+                            `Failed to send email reminders for event ${event._id}:`,
+                            error,
+                        );
                     }
                 }
-                
 
                 if (event.marketingChannels?.includes("slack")) {
-                    const success = await JobHelperFunctions.sendEventReminderSlack(event, relTime);
+                    const success =
+                        await JobHelperFunctions.sendEventReminderSlack(
+                            event,
+                            relTime,
+                        );
                     if (!success) {
-                        console.error("Failed to send Slack reminders for event:", event._id);
+                        console.error(
+                            "Failed to send Slack reminders for event:",
+                            event._id,
+                        );
                     }
                 }
 
                 if (event.marketingChannels?.includes("discord")) {
-                    const success = await JobHelperFunctions.sendEventReminderDiscord(event, relTime);
+                    const success =
+                        await JobHelperFunctions.sendEventReminderDiscord(
+                            event,
+                            relTime,
+                        );
                     if (!success) {
-                        console.error("Failed to send Discord reminders for event:", event._id);
+                        console.error(
+                            "Failed to send Discord reminders for event:",
+                            event._id,
+                        );
                     }
-                }                
-            };
+                }
+            }
         },
     },
 
     sendEventReminders: {
         workerFunction: async (job: Job<SendEventRemindersPayload>) => {
-            const event = await Event.findOne({ _id: job.attrs.data.eventId }).lean().exec();
+            const event = await Event.findOne({ _id: job.attrs.data.eventId })
+                .lean()
+                .exec();
             if (event == null) {
-                console.error(`[sendEventReminders Job] - Event ${job.attrs.data.eventId} not found.`);
+                console.error(
+                    `[sendEventReminders Job] - Event ${job.attrs.data.eventId} not found.`,
+                );
                 return;
             }
 
             try {
                 if (event.marketingChannels?.includes("email")) {
                     const emailClient = new EmailClient();
-                    await JobHelperFunctions.sendEventReminderEmail(event, emailClient, "2 Hour");
+                    await JobHelperFunctions.sendEventReminderEmail(
+                        event,
+                        emailClient,
+                        "2 Hour",
+                    );
                 }
-                
+
                 if (event.marketingChannels?.includes("slack")) {
-                    const success = await JobHelperFunctions.sendEventReminderSlack(event, "2 Hour");
+                    const success =
+                        await JobHelperFunctions.sendEventReminderSlack(
+                            event,
+                            "2 Hour",
+                        );
                     if (!success) {
-                        console.error("Failed to send Slack reminders for event:", event._id);
+                        console.error(
+                            "Failed to send Slack reminders for event:",
+                            event._id,
+                        );
                     }
                 }
 
                 if (event.marketingChannels?.includes("discord")) {
-                    const success = await JobHelperFunctions.sendEventReminderDiscord(event, "2 Hour");
+                    const success =
+                        await JobHelperFunctions.sendEventReminderDiscord(
+                            event,
+                            "2 Hour",
+                        );
                     if (!success) {
-                        console.error("Failed to send Discord reminders for event:", event._id);
+                        console.error(
+                            "Failed to send Discord reminders for event:",
+                            event._id,
+                        );
                     }
                 }
-
             } catch (error) {
-                console.error(`Failed to send reminders for event ${event._id} due to error:`, error);
+                console.error(
+                    `Failed to send reminders for event ${event._id} due to error:`,
+                    error,
+                );
                 job.fail(error?.toString() ?? event._id.toString());
-            }       
+            }
         },
         options: {
             removeOnComplete: true, // Frees space by removing job from MongoDB on completion
@@ -226,16 +313,13 @@ export const DefinedJobs: Record<string, {
     },
 };
 
-
-
-
 // Define any static, repeating jobs here
 export const RecurringJobs: RecurringJobSchedulingData[] = [
     {
         jobName: "sendEventRemindersDaily",
         schedule: "0 8 * * *", // 8 AM daily
         options: {
-            timezone: "America/New_York"
-        }
-    }
+            timezone: "America/New_York",
+        },
+    },
 ];

@@ -1,0 +1,62 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "OrganizationsProvisioning",
+      "Effect": "Allow",
+      "Action": [
+        "organizations:CreateAccount",
+        "organizations:DescribeCreateAccountStatus",
+        "organizations:DescribeAccount",
+        "organizations:ListAccountsForParent",
+        "organizations:ListParents",
+        "organizations:MoveAccount"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "BudgetsManagement",
+      "Effect": "Allow",
+      "Action": [
+        "budgets:CreateBudget",
+        "budgets:CreateBudgetAction",
+        "budgets:DeleteBudget",
+        "budgets:DescribeBudget"
+      ],
+      "Resource": "arn:aws:budgets::<MANAGEMENT_ACCOUNT_ID>:budget/*"
+    },
+    {
+      "Sid": "PassBudgetEnforcementRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::<MANAGEMENT_ACCOUNT_ID>:role/BudgetEnforcementRole",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "budgets.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "AssumeMemberAccountAdmin",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::*:role/OrganizationAccountAccessRole"
+    },
+    {
+      "Sid": "S3TeamAssetObjects",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::<S3_BUCKET_NAME>/*"
+    },
+    {
+      "Sid": "S3TeamAssetBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::<S3_BUCKET_NAME>"
+    }
+  ]
+}

@@ -16,14 +16,14 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import './globals.css'
-import App from './App.tsx'
-import { BrowserRouter } from 'react-router-dom'
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import "./globals.css";
+import App from "./App.tsx";
+import { BrowserRouter } from "react-router-dom";
 
-createRoot(document.getElementById('root')!).render(
-  <BrowserRouter>
-    <App />
-  </BrowserRouter>
-)
+createRoot(document.getElementById("root")!).render(
+    <BrowserRouter>
+        <App />
+    </BrowserRouter>,
+);

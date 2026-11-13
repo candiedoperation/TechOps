@@ -2,9 +2,10 @@
  * Which teams confer organisation-wide administrative authority.
  *
  * The check used to be `team.name === "ExecutiveBoard"` written out in five
- * places across auth.ts and EventController. Adding TechOps as a second admin
- * team turned that into a set, so these tests pin down the contract and would
- * catch a sixth site being added that forgets one of them.
+ * places across auth.ts and EventController. It is now a set, so these tests
+ * pin down the contract and would catch a sixth site being added that forgets
+ * it. TechOps briefly held authority too and was removed: it is recruited into,
+ * so membership must not imply an org-wide override.
  */
 const assert = require("node:assert/strict");
 const test = require("node:test");
@@ -28,9 +29,16 @@ const rootOf = (group) =>
 const authorityVia = (...groups) =>
   hasAdminAuthority(groups.flatMap(rootOf), groups);
 
-test("ExecutiveBoard and TechOps both confer authority", () => {
+test("ExecutiveBoard confers authority", () => {
   assert.equal(hasAdminAuthority([team("ExecutiveBoard")], ["ExecutiveBoardMembers"]), true);
-  assert.equal(hasAdminAuthority([team("TechOps")], ["TechOpsMembers"]), true);
+});
+
+test("TechOps confers no authority", () => {
+  assert.equal(hasAdminAuthority([team("TechOps")], ["TechOpsMembers"]), false);
+  assert.equal(authorityVia("TechOpsMembers"), false);
+  assert.equal(authorityVia("TechOps"), false);
+  assert.ok(!ADMIN_AUTHORITY_TEAMS.has("TechOps"));
+  assert.ok(!ADMIN_AUTHORITY_SUBTEAMS.has("TechOpsMembers"));
 });
 
 test("an ordinary team confers nothing", () => {
@@ -40,7 +48,7 @@ test("an ordinary team confers nothing", () => {
 
 test("authority is granted by membership of any one admin team", () => {
   assert.equal(
-    hasAdminAuthority([team("WebDevFALL2026"), team("TechOps")], ["WebDevFALL2026", "TechOpsMembers"]),
+    hasAdminAuthority([team("WebDevFALL2026"), team("ExecutiveBoard")], ["WebDevFALL2026", "ExecutiveBoardMembers"]),
     true
   );
   assert.equal(
@@ -104,9 +112,8 @@ test("TechOps mirrors ExecutiveBoard's shape", () => {
    resolves to the same root team as the current members group. Any past
    executive kept the Bindle override on every team indefinitely. */
 
-test("current executives and current tech ops hold authority", () => {
+test("current executives hold authority", () => {
   assert.equal(authorityVia("ExecutiveBoardMembers"), true);
-  assert.equal(authorityVia("TechOpsMembers"), true);
 });
 
 test("alumni do NOT hold authority, despite resolving to the same root team", () => {
@@ -116,12 +123,10 @@ test("alumni do NOT hold authority, despite resolving to the same root team", ()
 
 test("an alumnus who is also a current member keeps authority", () => {
   assert.equal(authorityVia("ExecutiveBoardAlumni", "ExecutiveBoardMembers"), true);
-  assert.equal(authorityVia("ExecutiveBoardAlumni", "TechOpsMembers"), true);
 });
 
 test("direct membership of the root team itself still counts", () => {
   assert.equal(authorityVia("ExecutiveBoard"), true);
-  assert.equal(authorityVia("TechOps"), true);
 });
 
 test("an ordinary team member holds nothing", () => {

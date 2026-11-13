@@ -21,14 +21,11 @@ import { Agenda } from "agenda";
 import { MongoBackend } from "@agendajs/mongo-backend";
 import { DefinedJobs, JobSchedulingData, RecurringJobs } from "./Jobs";
 
-
-
 export class AgendaClient {
     private static readonly TAG = "AgendaClient";
     private agenda: Agenda | undefined;
 
-    
-    constructor() { 
+    constructor() {
         this.agenda = undefined;
     }
 
@@ -36,7 +33,6 @@ export class AgendaClient {
     // to look for pending jobs. If the interval is small, too many requests
     // will be made to the MongoDB server.
     public async initialize(dbQueryInterval?: string): Promise<void> {
-
         if (dbQueryInterval === undefined) {
             dbQueryInterval = "10 minutes";
         }
@@ -47,7 +43,6 @@ export class AgendaClient {
             processEvery: dbQueryInterval,
         });
 
-
         // Define all jobs
         Object.entries(DefinedJobs).map((entry) => {
             const key = entry[0];
@@ -55,7 +50,7 @@ export class AgendaClient {
             this.agenda!.define(key, job.workerFunction, job.options);
         });
 
-        for(const entry of RecurringJobs) {
+        for (const entry of RecurringJobs) {
             // Agenda automatically checks for duplicates.
             /* Awaited: an unawaited every() swallowed scheduling failures, so a
                recurring job could silently never be registered. */
@@ -63,7 +58,7 @@ export class AgendaClient {
                 entry.schedule,
                 entry.jobName,
                 entry.jobPayload,
-                entry.options
+                entry.options,
             );
         }
 
@@ -73,10 +68,10 @@ export class AgendaClient {
     // Schedule a job to be run one time.
     public async scheduleJobOnce(jobData: JobSchedulingData) {
         await this.agenda!.schedule(
-          jobData.runAt,
-          jobData.jobName,
-          jobData.jobPayload,
-          jobData.options
+            jobData.runAt,
+            jobData.jobName,
+            jobData.jobPayload,
+            jobData.options,
         );
     }
 
