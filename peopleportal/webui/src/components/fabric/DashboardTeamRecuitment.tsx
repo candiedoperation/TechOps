@@ -319,6 +319,49 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
         }
     }
 
+    async function retryApplicationEmail(
+        application: RecruitmentApplication,
+        confirmUncertain: boolean,
+    ) {
+        try {
+            const delivery = await review.emailRetry.mutateAsync({
+                applicationId: application.id,
+                confirmUncertain,
+            });
+            toast.success("Email retry completed", {
+                description: `Email status: ${delivery.status}`,
+            });
+        } catch (error) {
+            toast.error("Failed to Retry Email", {
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Could not retry the application email.",
+            });
+        }
+    }
+
+    function requestApplicationEmailRetry(
+        application: RecruitmentApplication,
+    ) {
+        const delivery = application.emailDelivery;
+        if (!delivery) return;
+
+        const stalePending =
+            delivery.status === "pending" &&
+            Date.parse(delivery.lastAttemptAt) <= Date.now() - 5 * 60 * 1000;
+        const confirmUncertain =
+            delivery.status === "uncertain" || stalePending;
+        if (confirmUncertain) {
+            const confirmed = window.confirm(
+                `The first email to ${application.name} may already have been delivered. Retrying could send a duplicate. Resend the original email?`,
+            );
+            if (!confirmed) return;
+        }
+
+        void retryApplicationEmail(application, confirmUncertain);
+    }
+
     async function executeStageUpdate(
         applicationId: string,
         newStage: string,
@@ -690,6 +733,92 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
                                                                         }
                                                                     />
                                                                 </div>
+                                                                {item.emailDelivery && (
+                                                                    <div
+                                                                        className="mt-2 border-t pt-2 text-[10px]"
+                                                                        onClick={(event) =>
+                                                                            event.stopPropagation()
+                                                                        }
+                                                                    >
+                                                                        <div className="flex items-center justify-between gap-2">
+                                                                            <span
+                                                                                className={
+                                                                                    item.emailDelivery.status ===
+                                                                                    "accepted"
+                                                                                        ? "text-green-700"
+                                                                                        : item.emailDelivery.status ===
+                                                                                            "failed"
+                                                                                          ? "text-red-700"
+                                                                                          : item.emailDelivery.status ===
+                                                                                              "uncertain"
+                                                                                            ? "text-amber-700"
+                                                                                            : "text-muted-foreground"
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    item.emailDelivery
+                                                                                        .stage
+                                                                                }{" "}
+                                                                                email:{" "}
+                                                                                {
+                                                                                    item.emailDelivery
+                                                                                        .status
+                                                                                }
+                                                                            </span>
+                                                                            {(item.emailDelivery
+                                                                                .status ===
+                                                                                "failed" ||
+                                                                                item.emailDelivery
+                                                                                    .status ===
+                                                                                    "uncertain" ||
+                                                                                (item.emailDelivery
+                                                                                    .status ===
+                                                                                    "pending" &&
+                                                                                    Date.parse(
+                                                                                        item.emailDelivery
+                                                                                            .lastAttemptAt,
+                                                                                    ) <=
+                                                                                        Date.now() -
+                                                                                            5 *
+                                                                                                60 *
+                                                                                                1000)) && (
+                                                                                <Button
+                                                                                    type="button"
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    className="h-6 px-2 text-[10px]"
+                                                                                    disabled={
+                                                                                        review
+                                                                                            .emailRetry
+                                                                                            .isPending
+                                                                                    }
+                                                                                    onClick={() =>
+                                                                                        requestApplicationEmailRetry(
+                                                                                            item,
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    {review
+                                                                                        .emailRetry
+                                                                                        .isPending ? (
+                                                                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                                                                    ) : (
+                                                                                        "Retry email"
+                                                                                    )}
+                                                                                </Button>
+                                                                            )}
+                                                                        </div>
+                                                                        {item.emailDelivery
+                                                                            .error && (
+                                                                            <p className="mt-1 text-red-700 line-clamp-2">
+                                                                                {
+                                                                                    item.emailDelivery
+                                                                                        .error
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </KanbanCard>
                                                     );

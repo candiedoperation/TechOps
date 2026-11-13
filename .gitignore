@@ -12,6 +12,12 @@
 *.DS_Store
 peopleportal/server/.env.development
 
+# Local credentials and generated development service state
+/.env
+/docker-compose.yml
+/peopleportal/docker-compose.yml
+/peopleportal/gitea/
+
 # Bootstrap script outputs (contain credentials)
 peopleportal/server/scripts/.oidc
 peopleportal/server/scripts/.env

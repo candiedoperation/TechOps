@@ -58,7 +58,12 @@ function controllerWithCapturedEmail() {
   const controller = new ATSController();
   const sent = [];
 
-  controller.emailClient = { send: async (message) => { sent.push(message); return true; } };
+  controller.emailClient = {
+    send: async (message) => {
+      sent.push(message);
+      return { kind: "sent", accepted: [message.to], rejected: [] };
+    },
+  };
 
   /* Stand in for Authentik so the test needs no directory. */
   controller.authentikClient = {
@@ -206,4 +211,222 @@ test("an application from another team is not found through this route", async (
   );
 
   assert.equal(result.error, "NotFound");
+});
+
+test("the stage email status is saved and included in dashboard application data", async () => {
+  const { application } = await seedApplication();
+  const { controller, sent } = controllerWithCapturedEmail();
+
+  const result = await controller.updateApplicationStage(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    {
+      stage: ApplicationStage.INTERVIEW,
+      interviewLink: "https://example.invalid/interview",
+      interviewGuidelines: "Please prepare a short introduction and discuss your experience.",
+    }
+  );
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.application.emailDelivery.status, "accepted");
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].templateName, "RecruitInterviewRequest");
+
+  const saved = await Application.findById(application._id).lean();
+  assert.equal(saved.stage, ApplicationStage.INTERVIEW);
+  assert.equal(saved.emailDelivery.status, "accepted");
+  assert.equal(saved.emailDelivery.request.templateName, "RecruitInterviewRequest");
+
+  const dashboardApplications = await controller.getTeamApplications(TEAM_PK);
+  assert.equal(dashboardApplications[0].emailDelivery.status, "accepted");
+});
+
+test("an SMTP rejection records failure without undoing the stage change", async () => {
+  const { application } = await seedApplication();
+  const { controller, sent } = controllerWithCapturedEmail();
+  controller.emailClient.send = async (message) => {
+    sent.push(message);
+    if (sent.length === 1) {
+      throw Object.assign(new Error("550 recipient rejected"), {
+        responseCode: 550,
+        command: "DATA",
+      });
+    }
+    return { kind: "sent", accepted: [message.to], rejected: [] };
+  };
+
+  const result = await controller.updateApplicationStage(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    {
+      stage: ApplicationStage.INTERVIEW,
+      interviewLink: "https://example.invalid/interview",
+      interviewGuidelines: "Please prepare a short introduction and discuss your experience.",
+    }
+  );
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.application.stage, ApplicationStage.INTERVIEW);
+  assert.equal(result.application.emailDelivery.status, "failed");
+  assert.match(result.application.emailDelivery.error, /550 recipient rejected/);
+
+  const saved = await Application.findById(application._id).lean();
+  assert.equal(saved.stage, ApplicationStage.INTERVIEW);
+  assert.equal(saved.emailDelivery.status, "failed");
+
+  const retried = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id), {}
+  );
+  assert.equal(retried.application.emailDelivery.status, "accepted");
+  assert.equal(retried.application.emailDelivery.attemptCount, 2);
+
+  const afterRetry = await Application.findById(application._id).lean();
+  assert.equal(afterRetry.stage, ApplicationStage.INTERVIEW);
+  assert.equal(afterRetry.stageHistory.length, 1);
+});
+
+test("an uncertain email requires confirmation and retries without another stage change", async () => {
+  const { application } = await seedApplication();
+  const { controller, sent } = controllerWithCapturedEmail();
+  controller.emailClient.send = async (message) => {
+    sent.push(message);
+    if (sent.length === 1) {
+      throw Object.assign(new Error("connection timed out"), {
+        code: "ETIMEDOUT",
+      });
+    }
+    return { kind: "sent", accepted: [message.to], rejected: [] };
+  };
+
+  const stageResult = await controller.updateApplicationStage(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    {
+      stage: ApplicationStage.INTERVIEW,
+      interviewLink: "https://example.invalid/interview",
+      interviewGuidelines: "Please prepare a short introduction and discuss your experience.",
+    }
+  );
+  assert.equal(stageResult.application.emailDelivery.status, "uncertain");
+  const originalMessage = sent[0];
+
+  const unconfirmed = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id), {}
+  );
+  assert.equal(unconfirmed.error, "BadRequest");
+  assert.equal(sent.length, 1);
+
+  const retried = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    { confirmUncertain: true }
+  );
+  assert.equal(retried.application.emailDelivery.status, "accepted");
+  assert.equal(retried.application.emailDelivery.attemptCount, 2);
+  const messageFields = (message) => ({
+    to: message.to,
+    cc: message.cc,
+    replyTo: message.replyTo,
+    subject: message.subject,
+    templateName: message.templateName,
+    templateVars: message.templateVars,
+  });
+  assert.deepEqual(messageFields(sent[1]), messageFields(originalMessage));
+
+  const saved = await Application.findById(application._id).lean();
+  assert.equal(saved.stage, ApplicationStage.INTERVIEW);
+  assert.equal(saved.stageHistory.length, 1);
+  assert.equal(saved.emailDelivery.status, "accepted");
+});
+
+test("a late email failure cannot overwrite the result of a newer retry", async () => {
+  const { application } = await seedApplication();
+  const { controller } = controllerWithCapturedEmail();
+
+  let markFirstSendStarted;
+  let rejectFirstSend;
+  const firstSendStarted = new Promise((resolve) => {
+    markFirstSendStarted = resolve;
+  });
+  let sendCount = 0;
+  controller.emailClient.send = async (message) => {
+    sendCount += 1;
+    if (sendCount === 1) {
+      markFirstSendStarted();
+      return new Promise((_, reject) => {
+        rejectFirstSend = reject;
+      });
+    }
+    return { kind: "sent", accepted: [message.to], rejected: [] };
+  };
+
+  const firstAttempt = controller.updateApplicationStage(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    {
+      stage: ApplicationStage.INTERVIEW,
+      interviewLink: "https://example.invalid/interview",
+      interviewGuidelines: "Please prepare a short introduction and discuss your experience.",
+    }
+  );
+  await firstSendStarted;
+
+  await Application.updateOne(
+    { _id: application._id },
+    { $set: { "emailDelivery.lastAttemptAt": new Date(Date.now() - 6 * 60 * 1000) } }
+  );
+  const newerAttempt = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    { confirmUncertain: true }
+  );
+  assert.equal(newerAttempt.application.emailDelivery.status, "accepted");
+
+  rejectFirstSend(
+    Object.assign(new Error("550 recipient rejected"), {
+      responseCode: 550,
+      command: "DATA",
+    })
+  );
+  await firstAttempt;
+
+  const saved = await Application.findById(application._id).lean();
+  assert.equal(saved.emailDelivery.status, "accepted");
+  assert.equal(saved.emailDelivery.attemptCount, 2);
+});
+
+test("a stale pending email is uncertain and requires confirmation to retry", async () => {
+  const { application } = await seedApplication();
+  await Application.updateOne(
+    { _id: application._id },
+    {
+      $set: {
+        emailDelivery: {
+          status: "pending",
+          attemptId: "stale-attempt",
+          stage: ApplicationStage.INTERVIEW,
+          request: {
+            to: "applicant@example.invalid",
+            subject: "Interview",
+            templateName: "RecruitInterviewRequest",
+            templateVars: {},
+          },
+          attemptCount: 1,
+          lastAttemptAt: new Date(Date.now() - 6 * 60 * 1000),
+        },
+      },
+    }
+  );
+  const { controller, sent } = controllerWithCapturedEmail();
+
+  const unconfirmed = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id), {}
+  );
+  assert.equal(unconfirmed.error, "BadRequest");
+  assert.equal(sent.length, 0);
+
+  const markedUncertain = await Application.findById(application._id).lean();
+  assert.equal(markedUncertain.emailDelivery.status, "uncertain");
+  assert.match(markedUncertain.emailDelivery.error, /may already have been delivered/);
+
+  const retried = await controller.retryApplicationEmail(
+    recruiterRequest(), TEAM_PK, String(application._id),
+    { confirmUncertain: true }
+  );
+  assert.equal(retried.application.emailDelivery.status, "accepted");
+  assert.equal(retried.application.emailDelivery.attemptCount, 2);
 });

@@ -17,6 +17,7 @@
 */
 
 import { Document, Schema, model } from "mongoose";
+import type { EmailSendRequest } from "../clients/EmailClient/models";
 
 export enum ApplicationStage {
     APPLIED = "Applied",
@@ -24,6 +25,23 @@ export enum ApplicationStage {
     REJECTED = "Rejected",
     POTENTIAL_HIRE = "Potential Hire",
     HIRED = "Hired",
+}
+
+export enum ApplicationEmailStatus {
+    PENDING = "pending",
+    ACCEPTED = "accepted",
+    FAILED = "failed",
+    UNCERTAIN = "uncertain",
+}
+
+export interface IApplicationEmailDelivery {
+    status: ApplicationEmailStatus;
+    attemptId?: string;
+    stage: ApplicationStage;
+    request: EmailSendRequest;
+    error?: string;
+    attemptCount: number;
+    lastAttemptAt: Date;
 }
 
 export interface IApplication extends Document {
@@ -43,7 +61,43 @@ export interface IApplication extends Document {
     appDevInternalPk?: number;
     stars: number;
     notes?: string;
+    emailDelivery?: IApplicationEmailDelivery;
 }
+
+const EmailRequestSchema = new Schema(
+    {
+        to: { type: String, required: true },
+        cc: { type: [String], default: undefined },
+        bcc: { type: [String], default: undefined },
+        replyTo: { type: [String], default: undefined },
+        subject: { type: String, required: true },
+        templateName: { type: String, required: true },
+        templateVars: { type: Schema.Types.Mixed, required: true },
+        from: { type: String },
+    },
+    { _id: false },
+);
+
+const EmailDeliverySchema = new Schema<IApplicationEmailDelivery>(
+    {
+        status: {
+            type: String,
+            enum: Object.values(ApplicationEmailStatus),
+            required: true,
+        },
+        attemptId: { type: String },
+        stage: {
+            type: String,
+            enum: Object.values(ApplicationStage),
+            required: true,
+        },
+        request: { type: EmailRequestSchema, required: true },
+        error: { type: String },
+        attemptCount: { type: Number, required: true, min: 1 },
+        lastAttemptAt: { type: Date, required: true },
+    },
+    { _id: false },
+);
 
 const ApplicationSchema = new Schema<IApplication>(
     {
@@ -96,6 +150,7 @@ const ApplicationSchema = new Schema<IApplication>(
         hiredSubteamPk: { type: String, required: false },
         stars: { type: Number, required: true, default: 0, min: 0, max: 5 },
         notes: { type: String, required: false, maxlength: 10000 },
+        emailDelivery: { type: EmailDeliverySchema, required: false },
     },
     { timestamps: true },
 );

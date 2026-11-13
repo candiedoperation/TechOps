@@ -46,6 +46,8 @@ import {
     Application,
     IApplication,
     ApplicationStage,
+    ApplicationEmailStatus,
+    IApplicationEmailDelivery,
 } from "../models/Application";
 import { Security } from "tsoa";
 import * as express from "express";
@@ -61,6 +63,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, BUCKET_NAME } from "../clients/AWSClient/S3Client";
 import { Query } from "tsoa";
 import { EmailClient } from "../clients/EmailClient";
+import type {
+    EmailSendRequest,
+    EmailSendResult,
+} from "../clients/EmailClient/models";
 import { OrgController } from "./OrgController";
 import { BindleController } from "./BindleController";
 import { AuthorizedUser } from "../clients/OpenIdClient";
@@ -70,6 +76,7 @@ import {
 } from "../utils/s3-validation";
 import MarkdownIt from "markdown-it";
 import { RedisClient } from "../clients/RedisClient";
+import { randomUUID } from "node:crypto";
 import { mapWithConcurrency } from "../utils/concurrency";
 import {
     CacheEnvelope,
@@ -108,6 +115,18 @@ interface ATSUpdateApplicationStageRequest {
     hiredSubteamPk?: string;
 }
 
+interface ATSRetryApplicationEmailRequest {
+    confirmUncertain?: boolean;
+}
+
+interface ATSApplicationEmailDeliverySummary {
+    status: ApplicationEmailStatus;
+    stage: ApplicationStage;
+    error?: string;
+    attemptCount: number;
+    lastAttemptAt: Date;
+}
+
 interface ATSKanbanApplicationCard {
     id: string;
     applicantId: string;
@@ -122,6 +141,7 @@ interface ATSKanbanApplicationCard {
      * @maximum 5 Maximum Stars is 5
      */
     stars: number;
+    emailDelivery?: ATSApplicationEmailDeliverySummary;
 }
 
 interface ATSApplicationDetails extends ATSKanbanApplicationCard {
@@ -766,7 +786,9 @@ export class ATSController extends Controller {
             const applications = await Application.find({
                 teamPk: teamId,
             })
-                .select("applicantId stage rolePreferences appliedAt stars")
+                .select(
+                    "applicantId stage rolePreferences appliedAt stars emailDelivery",
+                )
                 .populate<{ applicantId: IApplicant }>(
                     "applicantId",
                     "fullName",
@@ -784,6 +806,13 @@ export class ATSController extends Controller {
                     rolePreferences: app.rolePreferences,
                     appliedAt: app.appliedAt,
                     stars: app.stars || 0,
+                    ...(app.emailDelivery
+                        ? {
+                              emailDelivery: this.emailDeliverySummary(
+                                  app.emailDelivery,
+                              ),
+                          }
+                        : {}),
                 }),
             );
 
@@ -841,6 +870,13 @@ export class ATSController extends Controller {
                 profile: app.applicantId.profile as any,
                 responses: app.responses as any,
                 stageHistory: app.stageHistory,
+                ...(app.emailDelivery
+                    ? {
+                          emailDelivery: this.emailDeliverySummary(
+                              app.emailDelivery,
+                          ),
+                      }
+                    : {}),
                 ...(app.notes ? { notes: app.notes } : {}),
                 ...(app.hiredRole ? { hiredRole: app.hiredRole } : {}),
                 ...(app.appDevInternalPk
@@ -1240,33 +1276,58 @@ export class ATSController extends Controller {
                 application.hiredSubteamPk = hiredSubteamPk;
             }
 
-            // Update stage and history
+            let stageEmailRequest: EmailSendRequest | undefined;
+            if (stage === ApplicationStage.INTERVIEW) {
+                stageEmailRequest = {
+                    to: applicant.email,
+                    cc: [req.session.authorizedUser.email],
+                    replyTo: [req.session.authorizedUser.email],
+                    subject: `Next Steps: ${teamInfo.attributes.friendlyName} Interview`,
+                    templateName: "RecruitInterviewRequest",
+                    templateVars: {
+                        applicantName: applicant.fullName,
+                        interviewerName: req.session.authorizedUser.name,
+                        teamName: teamInfo.attributes.friendlyName,
+                        interviewLink: interviewLink!,
+                        interviewGuidelines: interviewGuidelines!,
+                    },
+                };
+            } else if (stage === ApplicationStage.REJECTED) {
+                stageEmailRequest = {
+                    to: applicant.email,
+                    cc: [req.session.authorizedUser.email],
+                    replyTo: [req.session.authorizedUser.email],
+                    subject: `Update on ${teamInfo.attributes.friendlyName}`,
+                    templateName: "RecruitApplicationDeclined",
+                    templateVars: {
+                        applicantName: applicant.fullName,
+                        teamName: teamInfo.attributes.friendlyName,
+                    },
+                };
+            }
+
+            // Save the stage and email intent together before attempting delivery.
             application.stage = stage;
             application.stageHistory.push({
                 stage: stage,
                 changedAt: new Date(),
                 changedBy: `${req.session.authorizedUser?.name} (${req.session.authorizedUser?.username})`,
             });
+            if (stageEmailRequest) {
+                application.emailDelivery = {
+                    status: ApplicationEmailStatus.PENDING,
+                    attemptId: randomUUID(),
+                    stage,
+                    request: stageEmailRequest,
+                    attemptCount: 1,
+                    lastAttemptAt: new Date(),
+                };
+            }
 
-            /* Save the Application and Send Emails */
             await application.save();
 
-            /* Get Parent Team Information and Handle Stage Specific Logic */
-            if (stage === ApplicationStage.INTERVIEW) {
-                await this.emailClient.send({
-                    to: applicant.email,
-                    cc: [req.session.authorizedUser!.email],
-                    replyTo: [req.session.authorizedUser!.email],
-                    subject: `Next Steps: ${teamInfo.attributes.friendlyName} Interview`,
-                    templateName: "RecruitInterviewRequest",
-                    templateVars: {
-                        applicantName: applicant.fullName,
-                        interviewerName: req.session.authorizedUser!.name,
-                        teamName: teamInfo.attributes.friendlyName,
-                        interviewLink: interviewLink,
-                        interviewGuidelines: interviewGuidelines,
-                    },
-                });
+            if (stageEmailRequest) {
+                await this.sendApplicationEmail(application);
                 /* Potential Hire deliberately notifies nobody. It is an internal
                    grouping the recruiting team uses while deciding, and the old
                    "Waitlisted for ..." mail told applicants they had been passed
@@ -1300,6 +1361,13 @@ export class ATSController extends Controller {
                     id: application._id,
                     stage: application.stage,
                     hiredRole: application.hiredRole,
+                    ...(application.emailDelivery
+                        ? {
+                              emailDelivery: this.emailDeliverySummary(
+                                  application.emailDelivery,
+                              ),
+                          }
+                        : {}),
                 },
             };
         } catch (err) {
@@ -1308,6 +1376,152 @@ export class ATSController extends Controller {
             return {
                 error: "ServerError",
                 message: "Failed to update application stage",
+            };
+        }
+    }
+
+    @Post("applications/{teamId}/{applicationId}/email/retry")
+    @Tags("Recruitment Actions")
+    @SuccessResponse(200, "Application email retried")
+    @Security("bindles", ["corp:hiringaccess"])
+    async retryApplicationEmail(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+        @Path() applicationId: string,
+        @Body() body: ATSRetryApplicationEmailRequest,
+    ) {
+        try {
+            const authorizedUser = req.session?.authorizedUser;
+            if (!authorizedUser) {
+                this.setStatus(401);
+                return {
+                    error: "Unauthorized",
+                    message: "Authenticated user not found",
+                };
+            }
+
+            const application = await Application.findOne({
+                _id: applicationId,
+                teamPk: teamId,
+            });
+            if (!application) {
+                this.setStatus(404);
+                return { error: "NotFound", message: "Application not found" };
+            }
+            if (!(await this.getAuthorizedHiringTeam(authorizedUser, teamId))) {
+                this.setStatus(403);
+                return {
+                    error: "Forbidden",
+                    message: "You do not have hiring access to this team",
+                };
+            }
+
+            let delivery = application.emailDelivery;
+            if (!delivery) {
+                this.setStatus(409);
+                return {
+                    error: "Conflict",
+                    message: "This application has no email to retry",
+                };
+            }
+            if (
+                delivery.status === ApplicationEmailStatus.PENDING &&
+                delivery.lastAttemptAt.getTime() <=
+                    Date.now() - 5 * 60 * 1000
+            ) {
+                const staleDelivery = await Application.findOneAndUpdate(
+                    {
+                        _id: applicationId,
+                        teamPk: teamId,
+                        "emailDelivery.status": ApplicationEmailStatus.PENDING,
+                        "emailDelivery.lastAttemptAt": {
+                            $lte: new Date(Date.now() - 5 * 60 * 1000),
+                        },
+                    },
+                    {
+                        $set: {
+                            "emailDelivery.status":
+                                ApplicationEmailStatus.UNCERTAIN,
+                            "emailDelivery.error":
+                                "The previous email attempt did not finish; it may already have been delivered.",
+                        },
+                    },
+                    { new: true },
+                );
+                if (!staleDelivery?.emailDelivery) {
+                    this.setStatus(409);
+                    return {
+                        error: "Conflict",
+                        message: "The email status changed; refresh and try again",
+                    };
+                }
+                delivery = staleDelivery.emailDelivery;
+            }
+            if (
+                delivery.status !== ApplicationEmailStatus.FAILED &&
+                delivery.status !== ApplicationEmailStatus.UNCERTAIN
+            ) {
+                this.setStatus(409);
+                return {
+                    error: "Conflict",
+                    message: `An email with status "${delivery.status}" cannot be retried`,
+                };
+            }
+            if (
+                delivery.status === ApplicationEmailStatus.UNCERTAIN &&
+                !body.confirmUncertain
+            ) {
+                this.setStatus(400);
+                return {
+                    error: "BadRequest",
+                    message:
+                        "Confirm that the original email may already have been delivered",
+                };
+            }
+
+            const attemptId = randomUUID();
+            const claimedApplication = await Application.findOneAndUpdate(
+                {
+                    _id: applicationId,
+                    teamPk: teamId,
+                    "emailDelivery.status": delivery.status,
+                },
+                {
+                    $set: {
+                        "emailDelivery.status": ApplicationEmailStatus.PENDING,
+                        "emailDelivery.attemptId": attemptId,
+                        "emailDelivery.lastAttemptAt": new Date(),
+                    },
+                    $unset: { "emailDelivery.error": 1 },
+                    $inc: { "emailDelivery.attemptCount": 1 },
+                },
+                { new: true },
+            );
+            if (!claimedApplication?.emailDelivery) {
+                this.setStatus(409);
+                return {
+                    error: "Conflict",
+                    message: "The email status changed; refresh and try again",
+                };
+            }
+
+            await this.sendApplicationEmail(claimedApplication);
+            return {
+                message: "Email retry completed",
+                application: {
+                    id: claimedApplication._id,
+                    stage: claimedApplication.stage,
+                    emailDelivery: this.emailDeliverySummary(
+                        claimedApplication.emailDelivery,
+                    ),
+                },
+            };
+        } catch (err) {
+            console.error("Error retrying application email:", err);
+            this.setStatus(500);
+            return {
+                error: "ServerError",
+                message: "Failed to retry application email",
             };
         }
     }
@@ -1859,6 +2073,150 @@ export class ATSController extends Controller {
             return {
                 error: "ServerError",
                 message: "Failed to update profile",
+            };
+        }
+    }
+
+    private emailDeliverySummary(
+        delivery: IApplicationEmailDelivery,
+    ): ATSApplicationEmailDeliverySummary {
+        return {
+            status: delivery.status,
+            stage: delivery.stage,
+            ...(delivery.error ? { error: delivery.error } : {}),
+            attemptCount: delivery.attemptCount,
+            lastAttemptAt: delivery.lastAttemptAt,
+        };
+    }
+
+    private async sendApplicationEmail(
+        application: IApplication,
+    ): Promise<void> {
+        const delivery = application.emailDelivery;
+        if (!delivery) {
+            throw new Error(
+                "Cannot send an application email without a saved request",
+            );
+        }
+        const { attemptId } = delivery;
+        if (!attemptId) {
+            throw new Error(
+                "Cannot send an application email without an attempt id",
+            );
+        }
+
+        let status: ApplicationEmailStatus;
+        let errorMessage: string | undefined;
+        try {
+            const request = delivery.request;
+            const result = await this.emailClient.send({
+                to: request.to,
+                ...(request.cc ? { cc: [...request.cc] } : {}),
+                ...(request.bcc ? { bcc: [...request.bcc] } : {}),
+                ...(request.replyTo ? { replyTo: [...request.replyTo] } : {}),
+                subject: request.subject,
+                templateName: request.templateName,
+                templateVars: request.templateVars,
+                ...(request.from !== undefined ? { from: request.from } : {}),
+            });
+            ({ status, error: errorMessage } = this.applyEmailSendResult(
+                delivery,
+                result,
+            ));
+        } catch (error) {
+            const errorDetails =
+                error instanceof Error ? error.message : String(error);
+            const smtpError =
+                typeof error === "object" && error !== null
+                    ? (error as {
+                          code?: unknown;
+                          command?: unknown;
+                          responseCode?: unknown;
+                      })
+                    : {};
+            const definiteFailureCodes = new Set([
+                "ECONNREFUSED",
+                "ENOTFOUND",
+                "EHOSTUNREACH",
+                "ENETUNREACH",
+                "EAI_AGAIN",
+            ]);
+            const definiteFailureCommands = new Set([
+                "CONN",
+                "AUTH",
+                "MAIL FROM",
+                "RCPT TO",
+            ]);
+            const definiteFailure =
+                (typeof smtpError.responseCode === "number" &&
+                    smtpError.responseCode >= 400) ||
+                (typeof smtpError.code === "string" &&
+                    definiteFailureCodes.has(smtpError.code)) ||
+                (typeof smtpError.command === "string" &&
+                    definiteFailureCommands.has(smtpError.command));
+
+            status = definiteFailure
+                ? ApplicationEmailStatus.FAILED
+                : ApplicationEmailStatus.UNCERTAIN;
+            errorMessage = errorDetails.slice(0, 1000);
+        }
+
+        const filter = {
+            _id: application._id,
+            "emailDelivery.attemptId": attemptId,
+            "emailDelivery.status": ApplicationEmailStatus.PENDING,
+        };
+        if (errorMessage) {
+            await Application.updateOne(filter, {
+                $set: {
+                    "emailDelivery.status": status,
+                    "emailDelivery.error": errorMessage,
+                },
+            });
+        } else {
+            await Application.updateOne(filter, {
+                $set: { "emailDelivery.status": status },
+                $unset: { "emailDelivery.error": 1 },
+            });
+        }
+
+        const latestApplication = await Application.findById(application._id);
+        if (latestApplication?.emailDelivery) {
+            application.emailDelivery = latestApplication.emailDelivery;
+        }
+    }
+
+    private applyEmailSendResult(
+        delivery: IApplicationEmailDelivery,
+        result: EmailSendResult,
+    ): { status: ApplicationEmailStatus; error?: string } {
+        if (result.kind === "intercepted") {
+            return {
+                status: ApplicationEmailStatus.FAILED,
+                error: "Email was intercepted by development configuration and was not sent.",
+            };
+        }
+
+        const recipient = delivery.request.to.toLowerCase();
+        if (
+            result.accepted.some(
+                (accepted) => accepted.toLowerCase() === recipient,
+            )
+        ) {
+            return { status: ApplicationEmailStatus.ACCEPTED };
+        } else if (
+            result.rejected.some(
+                (rejected) => rejected.toLowerCase() === recipient,
+            )
+        ) {
+            return {
+                status: ApplicationEmailStatus.FAILED,
+                error: "The SMTP server rejected the applicant's email address.",
+            };
+        } else {
+            return {
+                status: ApplicationEmailStatus.UNCERTAIN,
+                error: "The SMTP server did not confirm whether it accepted the applicant's email.",
             };
         }
     }

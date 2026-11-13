@@ -15,9 +15,23 @@ export interface RecruitmentApplication {
     rolePreferences: { role: string; subteamPk: string }[];
     appliedAt: string;
     stars: number;
+    emailDelivery?: RecruitmentEmailDelivery;
     [key: string]: unknown;
 }
 
+export type RecruitmentEmailStatus =
+    | "pending"
+    | "accepted"
+    | "failed"
+    | "uncertain";
+
+export interface RecruitmentEmailDelivery {
+    status: RecruitmentEmailStatus;
+    stage: string;
+    error?: string;
+    attemptCount: number;
+    lastAttemptAt: string;
+}
 /** Application information returned by the detail endpoint. */
 export interface RecruitmentDetails extends RecruitmentApplication {
     email: string;
@@ -92,6 +106,14 @@ export function useRecruitmentQueries(
                 signal,
             }),
         staleTime: metadataFreshness,
+
+        refetchInterval: (query) =>
+            query.state.data?.some(
+                (application) =>
+                    application.emailDelivery?.status === "pending",
+            )
+                ? 60_000
+                : false,
     });
     const selected = applications.data?.find(
         (application) => application.id === selectedId,
@@ -202,6 +224,43 @@ export function useRecruitmentQueries(
             ]),
     });
 
+    const emailRetry = useMutation({
+        mutationFn: async ({
+            applicationId,
+            confirmUncertain,
+        }: {
+            applicationId: string;
+            confirmUncertain: boolean;
+        }) => {
+            const response = await fetch(
+                `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${teamId}/${applicationId}/email/retry`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ confirmUncertain }),
+                },
+            );
+            const data = (await response.json()) as {
+                application?: {
+                    emailDelivery?: RecruitmentEmailDelivery;
+                };
+                message?: string;
+            };
+            if (!response.ok) {
+                throw new Error(
+                    data.message ?? "Could not retry the application email.",
+                );
+            }
+            if (!data.application?.emailDelivery) {
+                throw new Error("The email retry returned no delivery status.");
+            }
+            return data.application.emailDelivery;
+        },
+        onSettled: (_result, _error, { applicationId }) =>
+            refreshApplication(applicationId),
+    });
+
     return {
         applications,
         details,
@@ -210,6 +269,7 @@ export function useRecruitmentQueries(
         feedback,
         isFeedbackPending,
         stage,
+        emailRetry,
         selected: selected ?? details.data ?? null,
     };
 }

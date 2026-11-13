@@ -42,6 +42,7 @@ function deferred<T>() {
 let applications: RecruitmentApplication[];
 let details: Map<string, RecruitmentDetails>;
 let requests: { path: string; signal: AbortSignal | null | undefined }[];
+let retryRequests: { path: string; body: unknown }[];
 let responses: Map<string, Promise<Response>>;
 
 beforeEach(() => {
@@ -59,6 +60,7 @@ beforeEach(() => {
         ]),
     );
     requests = [];
+    retryRequests = [];
     responses = new Map();
     // Fake HTTP is the boundary; the router, query client, dialogs are real.
     vi.stubGlobal(
@@ -66,6 +68,23 @@ beforeEach(() => {
         async (input: RequestInfo | URL, init?: RequestInit) => {
             const path = String(input);
             requests.push({ path, signal: init?.signal });
+            if (path.endsWith("/email/retry")) {
+                retryRequests.push({
+                    path,
+                    body: JSON.parse(String(init?.body)),
+                });
+                const emailDelivery = {
+                    status: "accepted" as const,
+                    stage: "Interview",
+                    attemptCount: 2,
+                    lastAttemptAt: new Date().toISOString(),
+                };
+                applications = applications.map((application) => ({
+                    ...application,
+                    emailDelivery,
+                }));
+                return Response.json({ application: { emailDelivery } });
+            }
             const response = responses.get(path);
             if (response) return response;
             if (path === "/api/org/teams/team-a") {
@@ -108,6 +127,7 @@ beforeEach(() => {
 
 afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
 });
 
 function openBoard(search = "") {
@@ -137,6 +157,50 @@ async function openA() {
 }
 
 describe("recruitment review", () => {
+    it("confirms and retries an uncertain application email", async () => {
+        applications[0].emailDelivery = {
+            status: "uncertain",
+            stage: "Interview",
+            error: "Delivery could not be confirmed.",
+            attemptCount: 1,
+            lastAttemptAt: new Date().toISOString(),
+        };
+        const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+        openBoard();
+
+        await userEvent.click(
+            await screen.findByRole("button", { name: "Retry email" }),
+        );
+
+        await waitFor(() => expect(retryRequests).toHaveLength(1));
+        expect(confirm).toHaveBeenCalledWith(
+            expect.stringContaining("may already have been delivered"),
+        );
+        expect(retryRequests[0]).toEqual({
+            path: `${apiPath}/a/email/retry`,
+            body: { confirmUncertain: true },
+        });
+    });
+
+    it("allows confirmed recovery of a pending email older than five minutes", async () => {
+        applications[0].emailDelivery = {
+            status: "pending",
+            stage: "Interview",
+            attemptCount: 1,
+            lastAttemptAt: new Date(Date.now() - 6 * 60_000).toISOString(),
+        };
+        const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+        openBoard();
+
+        await userEvent.click(
+            await screen.findByRole("button", { name: "Retry email" }),
+        );
+
+        await waitFor(() => expect(retryRequests).toHaveLength(1));
+        expect(confirm).toHaveBeenCalled();
+        expect(retryRequests[0].body).toEqual({ confirmUncertain: true });
+    });
+  
     it("uses URL selection, browser history and cached data without losing other parameters", async () => {
         const { router } = openBoard("?filter=interview");
         await openA();

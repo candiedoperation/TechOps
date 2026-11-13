@@ -21,7 +21,7 @@ import hbs, { TemplateOptions } from "nodemailer-express-handlebars";
 import path from "path";
 import fs from "fs";
 import Handlebars from "handlebars";
-import { EmailSendRequest } from "./models";
+import { EmailSendRequest, EmailSendResult } from "./models";
 import { Options as NodemailerOptions } from "nodemailer/lib/mailer";
 
 type MailTemplateOptions = NodemailerOptions & TemplateOptions;
@@ -53,12 +53,14 @@ export class EmailClient {
         );
     }
 
-    async send(request: EmailSendRequest) {
-        if (process.env.PEOPLEPORTAL_EMAIL_CONREROUTE)
-            return this.sendInterceptAction(request);
+    async send(request: EmailSendRequest): Promise<EmailSendResult> {
+        if (process.env.PEOPLEPORTAL_EMAIL_CONREROUTE) {
+            this.sendInterceptAction(request);
+            return { kind: "intercepted" };
+        }
 
         try {
-            return await this.transporter.sendMail({
+            const result = await this.transporter.sendMail({
                 from: request.from ?? process.env.PEOPLEPORTAL_SMTP_DEFAULTFROM,
                 to: request.to,
                 cc: request.cc,
@@ -68,6 +70,21 @@ export class EmailClient {
                 context: request.templateVars,
                 replyTo: request.replyTo,
             } as MailTemplateOptions);
+            return {
+                kind: "sent",
+                accepted: result.accepted.map(
+                    (recipient: string | { address: string }) =>
+                    typeof recipient === "string"
+                        ? recipient
+                        : recipient.address,
+                ),
+                rejected: result.rejected.map(
+                    (recipient: string | { address: string }) =>
+                    typeof recipient === "string"
+                        ? recipient
+                        : recipient.address,
+                ),
+            };
         } catch (e) {
             console.error(e);
             throw e;
