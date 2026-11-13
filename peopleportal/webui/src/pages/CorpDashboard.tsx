@@ -247,7 +247,13 @@ export const CorpDashboard = () => {
                         />
                         <Route
                             path="/org/teams/:teamId/recruitment"
-                            element={<DashboardTeamRecruitment />}
+                            element={
+                                userInfo.pk ? (
+                                    <DashboardTeamRecruitment
+                                        reviewerId={userInfo.pk}
+                                    />
+                                ) : null
+                            }
                         />
                         <Route
                             path="/org/teams/:teamId/meetings"

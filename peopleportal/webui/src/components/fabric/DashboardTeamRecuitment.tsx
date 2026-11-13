@@ -22,7 +22,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { TeamInfo } from "./DashboardTeamInfo";
 import { RecruitmentStatistics } from "./RecruitmentStatistics";
-import { NavLink, useParams } from "react-router-dom";
+import { NavLink, useParams, useSearchParams } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+    useRecruitmentQueries,
+    type RecruitmentApplication,
+    type StageFields,
+} from "./recruitment-queries";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
     Accordion,
@@ -57,7 +63,7 @@ import {
     KanbanHeader,
     KanbanProvider,
 } from "../ui/shadcn-io/kanban";
-import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
 import {
     Dialog,
     DialogContent,
@@ -89,41 +95,43 @@ interface SubteamATSConfig {
     isRecruiting: boolean;
 }
 
-// Lite object for Kanban
-interface KanbanApplicationCard {
-    id: string;
-    name: string;
-    stage: string;
-    applicantId: string;
-    rolePreferences: { role: string; subteamPk: string }[];
-    appliedAt: string;
-    stars: number;
-    [key: string]: unknown; // Index signature for Kanban compatibility
-}
-
-// Full Details object for Modal
-interface KanbanApplicationDetails extends KanbanApplicationCard {
-    email: string;
-    profile: { [key: string]: string };
-    responses: { [key: string]: string };
-    hiredSubteamPk?: string;
-    hiredRole?: string;
-    appDevInternalPk?: number;
-    notes?: string;
-    stageHistory?: {
-        stage: string;
-        changedAt: string;
-        changedBy?: string;
-    }[];
-}
-
 interface StageDefinition {
     id: string;
     name: string;
     [key: string]: unknown; // Index signature for Kanban compatibility
 }
 
-export const DashboardTeamRecruitment = () => {
+/** Recruitment cache is private to this mounted team/reviewer, never persisted. */
+export const DashboardTeamRecruitment = ({
+    reviewerId,
+}: {
+    reviewerId: number;
+}) => {
+    const { teamId } = useParams();
+    if (!teamId) return null;
+    return (
+        <RecruitmentSession key={`${reviewerId}:${teamId}`} teamId={teamId} />
+    );
+};
+
+function RecruitmentSession({ teamId }: { teamId: string }) {
+    const [client] = React.useState(
+        () =>
+            new QueryClient({
+                defaultOptions: {
+                    queries: { retry: false, gcTime: 10 * 60_000 },
+                    mutations: { retry: false },
+                },
+            }),
+    );
+    return (
+        <QueryClientProvider client={client}>
+            <RecruitmentBoard teamId={teamId} />
+        </QueryClientProvider>
+    );
+}
+
+function RecruitmentBoard({ teamId }: { teamId: string }) {
     const STAGE_STYLES: { [key: string]: string } = {
         Applied: "text-blue-700 bg-blue-50 border-blue-200",
         Interview: "text-purple-700 bg-purple-50 border-purple-200",
@@ -131,7 +139,25 @@ export const DashboardTeamRecruitment = () => {
         Rejected: "text-red-700 bg-red-50 border-red-200",
         "Potential Hire": "text-orange-700 bg-orange-50 border-orange-200",
     };
-    const params = useParams();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const selectedId = searchParams.get("application");
+    const review = useRecruitmentQueries(teamId, selectedId);
+    const applications = review.applications.data ?? [];
+    const selectedApplication = review.selected;
+    const selectedApplicationDetails = review.details.data;
+    const resumeUrl =
+        review.resume.data && review.resume.data.refreshAt > Date.now()
+            ? review.resume.data.resumeUrl
+            : undefined;
+
+    function selectApplication(id: string | null) {
+        setSearchParams((current) => {
+            const next = new URLSearchParams(current);
+            if (id === null) next.delete("application");
+            else next.set("application", id);
+            return next;
+        });
+    }
     const [teamInfo, setTeamInfo] = React.useState<TeamInfo>();
     const [subTeams, setSubTeams] = React.useState<TeamInfo[]>([]);
     const [stages, setStages] = React.useState<StageDefinition[]>([]);
@@ -148,21 +174,6 @@ export const DashboardTeamRecruitment = () => {
     const [roleSpecQuestions, setRoleSpecQuestions] = React.useState<{
         [key: string]: { [key: string]: string[] };
     }>({});
-
-    const [applications, setApplications] = React.useState<
-        KanbanApplicationCard[]
-    >([]);
-    const [selectedApplication, setSelectedApplication] =
-        React.useState<KanbanApplicationCard | null>(null);
-    const [selectedApplicationDetails, setSelectedApplicationDetails] =
-        React.useState<KanbanApplicationDetails | null>(null);
-    const [isLoadingDetails, setIsLoadingDetails] = React.useState(false);
-
-    const [applicantUrls, setApplicantUrls] = React.useState<any | null>(null);
-    const [otherApplications, setOtherApplications] = React.useState<any[]>([]);
-    const [dragStartColumn, setDragStartColumn] = React.useState<string | null>(
-        null,
-    );
 
     // --- Stage Transition Logic ---
     const VALID_TRANSITIONS: { [key: string]: string[] } = {
@@ -183,11 +194,18 @@ export const DashboardTeamRecruitment = () => {
     const [pendingTransition, setPendingTransition] = React.useState<{
         applicationId: string;
         newStage: string;
-        previousStage: string;
     } | null>(null);
-    const [actionDialog, setActionDialog] = React.useState<
-        "reject" | "interview" | "potential" | "hired" | null
-    >(null);
+    const actionDialog =
+        pendingTransition?.newStage === "Rejected" ||
+        pendingTransition?.newStage === "Rejected After Interview"
+            ? "reject"
+            : pendingTransition?.newStage === "Interview"
+              ? "interview"
+              : pendingTransition?.newStage === "Potential Hire"
+                ? "potential"
+                : pendingTransition?.newStage === "Hired"
+                  ? "hired"
+                  : null;
 
     // Dialog Inputs
     const [interviewLink, setInterviewLink] = React.useState("");
@@ -198,10 +216,20 @@ export const DashboardTeamRecruitment = () => {
     const [hiredRole, setHiredRole] = React.useState("");
 
     // Feedback Dialog State
-    const [feedbackDialogOpen, setFeedbackDialogOpen] = React.useState(false);
-    const [feedbackText, setFeedbackText] = React.useState("");
-    const [isFeedbackSubmitting, setIsFeedbackSubmitting] =
-        React.useState(false);
+    const [feedbackDraft, setFeedbackDraft] = React.useState<{
+        applicationId: string;
+        name: string;
+        text: string;
+    } | null>(null);
+    const feedbackDialogOpen =
+        feedbackDraft !== null && feedbackDraft.applicationId === selectedId;
+    const isFeedbackSubmitting = review.isFeedbackPending;
+    const isStageSubmitting = review.stage.isPending;
+
+    // URL navigation also dismisses an unsaved editor, including browser Back/Forward.
+    React.useEffect(() => {
+        setFeedbackDraft(null);
+    }, [selectedId]);
 
     // Update browser tab title when an application is opened/closed
     React.useEffect(() => {
@@ -250,351 +278,109 @@ export const DashboardTeamRecruitment = () => {
         currentStage: string,
         newStage: string,
     ) {
+        if (currentStage === newStage || isStageSubmitting) return;
         // 1. Validate
         if (!validateTransition(currentStage, newStage)) {
             toast.error("Invalid Stage Transition", {
                 description: `Cannot move from "${currentStage}" to "${newStage}".`,
             });
-            // If this came from drag-drop, we need to revert the optimistic update.
-            // Since we use 'applications' state, simply re-fetching or resetting state would work.
-            // For now, let's just trigger a re-fetch of applications to reset UI
-            fetchApplications();
             return;
         }
 
-        // 2. Set Pending Transition & Open Appropriate Dialog
-        setPendingTransition({
-            applicationId,
-            newStage,
-            previousStage: currentStage,
-        });
-
-        if (
-            newStage === "Rejected" ||
-            newStage === "Rejected After Interview"
-        ) {
-            setActionDialog("reject");
-        } else if (newStage === "Interview") {
-            setActionDialog("interview");
-        } else if (newStage === "Potential Hire") {
-            setActionDialog("potential");
-        } else if (newStage === "Hired") {
-            setActionDialog("hired");
-        } else {
-            // No specific dialog for this transition (e.g. unexpected), just do it?
-            // Or maybe default to confirmation? For now, we only have these flows.
-            // If valid transition but no dialog, maybe just execute.
-            executeStageUpdate(applicationId, newStage);
-        }
+        setHiredRole("");
+        setPendingTransition({ applicationId, newStage });
     }
 
     function handleStarRating(stars: number) {
-        if (!selectedApplication) return;
-
-        // Optimistic update
-        setSelectedApplication((prev) => (prev ? { ...prev, stars } : null));
-        setSelectedApplicationDetails((prev) =>
-            prev ? { ...prev, stars } : null,
-        );
-        setApplications((prev) =>
-            prev.map((app) =>
-                app.id === selectedApplication.id ? { ...app, stars } : app,
-            ),
-        );
-
-        fetch(
-            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}/${selectedApplication.id}/feedback`,
-            {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ stars }),
-            },
-        )
-            .then(async (res) => {
-                if (!res.ok) throw new Error((await res.json()).message);
-            })
-            .catch((err) => {
-                toast.error(`Failed to Update Rating: ${err.message}`);
-                // Revert on error considering optimistic update
-                setSelectedApplication((prev) =>
-                    prev ? { ...prev, stars: selectedApplication.stars } : null,
-                );
-                setSelectedApplicationDetails((prev) =>
-                    prev ? { ...prev, stars: selectedApplication.stars } : null,
-                );
-                setApplications((prev) =>
-                    prev.map((app) =>
-                        app.id === selectedApplication.id
-                            ? { ...app, stars: selectedApplication.stars }
-                            : app,
-                    ),
-                );
-            });
+        if (!selectedApplication || isFeedbackSubmitting) return;
+        void review.feedback
+            .mutateAsync({ applicationId: selectedApplication.id, stars })
+            .catch((error) =>
+                toast.error(`Failed to update rating: ${error.message}`),
+            );
     }
 
-    function handleFeedbackSubmit() {
-        if (!selectedApplication) return;
-
-        setIsFeedbackSubmitting(true);
-
-        fetch(
-            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}/${selectedApplication.id}/feedback`,
-            {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ notes: feedbackText }),
-            },
-        )
-            .then(async (res) => {
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.message);
-
-                toast.success(
-                    `Updated Feedback for ${selectedApplication.name}`,
-                );
-                setFeedbackDialogOpen(false);
-
-                // Update local state with real data from backend (including history)
-                setSelectedApplicationDetails((prev) =>
-                    prev ? { ...prev, notes: data.notes } : null,
-                );
-            })
-            .catch((err) => {
-                toast.error(`Failed to Add Feedback: ${err.message}`);
-            })
-            .finally(() => {
-                setIsFeedbackSubmitting(false);
+    async function handleFeedbackSubmit() {
+        const draft = feedbackDraft;
+        if (!draft || !draft.text.trim() || isFeedbackSubmitting) return;
+        try {
+            await review.feedback.mutateAsync({
+                applicationId: draft.applicationId,
+                notes: draft.text,
             });
+            toast.success(`Updated feedback for ${draft.name}`);
+            setFeedbackDraft((current) => (current === draft ? null : current));
+        } catch (error) {
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to add feedback.",
+            );
+        }
     }
 
-    function executeStageUpdate(
+    async function executeStageUpdate(
         applicationId: string,
         newStage: string,
-        extraData?: any,
+        extraData: StageFields = {},
     ) {
-        // Optimistic update locally
-        setApplications((apps) =>
-            apps.map((a) =>
-                a.id === applicationId
-                    ? { ...a, column: newStage, stage: newStage }
-                    : a,
-            ),
-        );
-
-        fetch(
-            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}/${applicationId}/stage`,
-            {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    stage: newStage,
-                    ...extraData,
-                }),
-            },
-        )
-            .then(async (res) => {
-                if (!res.ok) {
-                    const errorData = await res.json();
-                    throw new Error(
-                        errorData.message ||
-                            `Failed to update stage: HTTP ${res.status}`,
-                    );
-                }
-
-                const stageName =
-                    stages.find((s) => s.id === newStage)?.name || newStage;
-                const app = applications.find((a) => a.id === applicationId);
-                toast.success("Stage Updated", {
-                    description: `Moved ${app?.name} to ${stageName}`,
-                });
-
-                // Close dialogs and reset
-                setPendingTransition(null);
-                setActionDialog(null);
-
-                // Sync selectedApplication state if it matches
-                if (selectedApplication?.id === applicationId) {
-                    setSelectedApplication((prev) =>
-                        prev
-                            ? {
-                                  ...prev,
-                                  column: newStage,
-                                  stage: newStage,
-                                  hiredRole:
-                                      extraData?.hiredRole ?? prev.hiredRole,
-                              }
-                            : null,
-                    );
-                }
-
-                setHiredRole("");
-
-                // If interview link save was checked
-                if (extraData?.interviewLink && saveInteviewLink) {
-                    localStorage.setItem(
-                        "interviewLink",
-                        extraData.interviewLink,
-                    );
-                } else if (!saveInteviewLink) {
-                    localStorage.removeItem("interviewLink");
-                }
-
-                // If interview guidelines save was checked
-                if (extraData?.interviewGuidelines && saveInterviewGuidelines) {
-                    localStorage.setItem(
-                        "interviewGuidelines",
-                        extraData.interviewGuidelines,
-                    );
-                } else if (!saveInterviewGuidelines) {
-                    localStorage.removeItem("interviewGuidelines");
-                }
-
-                // Refresh app list to ensure consistency
-                fetchApplications();
-            })
-            .catch((err) => {
-                toast.error("Failed to Update Stage: " + err.message);
-                fetchApplications();
+        if (review.stage.isPending) return;
+        const transition = pendingTransition;
+        try {
+            await review.stage.mutateAsync({
+                applicationId,
+                stage: newStage,
+                ...extraData,
             });
+            const app = applications.find(
+                (application) => application.id === applicationId,
+            );
+            toast.success("Stage Updated", {
+                description: `Moved ${app?.name} to ${newStage}`,
+            });
+            // Do not dismiss a different confirmation opened while this request was pending.
+            setPendingTransition((current) =>
+                current === transition ? null : current,
+            );
+
+            if (extraData.interviewLink && saveInteviewLink) {
+                localStorage.setItem("interviewLink", extraData.interviewLink);
+            } else if (!saveInteviewLink) {
+                localStorage.removeItem("interviewLink");
+            }
+            if (extraData.interviewGuidelines && saveInterviewGuidelines) {
+                localStorage.setItem(
+                    "interviewGuidelines",
+                    extraData.interviewGuidelines,
+                );
+            } else if (!saveInterviewGuidelines) {
+                localStorage.removeItem("interviewGuidelines");
+            }
+        } catch (error) {
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to update stage.",
+            );
+        }
     }
 
     function cancelStageUpdate() {
-        if (pendingTransition) {
-            // Revert local state immediately
-            setApplications((apps) =>
-                apps.map((a) =>
-                    a.id === pendingTransition.applicationId
-                        ? { ...a, stage: pendingTransition.previousStage }
-                        : a,
-                ),
-            );
-        }
         setPendingTransition(null);
-        setActionDialog(null);
         setHiredRole("");
-    }
-
-    function handleDragStart(event: DragStartEvent) {
-        const item = applications.find((a) => a.id === event.active.id);
-        if (item) setDragStartColumn(item.stage);
     }
 
     function handleDragEnd(event: DragEndEvent) {
         const { active, over } = event;
-        const activeId = active.id;
-
-        setDragStartColumn(null);
         if (!over) return;
-
-        const app = applications.find((a) => a.id === activeId);
-        // If app exists and stage actually changed
-        if (app && app.stage !== over.id) {
-            // over.id corresponds to column id if dropped on column
-            let targetColumn = over.id as string;
-            // If over.id matches an existing card, find that card's column
-            const overItem = applications.find((a) => a.id === over.id);
-            if (overItem) targetColumn = overItem.stage;
-
-            // The dragStartColumn is reliable for previous state.
-            if (targetColumn !== dragStartColumn) {
-                // Trigger our centralized logic
-                initiateStageUpdate(
-                    activeId as string,
-                    dragStartColumn!,
-                    targetColumn,
-                );
-            }
+        const app = applications.find((a) => a.id === active.id);
+        const targetStage =
+            applications.find((a) => a.id === over.id)?.stage ??
+            stages.find((stage) => stage.id === over.id)?.id;
+        if (app && targetStage) {
+            initiateStageUpdate(app.id, app.stage, targetStage);
         }
     }
-
-    // Helper to refresh data
-    function fetchApplications() {
-        if (!params.teamId) return;
-        fetch(
-            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}`,
-            { credentials: "include" },
-        )
-            .then(async (response) => {
-                const data = await response.json();
-                if (response.ok) {
-                    // Map stage to column for Kanban compatibility
-                    setApplications(data);
-                }
-            })
-            .catch(console.error);
-    }
-
-    React.useEffect(() => {
-        if (selectedApplication?.applicantId) {
-            setApplicantUrls(null); // Reset while loading
-            setOtherApplications([]); // Reset while loading
-            setSelectedApplicationDetails(null);
-            setIsLoadingDetails(true);
-
-            // Fetch secure resume URL
-            fetch(
-                `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}/${selectedApplication.applicantId}/resume`,
-            )
-                .then(async (res) => {
-                    if (!res.ok) {
-                        const errorData = await res.json();
-                        throw new Error(
-                            errorData.message || "Failed to fetch resume",
-                        );
-                    }
-                    const urls = await res.json();
-                    setApplicantUrls(urls);
-                })
-                .catch((err) => {
-                    console.error("Failed to fetch applicant URLs", err);
-                    toast.error("Failed to load resume: " + err.message);
-                });
-
-            // Fetch application history
-            fetch(
-                `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}/${selectedApplication.applicantId}/otherapps`,
-            )
-                .then(async (res) => {
-                    if (!res.ok) {
-                        const errorData = await res.json();
-                        throw new Error(
-                            errorData.message ||
-                                "Failed to fetch application history",
-                        );
-                    }
-                    const apps = await res.json();
-                    setOtherApplications(apps);
-                })
-                .catch((err) => {
-                    console.error("Failed to fetch applicant history", err);
-                    toast.error(
-                        "Failed to load applicant history: " + err.message,
-                    );
-                });
-
-            // Fetch Full Details
-            fetch(
-                `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}/${selectedApplication.id}/info`,
-            )
-                .then(async (res) => {
-                    if (!res.ok) {
-                        const errorData = await res.json();
-                        throw new Error(
-                            errorData.message || "Failed to fetch details",
-                        );
-                    }
-                    const details: KanbanApplicationDetails = await res.json();
-                    setSelectedApplicationDetails(details);
-                })
-                .catch((err) => {
-                    console.error("Failed to fetch application details", err);
-                    toast.error(
-                        "Failed to load application details: " + err.message,
-                    );
-                })
-                .finally(() => setIsLoadingDetails(false));
-        }
-    }, [selectedApplication?.id]);
 
     // Fetch application stages
     React.useEffect(() => {
@@ -615,33 +401,8 @@ export const DashboardTeamRecruitment = () => {
             });
     }, []);
 
-    // Fetch applications from MongoDB
     React.useEffect(() => {
-        fetch(
-            `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${params.teamId}`,
-            { credentials: "include" },
-        )
-            .then(async (response) => {
-                const data = await response.json();
-                if (response.ok) {
-                    // Ensure data is an array (empty array is valid)
-                    setApplications(Array.isArray(data) ? data : []);
-                } else {
-                    console.error("Server error:", data);
-                    toast.error(
-                        "Failed to Fetch Applications: " +
-                            (data.message || "Server Error"),
-                    );
-                }
-            })
-            .catch((e) => {
-                console.error("Fetch error:", e);
-                toast.error("Failed to Fetch Applications: Error " + e.message);
-            });
-    }, [params.teamId]);
-
-    React.useEffect(() => {
-        fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${params.teamId}`)
+        fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${teamId}`)
             .then(async (response) => {
                 const teamlistResponse: any = await response.json();
                 if (!response.ok)
@@ -708,7 +469,7 @@ export const DashboardTeamRecruitment = () => {
             .catch((e) => {
                 toast.error("Failed to Fetch Team Information: " + e.message);
             });
-    }, [params.teamId]);
+    }, [teamId]);
 
     function handleSettingsUpdate(subteamPk: string) {
         setIsLoading(true);
@@ -769,7 +530,7 @@ export const DashboardTeamRecruitment = () => {
         const newIndex =
             direction === "next" ? currentNavIndex + 1 : currentNavIndex - 1;
         if (newIndex >= 0 && newIndex < reviewableApps.length) {
-            setSelectedApplication(reviewableApps[newIndex]);
+            selectApplication(reviewableApps[newIndex].id);
         }
     }
 
@@ -820,19 +581,37 @@ export const DashboardTeamRecruitment = () => {
                         className="flex flex-col flex-grow h-full"
                         value="applications"
                     >
+                        {review.applications.isPending && (
+                            <p role="status">Loading applications…</p>
+                        )}
+                        {review.applications.isError && (
+                            <div role="alert">
+                                <p>{review.applications.error.message}</p>
+                                <Button
+                                    variant="outline"
+                                    onClick={() =>
+                                        review.applications.refetch()
+                                    }
+                                >
+                                    Retry applications
+                                </Button>
+                            </div>
+                        )}
                         <KanbanProvider
                             columns={stages}
                             data={applications}
                             columnKey="stage"
-                            onDataChange={(data) => setApplications(data)}
-                            onDragStart={handleDragStart}
+                            // A drag proposes a transition; only a saved response changes the stage.
                             onDragEnd={handleDragEnd}
                             className="overflow-x-auto flex h-full"
                         >
                             {(/* column */ col) => {
                                 const column = col as StageDefinition;
                                 return (
-                                    <div className="w-[250px] shrink-0">
+                                    <div
+                                        key={column.id}
+                                        className="w-[250px] shrink-0"
+                                    >
                                         <KanbanBoard
                                             id={column.id}
                                             className="w-full ring-inset"
@@ -850,7 +629,7 @@ export const DashboardTeamRecruitment = () => {
                                             </KanbanHeader>
                                             <KanbanCards id={column.id}>
                                                 {(
-                                                    item: KanbanApplicationCard,
+                                                    item: RecruitmentApplication,
                                                 ) => {
                                                     return (
                                                         <KanbanCard
@@ -858,8 +637,8 @@ export const DashboardTeamRecruitment = () => {
                                                             name={item.name}
                                                             className="bg-background hover:bg-muted/50 transition-colors border-border p-3"
                                                             onClick={() =>
-                                                                setSelectedApplication(
-                                                                    item,
+                                                                selectApplication(
+                                                                    item.id,
                                                                 )
                                                             }
                                                         >
@@ -1205,22 +984,23 @@ export const DashboardTeamRecruitment = () => {
 
             {/* Application Details Modal */}
             <Dialog
-                open={selectedApplication !== null}
-                onOpenChange={(open) => !open && setSelectedApplication(null)}
+                open={selectedId !== null}
+                onOpenChange={(open) => !open && selectApplication(null)}
             >
                 <DialogContent className="!max-w-[95vw] !w-[95vw] !h-[95vh] p-0 flex gap-0">
                     {/* Left Sidebar: Application Information */}
                     <div className="w-96 bg-muted/20 border-r p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
                         <div>
                             <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-lg">
-                                    {selectedApplication?.name}
-                                </h3>
+                                <DialogTitle className="font-semibold text-lg">
+                                    {selectedApplication?.name ?? "Application"}
+                                </DialogTitle>
                                 <div className="flex gap-1">
                                     <Button
                                         variant="outline"
                                         size="icon"
                                         className="h-6 w-6"
+                                        aria-label="Previous applicant"
                                         onClick={() =>
                                             navigateApplicant("prev")
                                         }
@@ -1232,6 +1012,7 @@ export const DashboardTeamRecruitment = () => {
                                         variant="outline"
                                         size="icon"
                                         className="h-6 w-6"
+                                        aria-label="Next applicant"
                                         onClick={() =>
                                             navigateApplicant("next")
                                         }
@@ -1245,12 +1026,18 @@ export const DashboardTeamRecruitment = () => {
                                     </Button>
                                 </div>
                             </div>
-                            <p className="text-sm text-muted-foreground">
+                            <DialogDescription>
                                 Application Information
-                            </p>
+                            </DialogDescription>
                             <div className="flex flex-col gap-2 mt-2">
                                 <Ratings
-                                    onValueChange={handleStarRating}
+                                    onValueChange={
+                                        isFeedbackSubmitting ||
+                                        !selectedApplication ||
+                                        review.details.isError
+                                            ? undefined
+                                            : handleStarRating
+                                    }
                                     variant="yellow"
                                     totalStars={5}
                                     value={selectedApplication?.stars || 0}
@@ -1259,11 +1046,15 @@ export const DashboardTeamRecruitment = () => {
                             </div>
                         </div>
 
-                        {isLoadingDetails ? (
+                        {review.details.isPending ? (
                             <div className="flex items-center justify-center p-8">
-                                <Loader2Icon className="animate-spin h-8 w-8 text-muted-foreground" />
+                                <Loader2Icon
+                                    aria-label="Loading application details"
+                                    className="animate-spin h-8 w-8 text-muted-foreground"
+                                />
                             </div>
-                        ) : selectedApplicationDetails ? (
+                        ) : !review.details.isError &&
+                          selectedApplicationDetails ? (
                             /* Application Details */
                             <div className="flex flex-col gap-4">
                                 {/* Social Links */}
@@ -1410,12 +1201,14 @@ export const DashboardTeamRecruitment = () => {
                                                 Interview and Intial Feedback
                                             </p>
                                             <Button
+                                                aria-label="Add feedback"
                                                 onClick={() => {
-                                                    setFeedbackText(
-                                                        selectedApplicationDetails?.notes ||
-                                                            "",
-                                                    );
-                                                    setFeedbackDialogOpen(true);
+                                                    setFeedbackDraft({
+                                                        applicationId:
+                                                            selectedApplicationDetails.id,
+                                                        name: selectedApplicationDetails.name,
+                                                        text: "",
+                                                    });
                                                 }}
                                                 variant="ghost"
                                                 className="h-6 w-6 text-muted-foreground hover:text-foreground"
@@ -1596,7 +1389,16 @@ export const DashboardTeamRecruitment = () => {
                             </div> /* End of Details */
                         ) : (
                             <div className="p-4 text-center text-muted-foreground">
-                                Failed to load details.
+                                <p role="alert">
+                                    {review.details.error?.message ??
+                                        "Application unavailable."}
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => review.details.refetch()}
+                                >
+                                    Retry details
+                                </Button>
                             </div>
                         )}
                     </div>
@@ -1635,6 +1437,8 @@ export const DashboardTeamRecruitment = () => {
                                             )
                                         }
                                         disabled={
+                                            isStageSubmitting ||
+                                            review.details.isError ||
                                             !selectedApplication ||
                                             selectedApplication.stage ===
                                                 stage.id ||
@@ -1649,60 +1453,111 @@ export const DashboardTeamRecruitment = () => {
                                 ))}
                             </div>
 
-                            {/* Other Applications */}
-                            <p className="text-lg text-muted-foreground leading-0">
+                            {/* Other applications load independently of the resume. */}
+                            <p className="text-lg text-muted-foreground">
                                 Other Applications
                             </p>
-                            <div className="flex gap-2 max-w-full overflow-x-auto">
-                                {otherApplications.map((app) => (
-                                    <div
-                                        key={app.id}
-                                        className={`flex gap-6 p-3 rounded-md border text-sm w-[200px] shrink-0 ${app.id === selectedApplication?.id ? "bg-primary/10 border-primary" : "bg-background hover:bg-muted/50"}`}
+                            {review.details.isError ? null : review.history
+                                  .isPending ? (
+                                <p role="status">Loading other applications…</p>
+                            ) : review.history.isError ? (
+                                <div role="alert">
+                                    <p>{review.history.error.message}</p>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => review.history.refetch()}
                                     >
-                                        <div className="flex flex-col leading-[1] min-w-0 flex-1">
-                                            <p className="font-medium truncate">
-                                                {app.teamName || "Unknown Team"}
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground mt-1">
-                                                Applied{" "}
-                                                {new Date(
-                                                    app.appliedAt,
-                                                ).toLocaleDateString()}
-                                            </p>
-                                        </div>
-
-                                        <Badge
-                                            className={`${STAGE_STYLES[app.stage]} capitalize`}
-                                            variant="secondary"
+                                        Retry other applications
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="flex gap-2 max-w-full overflow-x-auto">
+                                    {review.history.data.map((app) => (
+                                        <div
+                                            key={app.id}
+                                            className={`flex gap-6 p-3 rounded-md border text-sm w-[200px] shrink-0 ${app.id === selectedId ? "bg-primary/10 border-primary" : "bg-background hover:bg-muted/50"}`}
                                         >
-                                            {app.stage}
-                                        </Badge>
-                                    </div>
-                                ))}
-                                {otherApplications.length === 0 && (
-                                    <p className="text-sm text-muted-foreground italic">
-                                        No other applications found.
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Applicant Profile Section */}
-                            <p className="text-lg text-muted-foreground leading-0">
-                                {selectedApplication?.name.split(" ")[0]}'s
-                                Resume
-                            </p>
-                            <iframe
-                                src={applicantUrls?.resumeUrl}
-                                className="w-full flex-grow-1 border rounded-md"
-                                title="Resume"
-                            />
-
-                            {/* {selectedApplication.profile.previousInvolvement && (
-                                            <div className="col-span-full">
-                                                <Label className="text-muted-foreground">Previous Involvement</Label>
-                                                <p className="whitespace-pre-wrap text-sm mt-1 bg-muted/50 p-2 rounded">{selectedApplication.profile.previousInvolvement}</p>
+                                            <div className="flex flex-col leading-[1] min-w-0 flex-1">
+                                                <p className="font-medium truncate">
+                                                    {app.teamName ||
+                                                        "Unknown Team"}
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground mt-1">
+                                                    Applied{" "}
+                                                    {new Date(
+                                                        app.appliedAt,
+                                                    ).toLocaleDateString()}
+                                                </p>
                                             </div>
-                                        )} */}
+                                            <Badge
+                                                className={
+                                                    STAGE_STYLES[app.stage]
+                                                }
+                                                variant="secondary"
+                                            >
+                                                {app.stage}
+                                            </Badge>
+                                        </div>
+                                    ))}
+                                    {review.history.data.length === 0 && (
+                                        <p className="text-sm text-muted-foreground italic">
+                                            No other applications found.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-between gap-2">
+                                <p className="text-lg text-muted-foreground">
+                                    Resume
+                                </p>
+                                {!review.details.isError &&
+                                    !review.resume.isError &&
+                                    resumeUrl && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <a
+                                                href={resumeUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                            >
+                                                Open resume <ExternalLinkIcon />
+                                            </a>
+                                        </Button>
+                                    )}
+                            </div>
+                            {review.details.isError ? null : review.resume
+                                  .isError ? (
+                                <div
+                                    role="alert"
+                                    className="min-h-80 flex-grow border rounded-md p-6"
+                                >
+                                    <p>{review.resume.error.message}</p>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => review.resume.refetch()}
+                                    >
+                                        Retry resume
+                                    </Button>
+                                </div>
+                            ) : review.resume.isPending || !resumeUrl ? (
+                                <div
+                                    role="status"
+                                    className="min-h-80 flex-grow border rounded-md p-6"
+                                >
+                                    Loading resume…
+                                </div>
+                            ) : (
+                                <iframe
+                                    key={selectedApplication?.applicantId}
+                                    src={resumeUrl}
+                                    className="w-full min-h-80 flex-grow border rounded-md"
+                                    title="Resume"
+                                />
+                            )}
                         </div>
                     </div>
                 </DialogContent>
@@ -1712,7 +1567,7 @@ export const DashboardTeamRecruitment = () => {
             {/* 1. Reject Dialog */}
             <Dialog
                 open={actionDialog === "reject"}
-                onOpenChange={(open) => !open && setActionDialog(null)}
+                onOpenChange={(open) => !open && cancelStageUpdate()}
             >
                 <DialogContent>
                     <DialogHeader>
@@ -1729,6 +1584,7 @@ export const DashboardTeamRecruitment = () => {
                             Cancel
                         </Button>
                         <Button
+                            disabled={isStageSubmitting}
                             variant="destructive"
                             onClick={() =>
                                 pendingTransition &&
@@ -1756,7 +1612,7 @@ export const DashboardTeamRecruitment = () => {
             {/* 2. Interview Dialog */}
             <Dialog
                 open={actionDialog === "interview"}
-                onOpenChange={(open) => !open && setActionDialog(null)}
+                onOpenChange={(open) => !open && cancelStageUpdate()}
             >
                 <DialogContent>
                     <DialogHeader>
@@ -1839,6 +1695,7 @@ export const DashboardTeamRecruitment = () => {
                         </Button>
                         <Button
                             disabled={
+                                isStageSubmitting ||
                                 !interviewLink ||
                                 interviewGuidelines.length < 50 ||
                                 interviewGuidelines.length > 500
@@ -1870,7 +1727,7 @@ export const DashboardTeamRecruitment = () => {
             {/* 3. Potential Hire Dialog */}
             <Dialog
                 open={actionDialog === "potential"}
-                onOpenChange={(open) => !open && setActionDialog(null)}
+                onOpenChange={(open) => !open && cancelStageUpdate()}
             >
                 <DialogContent>
                     <DialogHeader>
@@ -1895,6 +1752,7 @@ export const DashboardTeamRecruitment = () => {
                             Cancel
                         </Button>
                         <Button
+                            disabled={isStageSubmitting}
                             onClick={() =>
                                 pendingTransition &&
                                 executeStageUpdate(
@@ -1921,7 +1779,7 @@ export const DashboardTeamRecruitment = () => {
             {/* 4. Hired Dialog */}
             <Dialog
                 open={actionDialog === "hired"}
-                onOpenChange={(open) => !open && setActionDialog(null)}
+                onOpenChange={(open) => !open && cancelStageUpdate()}
             >
                 <DialogContent>
                     <DialogHeader>
@@ -1985,7 +1843,7 @@ export const DashboardTeamRecruitment = () => {
                             Cancel
                         </Button>
                         <Button
-                            disabled={!hiredRole}
+                            disabled={isStageSubmitting || !hiredRole}
                             onClick={() => {
                                 if (!pendingTransition) return;
                                 const app = applications.find(
@@ -2027,13 +1885,12 @@ export const DashboardTeamRecruitment = () => {
             {/* 5. Feedback Dialog */}
             <Dialog
                 open={feedbackDialogOpen}
-                onOpenChange={(open) => setFeedbackDialogOpen(open)}
+                onOpenChange={(open) => !open && setFeedbackDraft(null)}
             >
                 <DialogContent className="min-w-xl">
                     <DialogHeader>
                         <DialogTitle>
-                            Add Feedback for{" "}
-                            {selectedApplication?.name.split(" ")[0]}
+                            Add Feedback for {feedbackDraft?.name.split(" ")[0]}
                         </DialogTitle>
                         <DialogDescription>
                             You're feedback means a lot towards helping make
@@ -2045,20 +1902,27 @@ export const DashboardTeamRecruitment = () => {
                         <Editor
                             key={selectedApplication?.id}
                             onChange={(markdown) => {
-                                setFeedbackText(markdown);
+                                setFeedbackDraft((current) =>
+                                    current
+                                        ? { ...current, text: markdown }
+                                        : current,
+                                );
                             }}
                         />
                     </div>
                     <DialogFooter>
                         <Button
                             variant="outline"
-                            onClick={() => setFeedbackDialogOpen(false)}
+                            onClick={() => setFeedbackDraft(null)}
                         >
                             Cancel
                         </Button>
                         <Button
                             onClick={handleFeedbackSubmit}
-                            disabled={isFeedbackSubmitting}
+                            disabled={
+                                isFeedbackSubmitting ||
+                                !feedbackDraft?.text.trim()
+                            }
                         >
                             {isFeedbackSubmitting && (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -2072,4 +1936,4 @@ export const DashboardTeamRecruitment = () => {
             </Dialog>
         </div>
     );
-};
+}
