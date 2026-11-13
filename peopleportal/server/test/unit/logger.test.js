@@ -193,3 +193,34 @@ test("credentials are redacted at the top level and one level down", () => {
   assert.doesNotMatch(line, /hunter2|t0p|s3|r3/);
   assert.match(line, /\[redacted\]/);
 });
+
+test("request bodies attached to errors never reach the log", () => {
+  const err = new SyntaxError("Unexpected end of JSON input");
+  err.status = 400;
+  err.body = '{"username":"probe","password":"hunter2"';
+  err.rawBody = Buffer.from(err.body);
+  err.data = { auth: { token: "hunter2" } };
+
+  const out = serializeError(err);
+  assert.equal(out.message, "Unexpected end of JSON input");
+  assert.equal(out.status, 400);
+  assert.doesNotMatch(JSON.stringify(out), /hunter2/);
+});
+
+test("a caller-supplied x-request-id is used, but only when it is a plain token", () => {
+  const run = (headers) => {
+    const req = { method: "GET", baseUrl: "/api", headers, session: {} };
+    const res = new EventEmitter();
+    res.statusCode = 200;
+    const sent = {};
+    res.setHeader = (k, v) => (sent[k] = v);
+    requestLogger(req, res, () => {});
+    assert.equal(sent["X-Request-Id"], req.id);
+    return req.id;
+  };
+
+  assert.equal(run({ "x-request-id": "test-123" }), "test-123");
+  assert.match(run({}), /^[0-9a-f-]{36}$/);
+  assert.match(run({ "x-request-id": "bad id\nwith newline" }), /^[0-9a-f-]{36}$/);
+  assert.match(run({ "x-request-id": "x".repeat(65) }), /^[0-9a-f-]{36}$/);
+});

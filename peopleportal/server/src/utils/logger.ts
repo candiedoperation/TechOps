@@ -66,6 +66,11 @@ const DROPPED_ERROR_KEYS = [
     "response",
     "headers",
     "toJSON",
+    /* body-parser attaches the raw, unparsed request body to its errors, so a
+       malformed login would otherwise log the password in plain text. */
+    "body",
+    "rawBody",
+    "data",
 ];
 
 function isErrorLike(value: unknown): value is Error {
@@ -187,6 +192,19 @@ declare module "express-serve-static-core" {
     }
 }
 
+/* A caller or proxy may supply its own id so a request can be traced across
+   services. Only short, plain tokens are accepted, so a header cannot inject
+   odd characters or oversized values into every log line. */
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,64}$/;
+
+function incomingRequestId(req: Request): string | undefined {
+    const header = req.headers?.["x-request-id"];
+    const value = Array.isArray(header) ? header[0] : header;
+    return typeof value === "string" && REQUEST_ID_PATTERN.test(value)
+        ? value
+        : undefined;
+}
+
 /**
  * Logs one line per request when it finishes: method, route, status, duration
  * and user id. The route is the matched pattern (/api/teams/:teamId), not the
@@ -203,7 +221,7 @@ export function requestLogger(
     next: NextFunction,
 ): void {
     const start = process.hrtime.bigint();
-    req.id = randomUUID();
+    req.id = incomingRequestId(req) ?? randomUUID();
     res.setHeader("X-Request-Id", req.id);
 
     res.on("finish", () => {

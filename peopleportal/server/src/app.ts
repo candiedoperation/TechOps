@@ -193,6 +193,27 @@ app.use(function errorHandler(
         });
     }
 
+    /* Errors raised by body-parser and similar middleware (malformed JSON,
+       oversized bodies) carry the client's 4xx status. They are the caller's
+       mistake, so answer with that status and keep the error out of the logs:
+       it holds the raw request body. */
+    const clientStatus =
+        err instanceof Error
+            ? ((err as { status?: unknown }).status ??
+              (err as { statusCode?: unknown }).statusCode)
+            : undefined;
+    if (
+        typeof clientStatus === "number" &&
+        clientStatus >= 400 &&
+        clientStatus < 500
+    ) {
+        logger.warn(
+            { route: req.path, status: clientStatus },
+            "Request rejected before reaching a handler",
+        );
+        return res.status(clientStatus).json({ message: "Bad Request" });
+    }
+
     if (err instanceof Error) {
         logger.error({ err, route: req.path }, "Unhandled error in request");
         return res.status(500).json({
