@@ -14,7 +14,19 @@ peopleportal/server/.env.development
 
 # Bootstrap script outputs (contain credentials)
 peopleportal/server/scripts/.oidc
+peopleportal/server/scripts/.oidc-gitea
 peopleportal/server/scripts/.env
 peopleportal/server/scripts/.gitea-app-token
 peopleportal/server/scripts/.gitea-admin-pass
 peopleportal/server/.env.development*
+
+# Authentik
+peopleportal/authentik/.env
+
+peopleportal/Gitea/gitea/gitea/jwt/private.pem
+
+Gitea/
+authentik/
+server/scripts/bootstrap-gitea-authentik.sh
+server/scripts/seed-ats-applicants.ts
+server/scripts/test-ats-stage-concurrency.ts

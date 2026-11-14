@@ -23,6 +23,7 @@ import { DashboardPeopleList } from "@/components/fabric/DashboardPeopleList";
 import { DashboardTeamInfo } from "@/components/fabric/DashboardTeamInfo";
 import { DashboardTeamRecruitment } from "@/components/fabric/DashboardTeamRecuitment";
 import { DashboardTeamsList } from "@/components/fabric/DashboardTeamsList";
+import { DashboardPeopleRecruitment } from "@/components/fabric/DashboardPeopleRecruitment";
 import { OrgChartVisualization } from "@/components/fragments/OrgChartVisualization";
 import { OrgTeamRequestReview } from "@/components/fragments/OrgTeamRequestReview";
 import { PlatformLicenseInfo } from "@/components/fragments/PlatformLicenseInfo";
@@ -232,6 +233,10 @@ export const CorpDashboard = () => {
                         <Route
                             path="/org/people"
                             element={<DashboardPeopleList />}
+                        />
+                        <Route
+                            path="/org/recruitment"
+                            element={<DashboardPeopleRecruitment />}
                         />
                         <Route
                             path="/org/people/:userPk"

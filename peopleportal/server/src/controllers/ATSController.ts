@@ -153,6 +153,20 @@ const OPEN_TEAMS_CACHE_SOFT_TTL_SECONDS = 300;
    how long a *missed* invalidation can serve a stale roster. */
 const OPEN_TEAMS_CACHE_HARD_TTL_SECONDS = 3600;
 
+type RolePreferenceRef = { role: string; subteamPk: string };
+
+/** Mongoose subdocuments do not spread reliably into JSON; pick fields explicitly. */
+function rolePreferenceDto(
+    pref: RolePreferenceRef,
+    subteamName: string,
+): RolePreferenceRef & { subteamName: string } {
+    return {
+        role: pref.role,
+        subteamPk: pref.subteamPk,
+        subteamName,
+    };
+}
+
 @Route("/api/ats")
 export class ATSController extends Controller {
     private readonly authentikClient: AuthentikClient;
@@ -497,7 +511,7 @@ export class ATSController extends Controller {
      * a distributed lock is not worth its failure modes here.
      */
     private static openTeamsRefreshInFlight = false;
-
+    
     private refreshOpenTeamsInBackground() {
         if (ATSController.openTeamsRefreshInFlight) return;
         ATSController.openTeamsRefreshInFlight = true;
@@ -1312,6 +1326,179 @@ export class ATSController extends Controller {
         }
     }
 
+
+    @Get("applicantApplications/{applicantId}")
+    @Tags("Recruitment Actions")
+    @SuccessResponse(200)
+    @Security("executive")
+    async getApplicantApplicationsById(@Path() applicantId: string) {
+        try {
+            const applications = await Application.find({
+                applicantId: applicantId,
+            })
+            .lean()
+            .sort({ appliedAt: -1 })
+            .exec();
+
+            const results = await Promise.all(
+                applications.map(async (app) => {
+                    let teamName = app.teamPk;
+
+                    try {
+                        const teamInfo = await this.authentikClient.getGroupInfo(app.teamPk);
+                        if (teamInfo && teamInfo.attributes && teamInfo.attributes.friendlyName) {
+                            teamName = teamInfo.attributes.friendlyName;
+                        } else if (teamInfo && teamInfo.name) {
+                            teamName = teamInfo.name;
+                        }
+                    } catch (e) {
+                        console.error(`Failed to fetch team info for ${app.teamPk}`, e);
+                    }
+
+                    const rolePreferencesWithNames = await Promise.all(
+                        (app.rolePreferences || []).map(async (pref: any) => {
+                            let subteamName = pref.subteamPk;
+                            try {
+                                const subteamInfo = await this.authentikClient.getGroupInfo(pref.subteamPk);
+
+                                subteamName =
+                                subteamInfo.attributes?.friendlyName ||
+                                subteamInfo.name;
+                            } catch (e) {
+                                console.error(`Failed to fetch subteam info for ${pref.subteamPk}`, e);
+                            }
+                            return rolePreferenceDto(pref, subteamName);
+                        }),
+                    );
+
+                    return {
+                        id: String(app._id),
+                        teamPk: app.teamPk,
+                        teamName: teamName,
+                        rolePreferences: rolePreferencesWithNames,
+                        stage: app.stage,
+                        appliedAt: app.appliedAt,
+                        hiredRole: app.hiredRole,
+                    };
+                }),
+            );
+
+            return results;
+        } catch (e) {
+            console.error("Error fetching applicant applications:", e);
+            this.setStatus(500);
+            return {
+                error: "ServerError",
+                message: "Failed to fetch applicant applications",
+            };
+        }
+    }
+
+
+    /**
+     * TODO
+     * 
+     * Fetches all applications, along with the team information and 
+     * stage they're currently in. To access this, the user needs to be a Team
+     * Owner or have the `corp:hiringaccess` bindle.
+     * 
+     * @returns List of All Applications
+     */
+    @Get("allApplications")
+    @Tags("Recruitment Actions")
+    @SuccessResponse(200)
+    @Security("executive")
+    async getAllApplications() {
+        try{
+            const applicants = await Applicant.find({}).lean();
+
+            const result = await Promise.all(
+                applicants.map(async (applicant) => {
+                    const application = await Application.findOne({
+                        applicantId: applicant._id,
+                    })
+                        .sort({ appliedAt: -1 })
+                        .lean();
+
+                    if (!application) {
+                        return null;
+                    }
+
+                    let teamName = application.teamPk;
+
+                    try {
+                        const teamInfo =
+                            await this.authentikClient.getGroupInfo(application.teamPk);
+                        if (
+                            teamInfo &&
+                            teamInfo.attributes &&
+                            teamInfo.attributes.friendlyName
+                        ) {
+                            teamName = teamInfo.attributes.friendlyName;
+                        } else if (teamInfo && teamInfo.name) {
+                            teamName = teamInfo.name;
+                        }
+                    } catch (e) {
+                        console.error(
+                            `Failed to fetch team info for ${application.teamPk}`,
+                            e,
+                        );
+                    }
+
+                    const rolePreferencesWithNames = await Promise.all(
+                        (application.rolePreferences || []).map(async (pref: any) => {
+                            let subteamName = pref.subteamPk;
+                            try {
+                                const subteamInfo =
+                                    await this.authentikClient.getGroupInfo(
+                                        pref.subteamPk,
+                                    );
+                                subteamName =
+                                    subteamInfo.attributes?.friendlyName ||
+                                    subteamInfo.name;
+                            } catch (e) {
+                                console.error(
+                                    `Failed to fetch subteam info for ${pref.subteamPk}`,
+                                    e,
+                                );
+                            }
+                            return rolePreferenceDto(pref, subteamName);
+                        }),
+                    );
+
+                    const app = {
+                        id: String(application._id),
+                        teamPk: application.teamPk,
+                        teamName: teamName,
+                        rolePreferences: rolePreferencesWithNames,
+                        stage: application.stage,
+                        appliedAt: application.appliedAt,
+                        hiredRole: application.hiredRole,
+                    }
+
+
+                    return {
+                        applicantId: String(applicant._id),
+                        applicantName: applicant.fullName,
+                        applicantEmail: applicant.email,
+                        applications: [app],
+                    };
+                }),
+            );
+
+        return result.filter(
+            (row): row is NonNullable<typeof row> => row != null,
+        );
+        } catch (e) {
+            console.error("Error fetching all applications:", e);
+            this.setStatus(500);
+            return {
+                error: "ServerError",
+                message: "Failed to fetch all applications",
+            };
+        }
+    }
+
     /**
      * Fetches all the other teams the applicant has applied to and the
      * stage they're currently in for those teams. To access this, the
@@ -1333,6 +1520,7 @@ export class ATSController extends Controller {
         @Path() applicantId: string,
     ) {
         try {
+
             const teamApplication = await Application.exists({
                 applicantId,
                 teamPk: teamId,
@@ -1390,7 +1578,7 @@ export class ATSController extends Controller {
                                     "Failed to fetch subteam info",
                                 );
                             }
-                            return { ...pref, subteamName };
+                            return rolePreferenceDto(pref, subteamName);
                         }),
                     );
 
