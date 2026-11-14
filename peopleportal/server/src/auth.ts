@@ -26,6 +26,7 @@ import { ResourceAccessError } from "./utils/errors";
 import { formatBindleAccessError } from "./utils/strings";
 import { ConstraintViolationException } from "@aws-sdk/client-organizations";
 import { hasAdminAuthority } from "./config";
+import { isHorizonServiceAuthorized } from "./utils/horizon-service-auth";
 
 import { logger } from "./utils/logger";
 
@@ -66,6 +67,15 @@ export async function expressAuthentication(
             return await eventsAuthVerify(request, scopes);
         else if (securityName == "executive")
             return await executiveAuthVerify(request, scopes);
+        else if (securityName == "horizon") {
+            /* Horizon is a service, not a user: no OIDC session, only the
+               shared HORIZON_SERVICE_TOKEN (T3.1). Refused when unset. */
+            if (!isHorizonServiceAuthorized(request.get("Authorization")))
+                return Promise.reject(
+                    new ResourceAccessError(401, "Invalid Horizon service token"),
+                );
+            return Promise.resolve(true);
+        }
         else if (securityName == "ats_otp") {
             if (
                 !request.session.tempsession?.jwt ||

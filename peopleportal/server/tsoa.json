@@ -13,6 +13,11 @@
         "flow": "implicit",
         "authorizationUrl": "/api/auth/login",
         "scopes": {}
+      },
+      "horizon": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Horizon service token (HORIZON_SERVICE_TOKEN)"
       }
     },
     "name": "People Portal Server",
