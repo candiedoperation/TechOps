@@ -80,7 +80,9 @@
   --chart-muted: #91a2bb;
 }
 @theme inline {
-  --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-sans:
+    ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-foreground: var(--text);

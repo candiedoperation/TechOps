@@ -1,7 +1,8 @@
 .portal-shell {
   --portal-sidebar-width: 15rem;
-  --portal-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-    'Courier New', monospace;
+  --portal-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
   display: grid;
   grid-template-columns: var(--portal-sidebar-width) minmax(0, 1fr);
   min-height: 100dvh;
@@ -203,4 +204,14 @@
   .portal-toolbar .access-link span {
     display: none;
   }
+}
+
+.portal-demo-badge {
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: var(--card);
+  color: var(--foreground);
+  padding: 0.15rem 0.45rem;
+  font: 0.72rem var(--portal-mono);
+  white-space: nowrap;
 }

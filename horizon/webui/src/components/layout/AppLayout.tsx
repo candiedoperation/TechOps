@@ -43,9 +43,11 @@ function Navigation({
 export function AppLayout({
   routes = horizonRoutes,
   banner,
+  demoData = false,
 }: {
   routes?: readonly HorizonRoute[]
   banner?: ReactNode
+  demoData?: boolean
 }) {
   const location = useLocation()
   const route = routes.find((item) => matchPath({ path: item.path, end: true }, location.pathname))
@@ -68,7 +70,9 @@ export function AppLayout({
       </a>
       <aside className="portal-sidebar">
         <Link className="portfolio-brand" to="/dashboard" aria-label="Horizon dashboard">
-          <span className="portfolio-logo" aria-hidden="true">H</span>
+          <span className="portfolio-logo" aria-hidden="true">
+            H
+          </span>
           <strong>App Dev Horizon</strong>
         </Link>
         <Navigation routes={routes} />
@@ -100,64 +104,71 @@ export function AppLayout({
             <span aria-current="page">{title}</span>
           </nav>
           <div className="portfolio-header-actions">
-          {['/dashboard', '/insights', '/project-health'].includes(location.pathname) && <SnapshotControl />}
-          <Link
-            to="/settings"
-            className="icon-button"
-            aria-label="Appearance settings"
-            title={'Appearance: ' + appearance}
-          >
-            <AppearanceIcon size={18} />
-          </Link>
-          <span className="connection-indicator">
-            <span />
-            {state.status === 'authenticated' ? 'Session verified' : 'Not connected'}
-          </span>
-          {state.status === 'authenticated' ? (
-            <button
-              className="button button-secondary compact"
-              onClick={() => {
-                setLogoutError(false)
-                void signOut().catch(() => setLogoutError(true))
-              }}
+            {demoData && <span className="portal-demo-badge">Demo data</span>}
+            {['/dashboard', '/insights', '/project-health'].includes(location.pathname) && (
+              <SnapshotControl />
+            )}
+            <Link
+              to="/settings"
+              className="icon-button"
+              aria-label="Appearance settings"
+              title={'Appearance: ' + appearance}
             >
-              <LogOut size={14} />
-              Sign out
-            </button>
-          ) : (
-            <Link to="/sign-in" className="access-link">
-              <LockKeyhole size={15} />
-              <span>Sign-in details</span>
+              <AppearanceIcon size={18} />
             </Link>
-          )}
-        </div>
-      </header>
-      <dialog
-        ref={dialogRef}
-        className="mobile-drawer"
-        aria-label="Workspace navigation"
-        onClick={(event) => {
-          if (event.target === event.currentTarget) dialogRef.current?.close()
-        }}
-      >
-        <button
-          className="icon-button drawer-close"
-          aria-label="Close navigation"
-          onClick={() => dialogRef.current?.close()}
+            <span className="connection-indicator">
+              <span />
+              {demoData
+                ? 'Local fixtures'
+                : state.status === 'authenticated'
+                  ? 'Session verified'
+                  : 'Not connected'}
+            </span>
+            {state.status === 'authenticated' ? (
+              <button
+                className="button button-secondary compact"
+                onClick={() => {
+                  setLogoutError(false)
+                  void signOut().catch(() => setLogoutError(true))
+                }}
+              >
+                <LogOut size={14} />
+                Sign out
+              </button>
+            ) : (
+              <Link to="/sign-in" className="access-link">
+                <LockKeyhole size={15} />
+                <span>Sign-in details</span>
+              </Link>
+            )}
+          </div>
+        </header>
+        <dialog
+          ref={dialogRef}
+          className="mobile-drawer"
+          aria-label="Workspace navigation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) dialogRef.current?.close()
+          }}
         >
-          <X size={20} />
-        </button>
-        <h2>Horizon workspace</h2>
-        <Navigation routes={routes} onNavigate={() => dialogRef.current?.close()} />
-      </dialog>
-      <main id="main-content" className="portfolio-main" ref={mainRef} tabIndex={-1}>
-        {logoutError && <p role="alert">Sign-out could not be confirmed.</p>}
-        <Outlet />
-      </main>
-      <footer className="portfolio-footer">
-        <span>App Dev Horizon</span>
-        <Link to="/sign-in">Access &amp; connection</Link>
-      </footer>
+          <button
+            className="icon-button drawer-close"
+            aria-label="Close navigation"
+            onClick={() => dialogRef.current?.close()}
+          >
+            <X size={20} />
+          </button>
+          <h2>Horizon workspace</h2>
+          <Navigation routes={routes} onNavigate={() => dialogRef.current?.close()} />
+        </dialog>
+        <main id="main-content" className="portfolio-main" ref={mainRef} tabIndex={-1}>
+          {logoutError && <p role="alert">Sign-out could not be confirmed.</p>}
+          <Outlet />
+        </main>
+        <footer className="portfolio-footer">
+          <span>App Dev Horizon</span>
+          <Link to="/sign-in">Access &amp; connection</Link>
+        </footer>
       </div>
     </div>
   )

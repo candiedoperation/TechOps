@@ -2,6 +2,9 @@ import { useState, type ComponentType, type ReactNode } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { createHorizonQueryClient } from '../api/query-client'
+import { MockSourceContext } from '../api/data-source'
+import type { HorizonReadClient } from '../api/client'
+import type { HorizonAuthAdapter } from '../auth/types'
 import { HorizonReadProvider } from '../api/HorizonReadProvider'
 import { AuthProvider } from '../auth/AuthProvider'
 import { ProtectedRoute } from '../auth/ProtectedRoute'
@@ -18,7 +21,24 @@ export interface AppExperience {
   banner?: ReactNode
   PortfolioProvider?: ComponentType<{ children: ReactNode }>
 }
-export function App({ experience }: { experience?: AppExperience } = {}) {
+const fixtureSession: HorizonAuthAdapter = {
+  getState: async () => ({
+    status: 'authenticated',
+    session: {
+      subject: 'horizon-fixture',
+      displayName: 'Demo viewer',
+      permissions: [],
+      isExec: true,
+    },
+  }),
+  signOut: async () => {},
+  signIn: async () => {},
+}
+
+export function App({
+  experience,
+  mockSource,
+}: { experience?: AppExperience; mockSource?: HorizonReadClient | null } = {}) {
   const [queryClient] = useState(createHorizonQueryClient)
   const ReadProvider = experience?.ReadProvider ?? HorizonReadProvider
   const routes = experience?.routes ?? horizonRoutes
@@ -27,48 +47,58 @@ export function App({ experience }: { experience?: AppExperience } = {}) {
     <AppErrorBoundary>
       <AppearanceProvider>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <ReadProvider>
-              <PortfolioBoundary>
-                <Routes>
-                  <Route element={<AppLayout routes={routes} banner={experience?.banner} />}>
-                    <Route index element={<Navigate to="/dashboard" replace />} />
-                    {routes.map((route) => (
-                      <Route
-                        key={route.path}
-                        path={route.path}
-                        element={
-                          route.protected ? (
-                            <ProtectedRoute
-                              permission={route.permission}
-                              executiveOnly={route.executiveOnly}
-                            >
-                              {route.element}
-                            </ProtectedRoute>
-                          ) : (
-                            route.element
-                          )
-                        }
-                      />
-                    ))}
+          <AuthProvider adapter={mockSource ? fixtureSession : undefined}>
+            <MockSourceContext.Provider value={mockSource ?? null}>
+              <ReadProvider>
+                <PortfolioBoundary>
+                  <Routes>
                     <Route
-                      path="*"
                       element={
-                        <EmptyState
-                          title="This page is beyond the horizon"
-                          description="The page you are looking for does not exist in this workspace."
-                          action={
-                            <Link className="button button-primary" to="/dashboard">
-                              Back to dashboard
-                            </Link>
-                          }
+                        <AppLayout
+                          routes={routes}
+                          banner={experience?.banner}
+                          demoData={Boolean(mockSource)}
                         />
                       }
-                    />
-                  </Route>
-                </Routes>
-              </PortfolioBoundary>
-            </ReadProvider>
+                    >
+                      <Route index element={<Navigate to="/dashboard" replace />} />
+                      {routes.map((route) => (
+                        <Route
+                          key={route.path}
+                          path={route.path}
+                          element={
+                            route.protected ? (
+                              <ProtectedRoute
+                                permission={route.permission}
+                                executiveOnly={route.executiveOnly}
+                              >
+                                {route.element}
+                              </ProtectedRoute>
+                            ) : (
+                              route.element
+                            )
+                          }
+                        />
+                      ))}
+                      <Route
+                        path="*"
+                        element={
+                          <EmptyState
+                            title="This page is beyond the horizon"
+                            description="The page you are looking for does not exist in this workspace."
+                            action={
+                              <Link className="button button-primary" to="/dashboard">
+                                Back to dashboard
+                              </Link>
+                            }
+                          />
+                        }
+                      />
+                    </Route>
+                  </Routes>
+                </PortfolioBoundary>
+              </ReadProvider>
+            </MockSourceContext.Provider>
           </AuthProvider>
         </QueryClientProvider>
       </AppearanceProvider>

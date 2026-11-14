@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { horizonAuthAdapter } from './adapter'
 import { AuthContext } from './context'
@@ -13,10 +13,14 @@ export function AuthProvider({
 }) {
   const [state, setState] = useState<AuthState>({ status: 'loading' })
   const queryClient = useQueryClient()
+  const previousAdapter = useRef(adapter)
 
   useEffect(() => {
     const controller = new AbortController()
-    queryClient.clear()
+    if (previousAdapter.current !== adapter) {
+      queryClient.clear()
+      previousAdapter.current = adapter
+    }
     setState({ status: 'loading' })
     adapter.getState(controller.signal).then(
       (nextState) => {

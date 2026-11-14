@@ -16,4 +16,18 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['error', { allowConstantExport: true }],
     },
   },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/api/data-source.ts', 'src/mocks/horizon/**'],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: ['**/mocks/horizon', '**/mocks/horizon/**'] }],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'ImportExpression[source.value=/mocks.horizon/]',
+          message: 'Load Horizon fixtures through the data-source boundary.',
+        },
+      ],
+    },
+  },
 )

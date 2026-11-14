@@ -1,16 +1,18 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { loadMockSource, parseDataSource } from './api/data-source'
+import type { HorizonReadClient } from './api/client'
 import { App, type AppExperience } from './app/App'
 import './styles.css'
 import './features/portfolio/portfolio.css'
 
 const root = createRoot(document.getElementById('root')!)
-function render(experience?: AppExperience) {
+function render(experience?: AppExperience, mockSource?: HorizonReadClient | null) {
   root.render(
     <StrictMode>
       <BrowserRouter>
-        <App experience={experience} />
+        <App experience={experience} mockSource={mockSource} />
       </BrowserRouter>
     </StrictMode>,
   )
@@ -36,6 +38,16 @@ if (
         </main>,
       )
     })
-} else {
+} else if (import.meta.env.VITE_HORIZON_DATA_SOURCE === 'api') {
   render()
+} else {
+  Promise.resolve()
+    .then(() => parseDataSource(import.meta.env.VITE_HORIZON_DATA_SOURCE))
+    .then(loadMockSource)
+    .then((mockSource) => render(undefined, mockSource))
+    .catch(() =>
+      root.render(
+        <main className="startup-error">Horizon could not load its configured data source.</main>,
+      ),
+    )
 }

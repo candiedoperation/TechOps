@@ -23,6 +23,7 @@ async function check(directory) {
           'Fictional demo environment',
           'mockServiceWorker.js',
           'msw/browser',
+          'Avery Example',
         ]) {
           assert(!contents.includes(marker), `Production includes demo marker ${marker}: ${path}`)
         }
