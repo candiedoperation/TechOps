@@ -74,7 +74,12 @@ app.use(express.json());
 
 app.use(
     cors({
-        origin: "http://localhost:5173",
+        /* Comma separated list; parallel dev stacks run the UI on other
+           host/port pairs (see dev-stack/PARALLEL.md). */
+        origin: (process.env.PEOPLEPORTAL_CORS_ORIGINS ?? "http://localhost:5173")
+            .split(",")
+            .map((origin) => origin.trim())
+            .filter(Boolean),
         credentials: true,
     }),
 );
