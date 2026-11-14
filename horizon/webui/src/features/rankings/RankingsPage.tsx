@@ -17,7 +17,10 @@ export function RankingsPage() {
     return (
       <>
         <div className="page-intro">
-          <div><h1>Member Rankings</h1><p>Compare published contributions by semester, role, and project.</p></div>
+          <div>
+            <h1>Member Rankings</h1>
+            <p>Compare published contributions by semester, role, and project.</p>
+          </div>
         </div>
         <PublishedRankings />
       </>

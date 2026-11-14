@@ -1,10 +1,21 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, matchPath } from 'react-router-dom'
-import { PanelsTopLeft, PanelLeft, ChevronRight, X, Monitor, Moon, Sun, LogOut, LockKeyhole } from 'lucide-react'
+import {
+  PanelsTopLeft,
+  PanelLeft,
+  ChevronRight,
+  X,
+  Monitor,
+  Moon,
+  Sun,
+  LogOut,
+  LockKeyhole,
+} from 'lucide-react'
 import { horizonRoutes, type HorizonRoute } from '../../app/routes'
 import { useAuth } from '../../auth/context'
 import { useAppearance } from '../../theme/context'
 import { SnapshotControl } from '../../features/portfolio/PortfolioPages'
+import { LoadingState } from '../ui/States'
 import { moveFrom } from '../ui/motion'
 import './portal-shell.css'
 
@@ -41,6 +52,9 @@ function Navigation({
           key={route.path}
           to={route.path}
           onClick={onNavigate}
+          onPointerEnter={() => void route.preload?.()}
+          onFocus={() => void route.preload?.()}
+          onPointerDown={() => void route.preload?.()}
           className={({ isActive }) => (isActive ? 'top-nav-link active' : 'top-nav-link')}
         >
           <i className="portal-nav-marker" aria-hidden="true" />
@@ -71,7 +85,9 @@ export function AppLayout({
   const [logoutError, setLogoutError] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   useEffect(() => {
-    const sync = () => { document.documentElement.dataset.paused = String(document.hidden) }
+    const sync = () => {
+      document.documentElement.dataset.paused = String(document.hidden)
+    }
     sync()
     document.addEventListener('visibilitychange', sync)
     return () => document.removeEventListener('visibilitychange', sync)
@@ -90,7 +106,10 @@ export function AppLayout({
           <span className="portfolio-logo" aria-hidden="true">
             <PanelsTopLeft size={17} />
           </span>
-          <span className="portal-brand-label"><strong>App Dev Club</strong><span>Horizon</span></span>
+          <span className="portal-brand-label">
+            <strong>App Dev Club</strong>
+            <span>Horizon</span>
+          </span>
         </Link>
         <p className="portal-nav-label">Workspace</p>
         <Navigation routes={routes} />
@@ -181,7 +200,9 @@ export function AppLayout({
         </dialog>
         <main id="main-content" className="portfolio-main" ref={mainRef} tabIndex={-1}>
           {logoutError && <p role="alert">Sign-out could not be confirmed.</p>}
-          <Outlet />
+          <Suspense fallback={<LoadingState />}>
+            <Outlet />
+          </Suspense>
         </main>
         <footer className="portfolio-footer">
           <span>App Dev Horizon</span>

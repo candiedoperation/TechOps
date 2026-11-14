@@ -27,8 +27,12 @@ export function CountUp({ value, animate = true }: { value: number; animate?: bo
       node.textContent = final
     }
   }, [animate, final, value])
-  return <span className="animated-value">
-    <span className="sr-only">{final}</span>
-    <span aria-hidden="true" ref={ref}>{final}</span>
-  </span>
+  return (
+    <span className="animated-value">
+      <span className="sr-only">{final}</span>
+      <span aria-hidden="true" ref={ref}>
+        {final}
+      </span>
+    </span>
+  )
 }

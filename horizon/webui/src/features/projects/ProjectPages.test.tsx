@@ -4,7 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { projectOperations, type SowTimelineDocument } from '../../api/contracts/projects'
 import { renderReadPage } from '../../test/render-read-page'
-import { ProjectPage, ProjectsPage } from './ProjectPages'
+import { ProjectPage } from './ProjectPages'
+import { ProjectsPage } from './ProjectsListPage'
 import { SowTimeline } from './SowTimeline'
 
 const meta = {

@@ -29,7 +29,10 @@ export function ScoreBar({
         {animate ? <CountUp value={value} /> : value} / {maximum}
       </span>
       <span className="score-track" aria-hidden="true">
-        <span className="score-fill" style={{ '--score-level': `${(value / maximum) * 100}%` } as CSSProperties} />
+        <span
+          className="score-fill"
+          style={{ '--score-level': `${(value / maximum) * 100}%` } as CSSProperties}
+        />
       </span>
       <meter className="sr-only" aria-label={label} min={0} max={maximum} value={value} />
     </span>

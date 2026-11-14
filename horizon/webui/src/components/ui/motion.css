@@ -7,39 +7,77 @@
 }
 
 @keyframes horizon-enter {
-  from { transform: translateY(5px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(5px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes horizon-draw {
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 @keyframes horizon-fill {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
 }
 
 @keyframes horizon-grow {
-  from { transform: scaleY(0); }
-  to { transform: scaleY(1); }
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 
 @keyframes horizon-node {
-  from { transform: scale(0.7); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes horizon-pulse {
-  from { transform: scale(0.8); opacity: 0.7; }
-  to { transform: scale(1.8); opacity: 0; }
+  from {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.8);
+    opacity: 0;
+  }
 }
 
 @keyframes horizon-sweep {
-  from { transform: translateX(-110%); opacity: 0; }
-  25% { opacity: 0.7; }
-  to { transform: translateX(110%); opacity: 0; }
+  from {
+    transform: translateX(-110%);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.7;
+  }
+  to {
+    transform: translateX(110%);
+    opacity: 0;
+  }
 }
 
 .animated-value {
@@ -99,7 +137,9 @@
 
 @supports (animation-timing-function: linear(0, 1)) {
   .score-fill,
-  .sow-status-icon { animation-timing-function: var(--motion-spring); }
+  .sow-status-icon {
+    animation-timing-function: var(--motion-spring);
+  }
 }
 
 .sow-timeline {
@@ -151,7 +191,9 @@
   height: 0.55rem;
 }
 
-.sow-task-overdue .sow-status-icon::before { inset: 0; }
+.sow-task-overdue .sow-status-icon::before {
+  inset: 0;
+}
 
 .sow-timeline[data-motion='ready'] .sow-task-overdue .sow-status-icon::before {
   animation: horizon-pulse 450ms var(--motion-ease) calc(200ms + var(--node-delay)) both;
@@ -180,7 +222,9 @@
   display: grid;
   grid-template-rows: 1fr;
   opacity: 1;
-  transition: grid-template-rows var(--motion-fast) var(--motion-ease), opacity var(--motion-fast);
+  transition:
+    grid-template-rows var(--motion-fast) var(--motion-ease),
+    opacity var(--motion-fast);
 }
 
 .sow-task-details > div {
@@ -189,7 +233,10 @@
 }
 
 @starting-style {
-  .sow-task-details { grid-template-rows: 0fr; opacity: 0; }
+  .sow-task-details {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
 }
 
 .portal-shell .skeleton-lines {
@@ -211,7 +258,9 @@
   animation-timing-function: var(--motion-ease);
 }
 
-::view-transition-new(root) { animation-name: horizon-enter; }
+::view-transition-new(root) {
+  animation-name: horizon-enter;
+}
 
 html[data-paused='true'] .sow-today::after,
 html[data-paused='true'] .skeleton-lines::after {
@@ -266,7 +315,9 @@ html[data-paused='true'] .skeleton-lines::after {
     transition: transform var(--motion-fast) var(--motion-ease);
   }
 
-  .portal-shell .project-card:hover { transform: translateY(-2px); }
+  .portal-shell .project-card:hover {
+    transform: translateY(-2px);
+  }
 
   .portal-shell .card:has(.portal-card-icon)::before {
     content: '';
@@ -275,22 +326,37 @@ html[data-paused='true'] .skeleton-lines::after {
     inset: 0;
     border: 1px solid transparent;
     border-radius: inherit;
-    background: radial-gradient(110px circle at var(--spot-x, -120px) var(--spot-y, -120px), var(--accent-text), transparent) border-box;
-    mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+    background: radial-gradient(
+        110px circle at var(--spot-x, -120px) var(--spot-y, -120px),
+        var(--accent-text),
+        transparent
+      )
+      border-box;
+    mask:
+      linear-gradient(#000 0 0) padding-box,
+      linear-gradient(#000 0 0);
     mask-composite: exclude;
     opacity: 0;
     pointer-events: none;
     transition: opacity var(--motion-fast);
   }
 
-  .portal-shell .card:has(.portal-card-icon):hover::before { opacity: 0.55; }
+  .portal-shell .card:has(.portal-card-icon):hover::before {
+    opacity: 0.55;
+  }
 }
 
 @media (pointer: coarse) {
-  .portal-shell .project-card:active { transform: scale(0.985); }
+  .portal-shell .project-card:active {
+    transform: scale(0.985);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .portal-shell .project-card:is(:hover, :active) { transform: none; }
-  .portal-shell .card:has(.portal-card-icon)::before { display: none; }
+  .portal-shell .project-card:is(:hover, :active) {
+    transform: none;
+  }
+  .portal-shell .card:has(.portal-card-icon)::before {
+    display: none;
+  }
 }

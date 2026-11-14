@@ -1,8 +1,13 @@
 import { ListOrdered } from 'lucide-react'
 import { useLayoutEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../../auth/context'
+import { useHorizonReadClient } from '../../api/context'
+import { memberOperation } from '../../api/contracts/member'
+import { loadMember } from '../../app/route-loaders'
 import { rankingOperations, type RankingRow } from '../../api/contracts/rankings'
-import { useHorizonReadQuery } from '../../api/use-horizon-query'
+import { horizonQueryKeys, useHorizonReadQuery } from '../../api/use-horizon-query'
 import { Card } from '../../components/ui/Card'
 import { QueryState } from '../../components/ui/QueryState'
 import { DataTable, type TableColumn } from '../../components/ui/DataTable'
@@ -34,11 +39,20 @@ function memberUrl(row: RankingRow, season: string, run: string) {
 
 function selectTransition(row: HTMLElement | null) {
   if (!row || !motionAllowed() || !document.startViewTransition) return
-  row.querySelector<HTMLElement>('[data-transition-name]')?.style.setProperty('view-transition-name', 'member-name')
-  row.querySelector<HTMLElement>('[data-transition-score]')?.style.setProperty('view-transition-name', 'member-score')
+  row
+    .querySelector<HTMLElement>('[data-transition-name]')
+    ?.style.setProperty('view-transition-name', 'member-name')
+  row
+    .querySelector<HTMLElement>('[data-transition-score]')
+    ?.style.setProperty('view-transition-name', 'member-score')
 }
 
-function columns(season: string, runId: string, rubricVersion: string): TableColumn<RankingRow>[] {
+function columns(
+  season: string,
+  runId: string,
+  rubricVersion: string,
+  prefetch: (row: RankingRow, run: string) => Promise<void>,
+): TableColumn<RankingRow>[] {
   return [
     {
       id: 'rank',
@@ -48,13 +62,22 @@ function columns(season: string, runId: string, rubricVersion: string): TableCol
     {
       id: 'name',
       heading: 'Name',
-      render: (row) => <Link to={memberUrl(row, season, runId)}
-        viewTransition={motionAllowed()}
-        onClick={(event) => {
-          if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey)
-            selectTransition(event.currentTarget.closest('tr'))
-        }}
-        data-transition-name>{row.name}</Link>,
+      render: (row) => (
+        <Link
+          to={memberUrl(row, season, runId)}
+          viewTransition={motionAllowed()}
+          onClick={(event) => {
+            if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey)
+              selectTransition(event.currentTarget.closest('tr'))
+          }}
+          onPointerEnter={() => void prefetch(row, runId)}
+          onPointerDown={() => void prefetch(row, runId)}
+          onFocus={() => void prefetch(row, runId)}
+          data-transition-name
+        >
+          {row.name}
+        </Link>
+      ),
     },
     { id: 'project', heading: 'Project', render: (row) => row.projectName },
     {
@@ -67,7 +90,9 @@ function columns(season: string, runId: string, rubricVersion: string): TableCol
       heading: 'Overall score',
       render: (row) =>
         row.status === 'ranked' ? (
-          <div data-transition-score><ScoreBar value={row.overallScore} maximum={100} label={`${row.name} overall score`} /></div>
+          <div data-transition-score>
+            <ScoreBar value={row.overallScore} maximum={100} label={`${row.name} overall score`} />
+          </div>
         ) : (
           '—'
         ),
@@ -111,6 +136,9 @@ function columns(season: string, runId: string, rubricVersion: string): TableCol
 
 export function PublishedRankings() {
   const navigate = useNavigate()
+  const queries = useQueryClient()
+  const client = useHorizonReadClient()
+  const { state } = useAuth()
   const tables = useRef<HTMLDivElement>(null)
   const previous = useRef(new Map<string, DOMRect>())
   const [search, setSearch] = useSearchParams()
@@ -137,6 +165,18 @@ export function PublishedRankings() {
     available: Boolean(season),
   })
 
+  function prefetch(row: RankingRow, run: string) {
+    if (state.status !== 'authenticated' || !client.isAvailable()) return Promise.resolve()
+    const parameters = { userPk: row.userPk, season, run }
+    return Promise.all([
+      loadMember(),
+      queries.prefetchQuery({
+        queryKey: horizonQueryKeys.read(state.session.subject, 'ranking-member', parameters),
+        queryFn: ({ signal }) => client.get(memberOperation(row.userPk, { season, run }), signal),
+      }),
+    ]).then(() => {})
+  }
+
   useLayoutEffect(() => {
     if (!rankings.data || !motionAllowed()) return
     const rows = tables.current?.querySelectorAll<HTMLElement>('[data-row-key]')
@@ -157,7 +197,8 @@ export function PublishedRankings() {
     previous.current.clear()
     const rows = tables.current?.querySelectorAll<HTMLElement>('[data-row-key]')
     if (motionAllowed() && rows && rows.length <= 50) {
-      for (const row of rows) previous.current.set(row.dataset.rowKey ?? '', row.getBoundingClientRect())
+      for (const row of rows)
+        previous.current.set(row.dataset.rowKey ?? '', row.getBoundingClientRect())
     }
     setSearch(next)
   }
@@ -263,7 +304,7 @@ export function PublishedRankings() {
                 {key && <h3>{group.label}</h3>}
                 <DataTable
                   caption={`Rankings · ${group.label}`}
-                  columns={columns(season, meta.runId, meta.rubricVersion)}
+                  columns={columns(season, meta.runId, meta.rubricVersion, prefetch)}
                   rows={[
                     ...group.rows.filter((row) => row.status === 'ranked'),
                     ...group.rows.filter((row) => row.status !== 'ranked'),
@@ -273,10 +314,16 @@ export function PublishedRankings() {
                   rowClassName={(row) => (row.status !== 'ranked' ? 'unranked-row' : 'ranking-row')}
                   onRowClick={(row) => {
                     const key = JSON.stringify([row.userPk, row.projectPk, row.role])
-                    const element = [...(tables.current?.querySelectorAll<HTMLElement>('[data-row-key]') ?? [])]
-                      .find((element) => element.dataset.rowKey === key)
-                    selectTransition(element ?? null)
-                    void navigate(memberUrl(row, season, meta.runId), { viewTransition: motionAllowed() })
+                    const element = [
+                      ...(tables.current?.querySelectorAll<HTMLElement>('[data-row-key]') ?? []),
+                    ].find((element) => element.dataset.rowKey === key)
+                    const animate = motionAllowed() && Boolean(document.startViewTransition)
+                    const open = () => {
+                      selectTransition(element ?? null)
+                      void navigate(memberUrl(row, season, meta.runId), { viewTransition: animate })
+                    }
+                    if (animate) void prefetch(row, meta.runId).then(open, open)
+                    else open()
                   }}
                 />
               </section>

@@ -1,8 +1,6 @@
-import type { ReactNode } from 'react'
+import { lazy, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ChartNoAxesCombined, LayoutDashboard, Settings2, UsersRound } from 'lucide-react'
-import { MemberPage } from '../features/rankings/MemberPage'
-import { RankingsPage } from '../features/rankings/RankingsPage'
 import {
   PortfolioDashboard,
   PortfolioProjects,
@@ -10,12 +8,18 @@ import {
 } from '../features/portfolio/PortfolioPages'
 import { SignInPage } from '../features/auth/SignInPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
-import { ProjectPage, ProjectsPage } from '../features/projects/ProjectPages'
+import { loadMember, loadProject, loadProjects, loadRankings } from './route-loaders'
+
+const RankingsPage = lazy(() => loadRankings().then((module) => ({ default: module.RankingsPage })))
+const MemberPage = lazy(() => loadMember().then((module) => ({ default: module.MemberPage })))
+const ProjectPage = lazy(() => loadProject().then((module) => ({ default: module.ProjectPage })))
+const ProjectsPage = lazy(() => loadProjects().then((module) => ({ default: module.ProjectsPage })))
 
 export interface HorizonRoute {
   path: string
   title: string
   element: ReactNode
+  preload?: () => Promise<unknown>
   navigation?: {
     icon: LucideIcon
     description: string
@@ -38,12 +42,14 @@ export const horizonRoutes: readonly HorizonRoute[] = [
   },
   {
     path: '/rankings',
+    preload: loadRankings,
     title: 'Member Rankings',
     element: <RankingsPage />,
     navigation: { icon: UsersRound, description: 'People & contributions', executiveOnly: true },
   },
   {
     path: '/projects',
+    preload: loadProjects,
     title: 'Projects',
     element: <ProjectsPage />,
     navigation: { icon: ChartNoAxesCombined, description: 'Projects & progress' },
@@ -57,6 +63,7 @@ export const horizonRoutes: readonly HorizonRoute[] = [
   },
   {
     path: '/rankings/members/:userPk',
+    preload: loadMember,
     title: 'Member profile',
     protected: true,
     executiveOnly: true,
@@ -64,6 +71,7 @@ export const horizonRoutes: readonly HorizonRoute[] = [
   },
   {
     path: '/projects/:projectPk',
+    preload: loadProject,
     title: 'Project detail',
     element: <ProjectPage />,
   },

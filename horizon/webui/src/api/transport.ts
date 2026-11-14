@@ -25,10 +25,12 @@ export interface TransportOptions {
   fetcher?: typeof fetch
   allowPath?: (url: URL) => boolean
   requireDemoResponse?: boolean
+  revalidate?: boolean
 }
 
 /** Shared HTTP behavior; callers must enforce session access or the isolated demo policy. */
 export function createReadTransport(options: TransportOptions) {
+  const validators = new Map<string, { etag: string; value: unknown }>()
   return {
     async get<T>(operation: ReadOperation<T>, signal?: AbortSignal): Promise<T> {
       const origin = new URL(options.origin)
@@ -58,11 +60,15 @@ export function createReadTransport(options: TransportOptions) {
           'unavailable',
           'This read path is not permitted in this environment.',
         )
+      const previous = options.revalidate ? validators.get(url.href) : undefined
       let response: Response
       try {
         response = await (options.fetcher ?? fetch)(url, {
           method: 'GET',
-          headers: { Accept: 'application/json' },
+          headers: {
+            Accept: 'application/json',
+            ...(previous ? { 'If-None-Match': previous.etag } : {}),
+          },
           credentials: options.credentials,
           redirect: 'error',
           cache: 'no-store',
@@ -87,13 +93,23 @@ export function createReadTransport(options: TransportOptions) {
           response.status,
         )
       }
+      if (response.status === 304 && previous) return operation.parse(previous.value)
       if (!response.ok)
         throw new ReadApiError('http', 'Horizon could not complete this request.', response.status)
       if (!response.headers.get('content-type')?.toLowerCase().includes('application/json')) {
         throw new ReadApiError('invalid-response', 'Horizon returned an unexpected response.')
       }
       try {
-        return operation.parse(await response.json())
+        const value: unknown = await response.json()
+        const parsed = operation.parse(value)
+        const etag = response.headers.get('ETag')
+        if (options.revalidate && etag) {
+          if (validators.size >= 32) validators.delete(validators.keys().next().value!)
+          validators.set(url.href, { etag, value })
+        } else {
+          validators.delete(url.href)
+        }
+        return parsed
       } catch {
         throw new ReadApiError('invalid-response', 'Horizon returned an unexpected response.')
       }

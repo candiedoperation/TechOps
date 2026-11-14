@@ -238,7 +238,9 @@
   margin-top: 0;
 }
 
-.portal-shell[data-sidebar-collapsed='true'] .portal-sidebar :is(.portal-nav-label, .portal-brand-label) {
+.portal-shell[data-sidebar-collapsed='true']
+  .portal-sidebar
+  :is(.portal-nav-label, .portal-brand-label) {
   display: none;
 }
 
@@ -345,4 +347,16 @@
   .portal-card-body {
     padding-inline: 1rem;
   }
+}
+
+.chart-placeholder {
+  min-height: 9rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+}
+
+.project-main > .card:nth-child(n + 4),
+.member-profile > .card:nth-child(n + 4) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 14rem;
 }

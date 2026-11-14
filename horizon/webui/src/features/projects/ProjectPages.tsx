@@ -1,158 +1,29 @@
 import { CountUp } from '../../components/ui/CountUp'
-import { ArrowLeft, ArrowUpRight, ChartNoAxesCombined, FolderKanban, History, ListTodo, MessageSquareText, ShieldAlert, UsersRound } from 'lucide-react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
-  projectOperations,
-  type ProjectSummary,
-  type ProjectMeta,
-} from '../../api/contracts/projects'
+  ArrowLeft,
+  ChartNoAxesCombined,
+  History,
+  ListTodo,
+  MessageSquareText,
+  ShieldAlert,
+  UsersRound,
+} from 'lucide-react'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { projectOperations } from '../../api/contracts/projects'
 import { usePublicProjectQuery } from '../../api/use-public-project-query'
 import { Card } from '../../components/ui/Card'
-import { TrendChart } from '../../components/ui/TrendChart'
+import { lazy, Suspense } from 'react'
+import { Freshness } from './ProjectPublication'
+import { readSelection } from './project-selection'
+const TrendChart = lazy(() =>
+  import('../../components/ui/TrendChart').then((module) => ({ default: module.TrendChart })),
+)
 import { QueryState } from '../../components/ui/QueryState'
 import { EmptyState } from '../../components/ui/States'
 import { ReadApiError } from '../../api/client'
 import { shortDate } from '../../format'
 import { SowTimeline } from './SowTimeline'
 import './projects.css'
-
-function readSelection(search: URLSearchParams) {
-  const now = new Date()
-  const season =
-    search.get('season') ?? `${now.getUTCMonth() < 6 ? 'SPRING' : 'FALL'}-${now.getUTCFullYear()}`
-  return { season, run: search.get('run') ?? 'current' }
-}
-
-function Freshness({ meta }: { meta: ProjectMeta }) {
-  return (
-    <p>
-      {meta.stale ? 'Stale · Last updated' : 'Updated'}{' '}
-      <time dateTime={meta.asOf}>{shortDate.format(new Date(meta.asOf))}</time>
-    </p>
-  )
-}
-
-function RiskBadges({ counts }: { counts: ProjectSummary['riskCounts'] }) {
-  return (
-    <ul className="project-badges" aria-label="Risks">
-      {Object.entries(counts)
-        .filter(([, count]) => count > 0)
-        .map(([risk, count]) => (
-          <li key={risk}>
-            {risk.replaceAll('_', ' ')} {count}
-          </li>
-        ))}
-    </ul>
-  )
-}
-
-export function ProjectsPage() {
-  const [search, setSearch] = useSearchParams()
-  const selection = readSelection(search)
-  const projects = usePublicProjectQuery(projectOperations.list(selection))
-  return (
-    <>
-      <header className="page-intro">
-        <div><h1>All projects</h1><p>Track published progress and delivery risks across the semester.</p></div>
-      </header>
-      <form
-        className="project-season"
-        key={selection.season}
-        onSubmit={(event) => {
-          event.preventDefault()
-          const data = new FormData(event.currentTarget)
-          setSearch({ season: `${data.get('seasonType')}-${data.get('year')}` })
-        }}
-      >
-        <label className="select-label">
-          Semester
-          <select
-            name="seasonType"
-            defaultValue={selection.season.startsWith('SPRING') ? 'SPRING' : 'FALL'}
-          >
-            <option value="SPRING">Spring</option>
-            <option value="FALL">Fall</option>
-          </select>
-        </label>
-        <label className="select-label">
-          Year
-          <input
-            name="year"
-            type="number"
-            min={2000}
-            max={2200}
-            required
-            defaultValue={selection.season.split('-')[1]}
-          />
-        </label>
-        <button type="submit" className="button button-secondary">
-          Apply
-        </button>
-      </form>
-      {projects.error instanceof ReadApiError && projects.error.status === 404 ? (
-        <EmptyState
-          title="No project publication"
-          description="Choose a semester with published project progress."
-        />
-      ) : (
-        <QueryState
-          available
-          data={projects.data}
-          pending={projects.isPending}
-          error={projects.error}
-          onRefresh={() => void projects.refetch()}
-          isEmpty={() => false}
-        >
-          {({ meta, data }) => (
-            <>
-              <Freshness meta={meta} />
-              {data.length === 0 && (
-                <EmptyState
-                  title="No published projects"
-                  description="No project summaries are available for this run."
-                />
-              )}
-              <div className="published-project-list">
-                {data.map((project) => (
-                  <Card key={project.projectPk} title={project.friendlyName} icon={FolderKanban} className="project-card">
-                    {project.hasSow ? (
-                      <>
-                        <p>
-                          {project.percentComplete}% complete · {project.tasksOverdue} overdue
-                        </p>
-                        <progress
-                          aria-label={`${project.friendlyName} completion`}
-                          max={100}
-                          value={project.percentComplete}
-                        />
-                      </>
-                    ) : (
-                      <p>No SOW yet</p>
-                    )}
-                    <RiskBadges counts={project.riskCounts} />
-                    <Link
-                      className="button button-secondary project-open"
-                      to={{
-                        pathname: `/projects/${encodeURIComponent(project.projectPk)}`,
-                        search: new URLSearchParams({
-                          season: selection.season,
-                          run: meta.runId,
-                        }).toString(),
-                      }}
-                      aria-label={`View ${project.friendlyName}`}
-                    >
-                      View project <ArrowUpRight size={14} aria-hidden="true" />
-                    </Link>
-                  </Card>
-                ))}
-              </div>
-            </>
-          )}
-        </QueryState>
-      )}
-    </>
-  )
-}
 
 const series = [
   ['PRs merged per week', 'prsMerged', ''],
@@ -226,7 +97,10 @@ function ProjectPublication({
                       }).map(([label, value]) => (
                         <div key={label}>
                           <dt>{label}</dt>
-                          <dd><CountUp value={value} />{label === 'Complete' && '%'}</dd>
+                          <dd>
+                            <CountUp value={value} />
+                            {label === 'Complete' && '%'}
+                          </dd>
                         </div>
                       ))}
                     </dl>
@@ -246,19 +120,21 @@ function ProjectPublication({
                     )}
                   </Card>
                   <Card title="Weekly engineering activity" icon={ChartNoAxesCombined} tone="blue">
-                    {series.map(([title, key, unit]) => (
-                      <TrendChart
-                        key={key}
-                        title={title}
-                        unit={unit}
-                        bars={key === 'prsMerged'}
-                        points={detail.metrics.map((week) => ({
-                          id: week.week,
-                          at: week.week,
-                          value: week[key],
-                        }))}
-                      />
-                    ))}
+                    <Suspense fallback={<div className="chart-placeholder" aria-hidden="true" />}>
+                      {series.map(([title, key, unit]) => (
+                        <TrendChart
+                          key={key}
+                          title={title}
+                          unit={unit}
+                          bars={key === 'prsMerged'}
+                          points={detail.metrics.map((week) => ({
+                            id: week.week,
+                            at: week.week,
+                            value: week[key],
+                          }))}
+                        />
+                      ))}
+                    </Suspense>
                   </Card>
                   <Card title="Ownership" icon={UsersRound} tone="green">
                     {Object.keys(detail.ownership).length ? (
@@ -298,16 +174,20 @@ function ProjectPublication({
                       isEmpty={() => false}
                     >
                       {(points) => (
-                        <TrendChart
-                          title="SOW completion by run"
-                          maximum={100}
-                          unit="%"
-                          points={points.map((point) => ({
-                            id: point.runId,
-                            at: point.asOf,
-                            value: point.percentComplete,
-                          }))}
-                        />
+                        <Suspense
+                          fallback={<div className="chart-placeholder" aria-hidden="true" />}
+                        >
+                          <TrendChart
+                            title="SOW completion by run"
+                            maximum={100}
+                            unit="%"
+                            points={points.map((point) => ({
+                              id: point.runId,
+                              at: point.asOf,
+                              value: point.percentComplete,
+                            }))}
+                          />
+                        </Suspense>
                       )}
                     </QueryState>
                   </Card>

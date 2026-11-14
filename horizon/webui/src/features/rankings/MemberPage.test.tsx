@@ -109,7 +109,7 @@ describe('member ranking detail', () => {
     )
     expect(screen.getByRole('button', { name: 'Flag for calibration' })).toBeDisabled()
     expect(
-      screen.getByText('Score by run').closest('figure')?.querySelectorAll('circle'),
+      (await screen.findByText('Score by run')).closest('figure')?.querySelectorAll('circle'),
     ).toHaveLength(2)
     expect(
       screen.getByText('Rank by run').closest('figure')?.querySelectorAll('circle'),

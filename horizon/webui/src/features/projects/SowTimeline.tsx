@@ -17,14 +17,42 @@ const status = {
 
 const today = () => new Date()
 
-const Task = memo(function Task({ task, selected, index }: { task: SowTask; selected: boolean; index: number }) {
+const Task = memo(function Task({
+  task,
+  selected,
+  index,
+}: {
+  task: SowTask
+  selected: boolean
+  index: number
+}) {
   const { label, icon: Icon } = status[task.timelineStatus]
   const override = task.override
   const pending = task.pendingOverride
   return (
-    <li id={taskAnchor(task.taskKey)} className={`sow-task sow-task-${task.timelineStatus}`} style={{ '--node-delay': `${Math.min(index, 11) * 34}ms` } as CSSProperties}>
+    <li
+      id={taskAnchor(task.taskKey)}
+      className={`sow-task sow-task-${task.timelineStatus}`}
+      style={{ '--node-delay': `${Math.min(index, 11) * 34}ms` } as CSSProperties}
+    >
       <span className="sow-status-icon">
-        {task.timelineStatus === 'done' ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path pathLength="1" d="m5 12 4 4L19 6" /></svg> : <Icon size={16} aria-hidden="true" />}
+        {task.timelineStatus === 'done' ? (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path pathLength="1" d="m5 12 4 4L19 6" />
+          </svg>
+        ) : (
+          <Icon size={16} aria-hidden="true" />
+        )}
       </span>
       <details open={selected || undefined}>
         <summary>
@@ -41,49 +69,51 @@ const Task = memo(function Task({ task, selected, index }: { task: SowTask; sele
           </span>
           {pending && <span className="sow-pending">Pending next run</span>}
         </summary>
-        <div className="sow-task-details"><div>
-        {task.description && <p>{task.description}</p>}
-        {task.acceptanceCriteria.length > 0 && (
-          <>
-            <h3>Acceptance criteria</h3>
-            <ul>
-              {task.acceptanceCriteria.map((criterion) => (
-                <li key={criterion}>{criterion}</li>
-              ))}
-            </ul>
-          </>
-        )}
-        {task.sourceRef && <p>Source {task.sourceRef}</p>}
-        {task.matchedPrs.length > 0 && (
-          <>
-            <h3>Matched pull requests</h3>
-            <ul>
-              {task.matchedPrs.map((pr) => {
-                const url = externalHttpUrl(pr.url)
-                return (
-                  <li key={`${pr.url}:${pr.number}`}>
-                    {url ? <a href={url}>PR #{pr.number}</a> : `PR #${pr.number}`} ·{' '}
-                    {percent.format(pr.confidence)} confidence
-                    <p>{pr.reason}</p>
-                  </li>
-                )
-              })}
-            </ul>
-          </>
-        )}
-        {override && (
-          <p>
-            Applied override · {override.status.replaceAll('_', ' ')}
-            {override.reason && ` · ${override.reason}`}
-          </p>
-        )}
-        {pending && (
-          <p>
-            Pending next run · {pending.status.replaceAll('_', ' ')}
-            {pending.reason && ` · ${pending.reason}`}
-          </p>
-        )}
-        </div></div>
+        <div className="sow-task-details">
+          <div>
+            {task.description && <p>{task.description}</p>}
+            {task.acceptanceCriteria.length > 0 && (
+              <>
+                <h3>Acceptance criteria</h3>
+                <ul>
+                  {task.acceptanceCriteria.map((criterion) => (
+                    <li key={criterion}>{criterion}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {task.sourceRef && <p>Source {task.sourceRef}</p>}
+            {task.matchedPrs.length > 0 && (
+              <>
+                <h3>Matched pull requests</h3>
+                <ul>
+                  {task.matchedPrs.map((pr) => {
+                    const url = externalHttpUrl(pr.url)
+                    return (
+                      <li key={`${pr.url}:${pr.number}`}>
+                        {url ? <a href={url}>PR #{pr.number}</a> : `PR #${pr.number}`} ·{' '}
+                        {percent.format(pr.confidence)} confidence
+                        <p>{pr.reason}</p>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </>
+            )}
+            {override && (
+              <p>
+                Applied override · {override.status.replaceAll('_', ' ')}
+                {override.reason && ` · ${override.reason}`}
+              </p>
+            )}
+            {pending && (
+              <p>
+                Pending next run · {pending.status.replaceAll('_', ' ')}
+                {pending.reason && ` · ${pending.reason}`}
+              </p>
+            )}
+          </div>
+        </div>
       </details>
     </li>
   )
@@ -105,12 +135,16 @@ export function SowTimeline({
   useEffect(() => {
     const list = rail.current
     if (!list) return
-    return whenVisible(list, () => { list.dataset.motion = 'ready' })
+    return whenVisible(list, () => {
+      list.dataset.motion = 'ready'
+    })
   }, [document])
   useEffect(() => {
     const marker = markerRef.current
     if (!marker || !('IntersectionObserver' in window)) return
-    const observer = new IntersectionObserver(([entry]) => { marker.dataset.onscreen = String(entry?.isIntersecting) })
+    const observer = new IntersectionObserver(([entry]) => {
+      marker.dataset.onscreen = String(entry?.isIntersecting)
+    })
     observer.observe(marker)
     return () => observer.disconnect()
   }, [document])
@@ -150,7 +184,12 @@ export function SowTimeline({
     </li>
   )
   return (
-    <Card title="SOW progress" icon={ListTodo} tone="green" description={document.title ?? undefined}>
+    <Card
+      title="SOW progress"
+      icon={ListTodo}
+      tone="green"
+      description={document.title ?? undefined}
+    >
       <progress
         className="sow-overall"
         aria-label="SOW completion"

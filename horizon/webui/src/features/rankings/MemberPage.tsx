@@ -10,12 +10,16 @@ import { useHorizonReadQuery } from '../../api/use-horizon-query'
 import { Card } from '../../components/ui/Card'
 import { QueryState } from '../../components/ui/QueryState'
 import { ScoreBar } from '../../components/ui/ScoreBar'
-import { TrendChart } from '../../components/ui/TrendChart'
+import { lazy, Suspense } from 'react'
 import { explainMissing } from '../../copy/missingReasons'
 import { percent } from '../../format'
 import { rankingStatus } from './display'
 import { formatMetric } from './formatMetric'
 import './rankings.css'
+
+const TrendChart = lazy(() =>
+  import('../../components/ui/TrendChart').then((module) => ({ default: module.TrendChart })),
+)
 
 function EvidenceLink({
   evidence,
@@ -59,7 +63,11 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
         </div>
       </div>
       <Card title="Overall ranking" icon={Award} tone="amber" className="member-overall">
-        {ranked && <div className="member-transition-score"><ScoreBar animate value={overall.score} maximum={100} label="Overall score" /></div>}
+        {ranked && (
+          <div className="member-transition-score">
+            <ScoreBar animate value={overall.score} maximum={100} label="Overall score" />
+          </div>
+        )}
         {ranked && overall.rank !== null && (
           <p>
             {overall.rank} of {overall.rankedInGroup} {engineer ? 'engineers on' : 'tech leads in'}{' '}
@@ -67,7 +75,11 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
           </p>
         )}
         <p>Coverage {percent.format(overall.coverage)}</p>
-        <span className="ranking-badge" data-status={overall.status} title={rankingStatus[overall.status].reason}>
+        <span
+          className="ranking-badge"
+          data-status={overall.status}
+          title={rankingStatus[overall.status].reason}
+        >
           {rankingStatus[overall.status].label}
         </span>
         {!ranked && <p>{rankingStatus[overall.status].reason}</p>}
@@ -135,24 +147,26 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
         </Card>
       ))}
       <Card title="Semester trend" icon={ChartNoAxesCombined} tone="green">
-        <TrendChart
-          title="Score by run"
-          maximum={100}
-          points={history.map((point) => ({
-            id: point.runId,
-            at: point.asOf,
-            value: point.score,
-          }))}
-        />
-        <TrendChart
-          title="Rank by run"
-          rank
-          points={history.map((point) => ({
-            id: point.runId,
-            at: point.asOf,
-            value: point.rank,
-          }))}
-        />
+        <Suspense fallback={<div className="chart-placeholder" aria-hidden="true" />}>
+          <TrendChart
+            title="Score by run"
+            maximum={100}
+            points={history.map((point) => ({
+              id: point.runId,
+              at: point.asOf,
+              value: point.score,
+            }))}
+          />
+          <TrendChart
+            title="Rank by run"
+            rank
+            points={history.map((point) => ({
+              id: point.runId,
+              at: point.asOf,
+              value: point.rank,
+            }))}
+          />
+        </Suspense>
       </Card>
       <button type="button" className="button button-secondary" disabled>
         Flag for calibration

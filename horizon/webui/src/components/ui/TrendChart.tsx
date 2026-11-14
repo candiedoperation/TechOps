@@ -34,7 +34,9 @@ export const TrendChart = memo(function TrendChart({
   useEffect(() => {
     const node = chart.current
     if (!node) return
-    return whenVisible(node, () => { node.dataset.motion = 'ready' })
+    return whenVisible(node, () => {
+      node.dataset.motion = 'ready'
+    })
   }, [points])
   const values = points.flatMap(({ value }) => (value === null ? [] : [value]))
   if (!values.length)
@@ -69,7 +71,9 @@ export const TrendChart = memo(function TrendChart({
     <figure ref={chart} className="trend-chart">
       <figcaption>{title}</figcaption>
       <svg viewBox="0 0 600 146" aria-hidden="true" onPointerLeave={() => setActive(null)}>
-        {[top, (top + bottom) / 2, bottom].map((y) => <line key={y} className="trend-grid" x1={left} y1={y} x2={right} y2={y} />)}
+        {[top, (top + bottom) / 2, bottom].map((y) => (
+          <line key={y} className="trend-grid" x1={left} y1={y} x2={right} y2={y} />
+        ))}
         <path className="trend-axis" d={`M ${left} ${top} V ${bottom} H ${right}`} />
         <text x={left - 6} y={top + 4} textAnchor="end">
           {rank ? min : max}
@@ -91,7 +95,11 @@ export const TrendChart = memo(function TrendChart({
           const previous = coordinates[index - 1]
           if (point.y === null) return null
           return (
-            <g key={point.id} onPointerEnter={() => setActive(point.id)} onClick={() => setActive((current) => current === point.id ? null : point.id)}>
+            <g
+              key={point.id}
+              onPointerEnter={() => setActive(point.id)}
+              onClick={() => setActive((current) => (current === point.id ? null : point.id))}
+            >
               {!bars && previous && previous.y !== null && (
                 <line
                   className="trend-line"
@@ -102,8 +110,22 @@ export const TrendChart = memo(function TrendChart({
                   y2={point.y}
                 />
               )}
-              {bars && <rect className="trend-bar" x={point.x - 8} y={point.y} width={16} height={bottom - point.y} rx={3} />}
-              <circle className={bars ? 'trend-point trend-bar-point' : 'trend-point'} cx={point.x} cy={point.y} r={4}>
+              {bars && (
+                <rect
+                  className="trend-bar"
+                  x={point.x - 8}
+                  y={point.y}
+                  width={16}
+                  height={bottom - point.y}
+                  rx={3}
+                />
+              )}
+              <circle
+                className={bars ? 'trend-point trend-bar-point' : 'trend-point'}
+                cx={point.x}
+                cy={point.y}
+                r={4}
+              >
                 <title>
                   {shortDate.format(new Date(point.at))} · {point.value}
                   {unit}
@@ -113,11 +135,15 @@ export const TrendChart = memo(function TrendChart({
           )
         })}
       </svg>
-      {active && coordinates.filter((point) => point.id === active).map((point) => (
-        <span className="trend-tooltip" key={point.id}>
-          {shortDate.format(new Date(point.at))} · {point.value}{unit}
-        </span>
-      ))}
+      {active &&
+        coordinates
+          .filter((point) => point.id === active)
+          .map((point) => (
+            <span className="trend-tooltip" key={point.id}>
+              {shortDate.format(new Date(point.at))} · {point.value}
+              {unit}
+            </span>
+          ))}
       <details>
         <summary>Chart data</summary>
         <ul>

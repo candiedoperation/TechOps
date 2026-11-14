@@ -35,6 +35,21 @@ export default defineConfig(({ command, mode, isPreview }) => {
         },
       },
     ],
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (
+              /\/node_modules\/(?:react|react-dom|scheduler|react-router|react-router-dom)\//.test(
+                id,
+              )
+            )
+              return 'react'
+            if (id.includes('/node_modules/@tanstack/')) return 'query'
+          },
+        },
+      },
+    },
     server: { host: '127.0.0.1', port: 5174, strictPort: true },
     preview: { host: '127.0.0.1', port: 4174, strictPort: true },
   }

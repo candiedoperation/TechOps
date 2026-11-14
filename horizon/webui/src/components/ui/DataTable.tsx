@@ -50,7 +50,11 @@ export function DataTable<T>({
               <tr
                 key={rowKey(row)}
                 data-row-key={motion ? rowKey(row) : undefined}
-                style={motion ? { '--row-delay': `${Math.min(12, index) * 22}ms` } as CSSProperties : undefined}
+                style={
+                  motion
+                    ? ({ '--row-delay': `${Math.min(12, index) * 22}ms` } as CSSProperties)
+                    : undefined
+                }
                 className={rowClassName?.(row)}
                 onClick={
                   onRowClick
