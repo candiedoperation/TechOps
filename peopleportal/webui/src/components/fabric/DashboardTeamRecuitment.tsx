@@ -101,6 +101,17 @@ interface StageDefinition {
     [key: string]: unknown; // Index signature for Kanban compatibility
 }
 
+/** Opens an applicant-supplied link in a new tab; only https links are opened. */
+function openExternalLink(href: string | undefined) {
+    if (!href) return;
+    try {
+        if (new URL(href).protocol !== "https:") return;
+    } catch {
+        return;
+    }
+    window.open(href, "_blank", "noopener,noreferrer");
+}
+
 /** Recruitment cache is private to this mounted team/reviewer, never persisted. */
 export const DashboardTeamRecruitment = ({
     reviewerId,
@@ -1094,12 +1105,9 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
                                         size="sm"
                                         className="flex-1"
                                         onClick={() =>
-                                            selectedApplicationDetails?.profile
-                                                ?.linkedinUrl &&
-                                            window.open(
+                                            openExternalLink(
                                                 selectedApplicationDetails
-                                                    .profile.linkedinUrl,
-                                                "_blank",
+                                                    ?.profile?.linkedinUrl,
                                             )
                                         }
                                         disabled={
@@ -1116,12 +1124,9 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
                                         size="sm"
                                         className="flex-1"
                                         onClick={() =>
-                                            selectedApplicationDetails?.profile
-                                                ?.githubUrl &&
-                                            window.open(
+                                            openExternalLink(
                                                 selectedApplicationDetails
-                                                    .profile.githubUrl,
-                                                "_blank",
+                                                    ?.profile?.githubUrl,
                                             )
                                         }
                                         disabled={

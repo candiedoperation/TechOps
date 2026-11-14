@@ -71,6 +71,7 @@ import {
 import MarkdownIt from "markdown-it";
 import { RedisClient } from "../clients/RedisClient";
 import { mapWithConcurrency } from "../utils/concurrency";
+import { isAllowedProfileLink } from "../utils/profile-links";
 import {
     CacheEnvelope,
     isCacheEnvelope,
@@ -1578,9 +1579,7 @@ export class ATSController extends Controller {
             }
 
             if (profile.linkedinUrl && profile.linkedinUrl.trim() !== "") {
-                try {
-                    new URL(profile.linkedinUrl);
-                } catch {
+                if (!isAllowedProfileLink(profile.linkedinUrl, "linkedin")) {
                     this.setStatus(400);
                     return {
                         error: "InvalidURL",
@@ -1590,9 +1589,7 @@ export class ATSController extends Controller {
             }
 
             if (profile.githubUrl && profile.githubUrl.trim() !== "") {
-                try {
-                    new URL(profile.githubUrl);
-                } catch {
+                if (!isAllowedProfileLink(profile.githubUrl, "github")) {
                     this.setStatus(400);
                     return {
                         error: "InvalidURL",
@@ -1836,6 +1833,26 @@ export class ATSController extends Controller {
                     return {
                         error: "InvalidFileSignature",
                         message: "The uploaded file is not a valid PDF.",
+                    };
+                }
+            }
+
+            if (body.linkedinUrl && body.linkedinUrl.trim() !== "") {
+                if (!isAllowedProfileLink(body.linkedinUrl, "linkedin")) {
+                    this.setStatus(400);
+                    return {
+                        error: "InvalidURL",
+                        message: "Please provide a valid LinkedIn URL",
+                    };
+                }
+            }
+
+            if (body.githubUrl && body.githubUrl.trim() !== "") {
+                if (!isAllowedProfileLink(body.githubUrl, "github")) {
+                    this.setStatus(400);
+                    return {
+                        error: "InvalidURL",
+                        message: "Please provide a valid GitHub URL",
                     };
                 }
             }
