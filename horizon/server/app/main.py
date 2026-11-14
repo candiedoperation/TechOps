@@ -10,6 +10,7 @@ from .auth import JwtVerifier
 from .config import Settings
 from .db import ReadDatabase
 from .errors import PublicationNotFound, ReadUnavailable
+from .projects import router as project_router
 from .routers import router
 
 
@@ -39,7 +40,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def no_store(request: Request, call_next):
         response = await call_next(request)
         if request.url.path.startswith("/api/"):
-            response.headers["Cache-Control"] = "no-store"
+            response.headers.setdefault("Cache-Control", "no-store")
         return response
 
     @application.exception_handler(HTTPException)
@@ -90,6 +91,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         application.add_exception_handler(error_type, unavailable)
 
     application.include_router(router)
+    application.include_router(project_router)
 
     @application.get("/")
     def read_root():

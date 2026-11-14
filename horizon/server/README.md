@@ -82,3 +82,18 @@ HORIZON_TEST_DATABASE_URL='<local-debug DSN>' ./nx run horizonserver:test
 ```
 
 The test permits only loopback port 55432 and database `horizon_debug`, verifies a real read-only transaction and parameter binding, and does not create tables or alter existing records. Its execution would verify the pool, not missing production ranking SQL. `horizon/dev/local-debug` has a synthetic source-feature stack, not a persisted Track 4 publication fixture. No production database was accessed or changed.
+
+### Public project publications
+
+`GET /api/v1/projects`, `/{projectPk}`, `/{projectPk}/sow-timeline` and
+`/{projectPk}/history` use `season=FALL-2026` (or `SPRING-2026`).
+The first three accept `run=current` (default), `latest` or a published run UUID
+and return `{meta, data}`. History returns an array, oldest publication first.
+All four support conditional reads with `If-None-Match`.
+
+The Track 5 publishing schema is pending. The SQL contract is exercised by
+`tests/fixtures/project_publications.sql`, using a disposable PostgreSQL cluster
+with a read-only role. Put `initdb` and `pg_ctl` on PATH to run those tests.
+Configure the deployed role with SELECT on the four referenced `horizon_api`
+tables and only the override columns shown in the fixture grant. The API
+projects only status, reason and timestamp from pending overrides.

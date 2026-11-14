@@ -448,6 +448,328 @@
         }
       }
     },
+    "/api/v1/projects": {
+      "get": {
+        "summary": "Projects",
+        "operationId": "projects_api_v1_projects_get",
+        "parameters": [
+          {
+            "name": "season",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(FALL|SPRING)-(20[0-9]{2}|21[0-9]{2}|2200)$",
+              "title": "Season"
+            }
+          },
+          {
+            "name": "run",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 36,
+              "default": "current",
+              "title": "Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Publication_list_ProjectSummary__"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The response matches If-None-Match."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectPk}": {
+      "get": {
+        "summary": "Project",
+        "operationId": "project_api_v1_projects__projectPk__get",
+        "parameters": [
+          {
+            "name": "projectPk",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Projectpk"
+            }
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(FALL|SPRING)-(20[0-9]{2}|21[0-9]{2}|2200)$",
+              "title": "Season"
+            }
+          },
+          {
+            "name": "run",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 36,
+              "default": "current",
+              "title": "Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Publication_ProjectDetail_"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The response matches If-None-Match."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectPk}/sow-timeline": {
+      "get": {
+        "summary": "Sow Timeline",
+        "operationId": "sow_timeline_api_v1_projects__projectPk__sow_timeline_get",
+        "parameters": [
+          {
+            "name": "projectPk",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Projectpk"
+            }
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(FALL|SPRING)-(20[0-9]{2}|21[0-9]{2}|2200)$",
+              "title": "Season"
+            }
+          },
+          {
+            "name": "run",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 36,
+              "default": "current",
+              "title": "Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Publication_dict_str__JsonValue__"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The response matches If-None-Match."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectPk}/history": {
+      "get": {
+        "summary": "History",
+        "operationId": "history_api_v1_projects__projectPk__history_get",
+        "parameters": [
+          {
+            "name": "projectPk",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Projectpk"
+            }
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(FALL|SPRING)-(20[0-9]{2}|21[0-9]{2}|2200)$",
+              "title": "Season"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectHistoryPoint"
+                  },
+                  "title": "Response History Api V1 Projects  Projectpk  History Get"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "The response matches If-None-Match."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/": {
       "get": {
         "summary": "Read Root",
@@ -641,6 +963,7 @@
         ],
         "title": "History"
       },
+      "JsonValue": {},
       "Me": {
         "properties": {
           "userPk": {
@@ -834,6 +1157,225 @@
           "friendlyName"
         ],
         "title": "Project"
+      },
+      "ProjectDetail": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/ProjectSummary"
+          },
+          "detail": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Detail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "summary",
+          "detail"
+        ],
+        "title": "ProjectDetail"
+      },
+      "ProjectHistoryPoint": {
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runid"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          },
+          "percentComplete": {
+            "type": "number",
+            "title": "Percentcomplete"
+          },
+          "tasksOverdue": {
+            "type": "integer",
+            "title": "Tasksoverdue"
+          },
+          "riskCounts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Riskcounts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runId",
+          "asOf",
+          "percentComplete",
+          "tasksOverdue",
+          "riskCounts"
+        ],
+        "title": "ProjectHistoryPoint"
+      },
+      "ProjectMeta": {
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Runid"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "runId",
+          "asOf",
+          "stale"
+        ],
+        "title": "ProjectMeta"
+      },
+      "ProjectSummary": {
+        "properties": {
+          "projectPk": {
+            "type": "string",
+            "title": "Projectpk"
+          },
+          "friendlyName": {
+            "type": "string",
+            "title": "Friendlyname"
+          },
+          "windowStart": {
+            "type": "string",
+            "format": "date",
+            "title": "Windowstart"
+          },
+          "windowEnd": {
+            "type": "string",
+            "format": "date",
+            "title": "Windowend"
+          },
+          "hasSow": {
+            "type": "boolean",
+            "title": "Hassow"
+          },
+          "tasksTotal": {
+            "type": "integer",
+            "title": "Taskstotal"
+          },
+          "tasksDue": {
+            "type": "integer",
+            "title": "Tasksdue"
+          },
+          "tasksDone": {
+            "type": "integer",
+            "title": "Tasksdone"
+          },
+          "tasksPartial": {
+            "type": "integer",
+            "title": "Taskspartial"
+          },
+          "tasksOverdue": {
+            "type": "integer",
+            "title": "Tasksoverdue"
+          },
+          "percentComplete": {
+            "type": "number",
+            "title": "Percentcomplete"
+          },
+          "riskCounts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Riskcounts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "projectPk",
+          "friendlyName",
+          "windowStart",
+          "windowEnd",
+          "hasSow",
+          "tasksTotal",
+          "tasksDue",
+          "tasksDone",
+          "tasksPartial",
+          "tasksOverdue",
+          "percentComplete",
+          "riskCounts"
+        ],
+        "title": "ProjectSummary"
+      },
+      "Publication_ProjectDetail_": {
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ProjectMeta"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ProjectDetail"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "Publication[ProjectDetail]"
+      },
+      "Publication_dict_str__JsonValue__": {
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ProjectMeta"
+          },
+          "data": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "Publication[dict[str, JsonValue]]"
+      },
+      "Publication_list_ProjectSummary__": {
+        "properties": {
+          "meta": {
+            "$ref": "#/components/schemas/ProjectMeta"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectSummary"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "meta",
+          "data"
+        ],
+        "title": "Publication[list[ProjectSummary]]"
       },
       "RankingList": {
         "properties": {
