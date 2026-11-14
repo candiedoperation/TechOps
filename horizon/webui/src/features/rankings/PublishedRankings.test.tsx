@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
-import { renderReadPage } from '../../test/renderReadPage'
+import { renderReadPage } from '../../test/render-read-page'
 import { ada, currentRun, finalRun } from '../../test/rankingFixtures'
 import { RankingsPage } from './RankingsPage'
 
@@ -74,15 +74,15 @@ describe('published rankings', () => {
     const [, first, second, third] = within(beacon).getAllByRole('row')
     expect(first).toHaveTextContent('Ada')
     expect(first).toHaveTextContent('80%')
-    expect(within(first).getByRole('meter', { name: /Code ownership/ })).toHaveAttribute(
+    expect(within(first!).getByRole('meter', { name: /Code ownership/ })).toHaveAttribute(
       'value',
       '72',
     )
     expect(second).toHaveTextContent('Dora')
     expect(third).toHaveTextContent('Clara')
-    expect(within(second).queryByRole('meter')).not.toBeInTheDocument()
-    expect(within(third).queryByRole('meter')).not.toBeInTheDocument()
-    expect(within(third).getByText('Group too small')).toHaveAttribute(
+    expect(within(second!).queryByRole('meter')).not.toBeInTheDocument()
+    expect(within(third!).queryByRole('meter')).not.toBeInTheDocument()
+    expect(within(third!).getByText('Group too small')).toHaveAttribute(
       'title',
       'Too few members qualified for a comparison.',
     )

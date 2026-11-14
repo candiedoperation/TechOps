@@ -13,6 +13,7 @@ const state: AuthState = {
   session: { subject: 'test', displayName: 'Fixture exec', isExec: true, permissions: [] },
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 function Location() {
   const location = useLocation()
   return (
