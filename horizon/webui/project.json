@@ -1,0 +1,73 @@
+{
+  "name": "horizonui",
+  "projectType": "application",
+  "sourceRoot": "horizon/webui/src",
+  "tags": ["scope:horizon", "type:frontend"],
+  "targets": {
+    "install-deps": {
+      "executor": "nx:run-commands",
+      "options": { "command": "npm ci", "cwd": "{projectRoot}" },
+      "parallelism": false
+    },
+    "serve": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "options": { "command": "vite", "cwd": "{projectRoot}" }
+    },
+    "serve-demo": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "options": {
+        "command": "vite --port 5175",
+        "cwd": "{projectRoot}",
+        "env": { "VITE_HORIZON_DEMO": "true" }
+      }
+    },
+    "build": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "outputs": ["{projectRoot}/dist"],
+      "options": { "command": "tsc -b && vite build", "cwd": "{projectRoot}" }
+    },
+    "verify-production": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "node scripts/verify-production.mjs", "cwd": "{projectRoot}" }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "options": { "command": "tsc -b", "cwd": "{projectRoot}" }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "options": { "command": "eslint . --max-warnings=0", "cwd": "{projectRoot}" }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "options": { "command": "vitest run", "cwd": "{projectRoot}" }
+    },
+    "test-watch": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "options": { "command": "vitest", "cwd": "{projectRoot}" }
+    },
+    "format-check": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "options": { "command": "prettier --check .", "cwd": "{projectRoot}" }
+    },
+    "format": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["install-deps"],
+      "options": { "command": "prettier --write .", "cwd": "{projectRoot}" }
+    },
+    "preview": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": { "command": "vite preview", "cwd": "{projectRoot}" }
+    }
+  }
+}

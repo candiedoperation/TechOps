@@ -1,10 +1,5 @@
-from fastapi import FastAPI
+"""Compatibility entry point for the existing Nx uvicorn command."""
 
-# Verify we can import the auto-generated SDK!
-import peopleportal_sdk
+from app.main import app
 
-app = FastAPI()
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World from Horizon Server"}
+__all__ = ["app"]

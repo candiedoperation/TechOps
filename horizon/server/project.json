@@ -2,27 +2,43 @@
     "name": "horizonserver",
     "projectType": "application",
     "sourceRoot": "horizon/server",
-    "implicitDependencies": [
-        "pplsdk-py"
-    ],
     "targets": {
         "install-deps": {
             "executor": "nx:run-commands",
             "options": {
-                "command": "python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt",
+                "command": "python3 -m venv .venv && .venv/bin/python -m pip install -q -r requirements-dev.txt",
                 "cwd": "{projectRoot}"
             }
         },
         "serve": {
             "executor": "nx:run-commands",
             "dependsOn": [
-                "install-deps",
-                "^generate"
+                "install-deps"
             ],
             "options": {
-                "command": ". .venv/bin/activate && uvicorn main:app --reload --port 8000",
+                "command": ".venv/bin/python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000",
                 "cwd": "{projectRoot}"
             }
+        },
+        "test": {
+            "executor": "nx:run-commands",
+            "dependsOn": ["install-deps"],
+            "options": { "command": ".venv/bin/python -m pytest -q tests", "cwd": "{projectRoot}" }
+        },
+        "format": {
+            "executor": "nx:run-commands",
+            "dependsOn": ["install-deps"],
+            "options": { "command": ".venv/bin/python -m ruff format app tests main.py", "cwd": "{projectRoot}" }
+        },
+        "export-openapi": {
+            "executor": "nx:run-commands",
+            "dependsOn": ["install-deps"],
+            "options": { "command": ".venv/bin/python -m app.export_openapi", "cwd": "{projectRoot}" }
+        },
+        "lint": {
+            "executor": "nx:run-commands",
+            "dependsOn": ["install-deps"],
+            "options": { "command": ".venv/bin/python -m ruff check app tests main.py", "cwd": "{projectRoot}" }
         }
     }
 }
