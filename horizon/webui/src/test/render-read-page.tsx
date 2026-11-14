@@ -31,7 +31,7 @@ export function renderReadPage(
   handler: (url: URL) => unknown,
   publicRead = false,
 ) {
-  const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+  const fetcher = vi.fn<typeof fetch>(async (input) => {
     const value = handler(new URL(String(input)))
     return value === undefined ? new Response(null, { status: 404 }) : Response.json(value)
   })

@@ -1,0 +1,189 @@
+.project-season,
+.project-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.project-season {
+  align-items: end;
+  margin-block: 1rem;
+}
+
+.project-season input {
+  width: 6rem;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  padding-inline: 0.5rem;
+}
+
+.published-project-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.published-project-list progress,
+.sow-overall {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.project-badges li {
+  background: var(--warning-surface);
+  border-radius: 999px;
+  color: var(--warning);
+  padding: 0.15rem 0.5rem;
+}
+
+.project-badges {
+  margin-block: 0.55rem;
+}
+
+.published-project-detail,
+.project-main {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.project-main,
+.project-rail {
+  min-width: 0;
+}
+
+@media (min-width: 1080px) {
+  .published-project-detail {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  }
+
+  .project-rail {
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100dvh - 2rem);
+    overflow: auto;
+    scrollbar-gutter: stable;
+  }
+}
+
+.project-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
+  gap: 0.75rem;
+}
+
+.project-totals dt {
+  color: var(--text-muted);
+}
+
+.project-totals dd {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.sow-timeline {
+  margin-top: 1rem;
+  padding-left: 0.7rem;
+}
+
+.sow-task,
+.sow-today {
+  position: relative;
+  padding: 0 0 1rem 1rem;
+  border-left: 1px solid var(--border);
+}
+
+.sow-status-icon {
+  position: absolute;
+  left: -0.62rem;
+  top: 0;
+  display: grid;
+  place-items: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.sow-task-done .sow-status,
+.sow-task-done .sow-status-icon {
+  color: var(--success);
+}
+
+.sow-task-in_progress .sow-status,
+.sow-task-in_progress .sow-status-icon {
+  color: var(--accent-text);
+}
+
+.sow-task-in_progress .sow-status-icon::after {
+  content: '';
+  position: absolute;
+  width: 0.36rem;
+  height: 0.71rem;
+  left: 50%;
+  background: currentColor;
+  border-radius: 0 1rem 1rem 0;
+}
+
+.sow-task-not_started .sow-status,
+.sow-task-not_started .sow-status-icon,
+.sow-facts {
+  color: var(--text-muted);
+}
+
+.sow-task-overdue .sow-status,
+.sow-task-overdue .sow-status-icon {
+  color: var(--danger);
+}
+
+.sow-task summary {
+  cursor: pointer;
+}
+
+.sow-task summary strong {
+  overflow-wrap: anywhere;
+}
+
+.sow-status,
+.sow-facts,
+.sow-pending {
+  display: block;
+}
+
+.sow-pending {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.sow-task details > p,
+.sow-task details > ul {
+  margin-block: 0.5rem;
+}
+
+.sow-task details h3 {
+  font-weight: 600;
+}
+
+.sow-task a {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.sow-today::before {
+  content: '';
+  position: absolute;
+  left: -0.25rem;
+  top: 0.3rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.sow-today time {
+  color: var(--accent-text);
+  font-weight: 600;
+}

@@ -30,7 +30,7 @@ describe('Horizon workspace', () => {
 
   it('navigates between all three routes while preserving the shell', async () => {
     const user = userEvent.setup()
-    const fetcher = vi.fn()
+    const fetcher = vi.fn(async () => new Response(null, { status: 404 }))
     vi.stubGlobal('fetch', fetcher)
     renderApp('/dashboard')
     const nav = screen.getByRole('navigation', { name: 'Primary navigation' })
@@ -39,12 +39,16 @@ describe('Horizon workspace', () => {
     expect(
       await screen.findByRole('heading', { name: 'All projects', level: 1 }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Portfolio snapshot' })).toBeDisabled()
+    expect(await screen.findByText('No project publication')).toBeInTheDocument()
     await user.click(within(nav).getByRole('link', { name: 'Dashboard' }))
     expect(
       await screen.findByRole('heading', { name: 'Your Horizon, at a glance.' }),
     ).toBeInTheDocument()
-    expect(fetcher).not.toHaveBeenCalled()
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(fetcher).toHaveBeenCalledWith(
+      expect.objectContaining({ pathname: '/api/v1/projects' }),
+      expect.objectContaining({ credentials: 'omit' }),
+    )
   })
 
   it('supports direct feature links and does not show invented records', async () => {
@@ -81,6 +85,10 @@ describe('Horizon workspace', () => {
 
   it('opens the mobile navigation and closes it after route selection', async () => {
     const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 404 })),
+    )
     renderApp()
     await user.click(screen.getByRole('button', { name: 'Open navigation' }))
     const dialog = screen.getByRole('dialog', { name: 'Workspace navigation' })

@@ -87,3 +87,19 @@ Design preserves the prototype-inspired blue identity and existing layout while 
 See [BACKEND_HANDOFF.md](./BACKEND_HANDOFF.md) for the contracts needed to finish live integration.
 
 See [INTEGRATION_READINESS.md](./INTEGRATION_READINESS.md) for the inspected persistence architecture, exact proposed authentication routes (not implemented), Track 7 decisions, provisional API contracts, and questions for Yash.
+
+## Published rankings and projects
+
+`/rankings` uses the versioned ranking list and completed-run catalog, with the
+T6.2 semester catalog. Ranking links pin the published run and preselect the
+member's project. The executive session and backend audit requirements still
+apply. Member detail supports the provisional Track 4 document and the existing
+T6.2 ranking rows.
+
+`/projects` and `/projects/:projectPk` use the public, same-origin
+`/api/v1/projects` routes. Route that API prefix to Horizon Server in the
+deployment. Links from the project list pin the published run, and the detail
+page loads the timeline for that run. Use `?season=FALL-2026` or
+`?season=SPRING-2026` to select another semester. The empty timeline links to
+the project team in People Portal. Set `VITE_HORIZON_PEOPLE_PORTAL_URL` in the
+web build environment to override its origin.

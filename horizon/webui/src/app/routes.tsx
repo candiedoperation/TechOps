@@ -10,7 +10,7 @@ import {
 } from '../features/portfolio/PortfolioPages'
 import { SignInPage } from '../features/auth/SignInPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
-import { EmptyState } from '../components/ui/States'
+import { ProjectPage, ProjectsPage } from '../features/projects/ProjectPages'
 
 export interface HorizonRoute {
   path: string
@@ -28,7 +28,7 @@ export interface HorizonRoute {
   executiveOnly?: boolean
 }
 
-/** Public routes below are structural previews only. Protected data components remain gated. */
+/** Ranking data routes require a verified executive session. */
 export const horizonRoutes: readonly HorizonRoute[] = [
   {
     path: '/dashboard',
@@ -45,7 +45,7 @@ export const horizonRoutes: readonly HorizonRoute[] = [
   {
     path: '/projects',
     title: 'Projects',
-    element: <PortfolioProjects />,
+    element: <ProjectsPage />,
     navigation: { icon: ChartNoAxesCombined, description: 'Projects & progress' },
   },
   { path: '/project-health', title: 'Projects', element: <PortfolioProjects /> },
@@ -65,14 +65,7 @@ export const horizonRoutes: readonly HorizonRoute[] = [
   {
     path: '/projects/:projectPk',
     title: 'Project detail',
-    protected: true,
-    element: (
-      <EmptyState
-        title="Project detail pending"
-        description="Authorized project publications are not connected yet."
-        locked
-      />
-    ),
+    element: <ProjectPage />,
   },
   { path: '/sign-in', title: 'Sign in', element: <SignInPage /> },
   {
