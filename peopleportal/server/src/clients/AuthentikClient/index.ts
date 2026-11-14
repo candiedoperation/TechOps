@@ -329,7 +329,6 @@ export class AuthentikClient {
                 path: "peopleportal.atheesh.org/onboardeduser",
             },
         };
-        console.log(RequestConfig);
 
         /* Append Optional Parameters */
         if (options?.page) RequestConfig.params.page = options.page;

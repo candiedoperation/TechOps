@@ -62,6 +62,86 @@ interface OtpVerifyRequest {
     otp: string;
 }
 
+/**
+ * Resolves a post-login redirect target against the server's own origin.
+ * Returns the same-origin path (with query and fragment) when the target is
+ * a single-slash relative path or an absolute URL on this origin, and
+ * undefined for anything else so callers fall back to their default.
+ *
+ * @param target Raw redirect value supplied by the caller
+ * @param origin This server's origin, e.g. https://portal.example.com
+ * @returns Same-origin path, or undefined when the target is not acceptable
+ */
+export function resolveSameOriginPath(
+    target: string | undefined,
+    origin: string,
+): string | undefined {
+    if (!target) return undefined;
+
+    let base: URL;
+    try {
+        base = new URL(origin);
+    } catch {
+        return undefined;
+    }
+
+    /* Relative targets must be a single leading slash: "//" and "/\" are
+       both parsed as protocol-relative hosts by browsers. */
+    const isRelative = target.startsWith("/");
+    if (isRelative && /^\/[\/\\]/.test(target)) return undefined;
+
+    let parsed: URL;
+    try {
+        parsed = new URL(target, base);
+    } catch {
+        return undefined;
+    }
+
+    if (parsed.origin !== base.origin) return undefined;
+    if (!parsed.pathname.startsWith("/")) return undefined;
+
+    return parsed.pathname + parsed.search + parsed.hash;
+}
+
+/**
+ * Projects an application record onto the fields the applicant portal
+ * displays. Team and subteam names are resolved by the caller.
+ *
+ * @param app Application record (lean) with resolved names attached
+ * @returns Applicant-facing view of the application
+ */
+export function toApplicantApplication(app: {
+    _id: unknown;
+    teamPk: string;
+    teamName?: string;
+    rolePreferences?: {
+        role: string;
+        subteamPk: string;
+        subteamName?: string;
+    }[];
+    stage: string;
+    appliedAt?: Date;
+    responses?: Record<string, string>;
+    hiredRole?: string;
+    hiredSubteamPk?: string;
+}) {
+    return {
+        _id: app._id,
+        teamPk: app.teamPk,
+        teamName: app.teamName,
+        rolePreferences: (app.rolePreferences || []).map((pref) => ({
+            role: pref.role,
+            subteamPk: pref.subteamPk,
+            subteamName: pref.subteamName,
+        })),
+        stage: app.stage,
+        appliedAt: app.appliedAt,
+        responses: app.responses || {},
+        hiredRole: app.hiredRole,
+        hiredSubteamPk: app.hiredSubteamPk,
+    };
+}
+
 @Route("/api/auth")
 export class AuthController extends Controller {
     private emailClient: EmailClient;
@@ -143,24 +223,22 @@ export class AuthController extends Controller {
     ) {
         /* Capture Redirect Context */
         req.session.tempsession = req.session.tempsession || {};
-        if (redirect_uri) {
-            req.session.tempsession.redirect_uri = redirect_uri;
+        const currentOrigin = req.protocol + "://" + req.get("host");
+
+        /* Both targets are redirected to after login, so only same-origin
+           paths are kept; anything else falls through to the default. */
+        const safeRedirectUri = resolveSameOriginPath(
+            redirect_uri,
+            currentOrigin,
+        );
+        if (safeRedirectUri) {
+            req.session.tempsession.redirect_uri =
+                currentOrigin + safeRedirectUri;
             if (state) req.session.tempsession.state = state;
         }
 
-        if (return_to) {
-            /* Only same-host or relative targets: return_to is redirected to
-               verbatim after login, so anything else is an open redirect. */
-            let safe = return_to.startsWith("/") && !return_to.startsWith("//");
-            if (!safe) {
-                try {
-                    safe = new URL(return_to).host === req.get("host");
-                } catch {
-                    safe = false;
-                }
-            }
-            if (safe) req.session.tempsession.return_to = return_to;
-        }
+        const safeReturnTo = resolveSameOriginPath(return_to, currentOrigin);
+        if (safeReturnTo) req.session.tempsession.return_to = safeReturnTo;
 
         let authFlowResponse = OpenIdClient.startAuthFlow();
         if (!authFlowResponse)
@@ -208,30 +286,33 @@ export class AuthController extends Controller {
         const res = (req as any).res as express.Response;
         const tempsession = req.session.tempsession;
 
+        const currentOrigin = req.protocol + "://" + req.get("host");
+
         /* Case 0: Simple Return To (App Navigation) */
-        if (tempsession?.return_to) {
-            const returnTo = tempsession.return_to;
-            delete req.session.tempsession?.return_to;
-            return res.redirect(302, returnTo);
-        }
+        const returnTo = resolveSameOriginPath(
+            tempsession?.return_to,
+            currentOrigin,
+        );
+        delete req.session.tempsession?.return_to;
+        if (returnTo) return res.redirect(302, returnTo);
 
         /* Case 1: OAuth2 Passthrough (API Docs Portal, Postman, etc.) */
-        if (tempsession?.redirect_uri) {
-            const redirectUri = new URL(tempsession.redirect_uri);
-            const currentOrigin = req.protocol + "://" + req.get("host");
+        const redirectPath = resolveSameOriginPath(
+            tempsession?.redirect_uri,
+            currentOrigin,
+        );
+        if (redirectPath) {
+            const redirectUri = new URL(redirectPath, currentOrigin);
 
             /* Implicit Flow Injection for OAuth2 Docs */
             /* If the redirect is for our own docs, we inject the dummy token directly using hash fragment */
-            if (
-                redirectUri.origin === currentOrigin &&
-                redirectUri.pathname.startsWith("/api/docs")
-            ) {
+            if (redirectUri.pathname.startsWith("/api/docs")) {
                 const hashParams = new URLSearchParams();
                 hashParams.append("access_token", "SessionCookieShimToken");
                 hashParams.append("token_type", "Bearer");
                 hashParams.append("expires_in", "3600");
 
-                if (tempsession.state)
+                if (tempsession?.state)
                     hashParams.append("state", tempsession.state);
 
                 redirectUri.hash = hashParams.toString();
@@ -242,7 +323,7 @@ export class AuthController extends Controller {
                     "code",
                     generateSecureRandomString(16),
                 );
-                if (tempsession.state)
+                if (tempsession?.state)
                     redirectUri.searchParams.append("state", tempsession.state);
             }
 
@@ -253,6 +334,8 @@ export class AuthController extends Controller {
         }
 
         /* Case 3: Default */
+        delete req.session.tempsession?.redirect_uri;
+        delete req.session.tempsession?.state;
         return res.redirect(302, "/");
     }
 
@@ -467,13 +550,12 @@ export class AuthController extends Controller {
                         }),
                     );
 
-                    // 3. Map subteam preferences (legacy support or if frontend needs it)
-                    // For the new UI, we mostly care about rolePreferencesWithNames
-                    return {
+                    // 3. Project onto the fields the applicant portal displays
+                    return toApplicantApplication({
                         ...app,
                         teamName: teamName,
                         rolePreferences: rolePreferencesWithNames,
-                    };
+                    });
                 }),
             );
 
