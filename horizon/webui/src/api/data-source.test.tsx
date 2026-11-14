@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../app/App'
@@ -25,6 +26,34 @@ describe('Horizon data sources', () => {
         <App />
       </MemoryRouter>,
     )
+    expect(screen.queryByText('Demo data')).not.toBeInTheDocument()
+  })
+
+  it('populates the dashboard, preserves snapshot selection and dismisses the preview notice', async () => {
+    vi.stubEnv('VITE_HORIZON_DATA_SOURCE', 'mock')
+    const client = await loadMockSource()
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <App mockSource={client} />
+      </MemoryRouter>,
+    )
+    await screen.findByRole('link', { name: /Northstar Studio/ })
+    expect(screen.getByRole('link', { name: /Active Projects/ })).toHaveTextContent('6')
+    const activity = screen.getByRole('region', { name: 'Activity snapshot' })
+    expect(within(activity).getByText('26')).toBeInTheDocument()
+    const snapshots = screen.getByRole<HTMLSelectElement>('combobox', {
+      name: 'Portfolio snapshot',
+    })
+    await user.selectOptions(snapshots, snapshots.options[1]!.value)
+    expect(await within(activity).findByText('32')).toBeInTheDocument()
+    const sidebar = screen.getByRole('complementary', { name: 'Workspace sidebar' })
+    await user.click(within(sidebar).getByLabelText('Demo Viewer account menu'))
+    expect(within(sidebar).getByRole('button', { name: 'Sign out' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Dismiss preview notice' }))
+    expect(screen.queryByText('Demo data')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Insights' }))
+    expect(await screen.findByRole('table', { name: 'Portfolio comparison' })).toBeInTheDocument()
     expect(screen.queryByText('Demo data')).not.toBeInTheDocument()
   })
 

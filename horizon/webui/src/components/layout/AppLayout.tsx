@@ -1,6 +1,18 @@
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, matchPath } from 'react-router-dom'
-import { PanelLeft, ChevronRight, X, Monitor, Moon, Sun, LogOut, LockKeyhole } from 'lucide-react'
+import {
+  PanelLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  UserRound,
+  Info,
+  X,
+  Monitor,
+  Moon,
+  Sun,
+  LogOut,
+  LockKeyhole,
+} from 'lucide-react'
 import portalLogo from '../../../../../peopleportal/webui/src/assets/logo.svg'
 import { horizonRoutes, type HorizonRoute } from '../../app/routes'
 import { useAuth } from '../../auth/context'
@@ -56,6 +68,75 @@ function Navigation({
     </nav>
   )
 }
+function SidebarBrand() {
+  return (
+    <Link className="portfolio-brand" to="/dashboard" aria-label="Horizon dashboard">
+      <span className="portfolio-logo" aria-hidden="true">
+        <img src={portalLogo} width={32} height={32} alt="" />
+      </span>
+      <span className="portal-brand-label">
+        <strong>App Dev Club</strong>
+        <span>Horizon</span>
+      </span>
+    </Link>
+  )
+}
+
+function SidebarAccount({ signOut, onNavigate }: { signOut: () => void; onNavigate?: () => void }) {
+  const { state } = useAuth()
+  const session = state.status === 'authenticated' ? state.session : undefined
+  const name = session?.displayName ?? 'Horizon account'
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+  return (
+    <details
+      className="portal-account"
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || !event.currentTarget.open) return
+        event.stopPropagation()
+        event.currentTarget.open = false
+        event.currentTarget.querySelector('summary')?.focus()
+      }}
+    >
+      <summary aria-label={`${name} account menu`}>
+        <span className="portal-account-avatar" aria-hidden="true">
+          {session ? initials : <UserRound size={17} />}
+        </span>
+        <span className="portal-account-label">
+          <strong>{name}</strong>
+          <span>{session ? (session.email ?? 'Horizon workspace') : 'Sign-in unavailable'}</span>
+        </span>
+        <ChevronsUpDown className="portal-account-chevron" size={16} aria-hidden="true" />
+      </summary>
+      <div className="portal-account-menu">
+        <Link to="/settings" onClick={onNavigate}>
+          Settings
+        </Link>
+        {session ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.currentTarget.closest('details')?.removeAttribute('open')
+              signOut()
+            }}
+          >
+            <LogOut size={15} aria-hidden="true" /> Sign out
+          </button>
+        ) : (
+          <Link to="/sign-in" onClick={onNavigate}>
+            <LockKeyhole size={15} aria-hidden="true" /> Sign-in details
+          </Link>
+        )}
+      </div>
+    </details>
+  )
+}
+
 export function AppLayout({
   routes = horizonRoutes,
   banner,
@@ -70,11 +151,16 @@ export function AppLayout({
   const title = route?.title ?? 'Page not found'
   const dialogRef = useRef<HTMLDialogElement>(null)
   const mainRef = useRef<HTMLElement>(null)
-  const { state, signOut } = useAuth()
+  const { signOut } = useAuth()
   const { appearance, resolved } = useAppearance()
   const AppearanceIcon = appearance === 'system' ? Monitor : resolved === 'dark' ? Moon : Sun
   const [logoutError, setLogoutError] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  const [showPreview, setShowPreview] = useState(true)
+  const exitAccount = () => {
+    setLogoutError(false)
+    void signOut().catch(() => setLogoutError(true))
+  }
   useEffect(() => {
     const sync = () => {
       document.documentElement.dataset.paused = String(document.hidden)
@@ -96,21 +182,13 @@ export function AppLayout({
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
-      <aside className="portal-sidebar">
-        <Link className="portfolio-brand" to="/dashboard" aria-label="Horizon dashboard">
-          <span className="portfolio-logo" aria-hidden="true">
-            <img src={portalLogo} width={32} height={32} alt="" />
-          </span>
-          <span className="portal-brand-label">
-            <strong>App Dev Club</strong>
-            <span>Horizon</span>
-          </span>
-        </Link>
+      <aside className="portal-sidebar" aria-label="Workspace sidebar">
+        <SidebarBrand />
         <p className="portal-nav-label">Workspace</p>
         <Navigation routes={routes} />
+        <SidebarAccount key={location.pathname} signOut={exitAccount} />
       </aside>
       <div className="portal-inset">
-        {banner}
         <header className="portal-toolbar">
           <button
             type="button"
@@ -136,7 +214,6 @@ export function AppLayout({
             <span aria-current="page">{title}</span>
           </nav>
           <div className="portfolio-header-actions">
-            {demoData && <span className="portal-demo-badge">Demo data</span>}
             {(banner ||
               ['/dashboard', '/insights', '/project-health'].includes(location.pathname)) && (
               <SnapshotControl />
@@ -149,31 +226,6 @@ export function AppLayout({
             >
               <AppearanceIcon size={18} />
             </Link>
-            <span className="connection-indicator">
-              <span />
-              {demoData
-                ? 'Local fixtures'
-                : state.status === 'authenticated'
-                  ? 'Session verified'
-                  : 'Not connected'}
-            </span>
-            {state.status === 'authenticated' ? (
-              <button
-                className="button button-secondary compact"
-                onClick={() => {
-                  setLogoutError(false)
-                  void signOut().catch(() => setLogoutError(true))
-                }}
-              >
-                <LogOut size={14} />
-                Sign out
-              </button>
-            ) : (
-              <Link to="/sign-in" className="access-link" aria-label="Sign-in details">
-                <LockKeyhole size={15} />
-                <span>Sign-in details</span>
-              </Link>
-            )}
           </div>
         </header>
         <dialog
@@ -191,8 +243,15 @@ export function AppLayout({
           >
             <X size={20} />
           </button>
-          <h2>Horizon workspace</h2>
+          <h2 className="sr-only">Horizon workspace</h2>
+          <SidebarBrand />
+          <p className="portal-nav-label">Workspace</p>
           <Navigation routes={routes} onNavigate={() => dialogRef.current?.close()} />
+          <SidebarAccount
+            key={location.pathname}
+            signOut={exitAccount}
+            onNavigate={() => dialogRef.current?.close()}
+          />
         </dialog>
         <main id="main-content" className="portfolio-main" ref={mainRef} tabIndex={-1}>
           {logoutError && <p role="alert">Sign-out could not be confirmed.</p>}
@@ -205,6 +264,27 @@ export function AppLayout({
           <Link to="/sign-in">Access &amp; connection</Link>
         </footer>
       </div>
+      {(demoData || banner) && showPreview && (
+        <aside className="portal-preview-notice" aria-label="Local preview">
+          {banner ?? (
+            <>
+              <Info size={17} aria-hidden="true" />
+              <div>
+                <strong>Demo data</strong>
+                <p>This preview uses fictional projects and members.</p>
+              </div>
+            </>
+          )}
+          <button
+            className="icon-button"
+            type="button"
+            onClick={() => setShowPreview(false)}
+            aria-label="Dismiss preview notice"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </aside>
+      )}
     </div>
   )
 }

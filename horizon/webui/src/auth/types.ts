@@ -2,6 +2,7 @@ export interface HorizonSession {
   /** Canonical member identifier as returned by Horizon, not inferred from an email. */
   subject: string
   displayName: string
+  email?: string
   /** From verified Horizon identity only; absent means no executive access. */
   isExec?: boolean
   /** UI hints only. The backend must enforce every data-access decision. */

@@ -273,3 +273,29 @@
   background: var(--chart-2);
   border-radius: 999px;
 }
+
+.project-season .select-label > :is(input, select),
+.project-season .button {
+  min-height: 2.25rem;
+  line-height: 1.25;
+}
+@media (max-width: 760px) {
+  .project-season .select-label > :is(input, select),
+  .project-season .button {
+    min-height: 44px;
+  }
+}
+
+.project-card {
+  display: flex;
+  flex-direction: column;
+}
+.project-card .portal-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+}
+.project-card .project-open {
+  margin-top: auto;
+}

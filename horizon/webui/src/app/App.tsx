@@ -27,7 +27,8 @@ const fixtureSession: HorizonAuthAdapter = {
     status: 'authenticated',
     session: {
       subject: 'horizon-fixture',
-      displayName: 'Demo viewer',
+      displayName: 'Demo Viewer',
+      email: 'viewer@example.invalid',
       permissions: [],
       isExec: true,
     },

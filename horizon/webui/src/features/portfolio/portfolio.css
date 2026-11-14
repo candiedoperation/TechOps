@@ -504,3 +504,36 @@
     padding: 16px;
   }
 }
+
+.activity-grid,
+.status-breakdown,
+.weekly-changes {
+  padding-top: 16px;
+}
+.activity-grid strong,
+.status-breakdown strong {
+  font-variant-numeric: tabular-nums;
+}
+.insights-toolbar {
+  padding-top: 16px;
+  align-items: end;
+}
+.insights-toolbar :is(.filter-chip, input, select) {
+  min-height: 2.25rem;
+}
+.insights-toolbar .portfolio-search {
+  flex: 1 1 10rem;
+  max-width: 18rem;
+}
+.insights-toolbar .filter-chips {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .insights-toolbar :is(input, select) {
+    font-size: 16px;
+  }
+  .insights-toolbar :is(.filter-chip, input, select) {
+    min-height: 44px;
+  }
+}

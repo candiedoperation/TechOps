@@ -1331,3 +1331,7 @@ tbody tr:last-child td {
     scroll-behavior: auto !important;
   }
 }
+
+.settings-page > .card + .card {
+  margin-top: 1rem;
+}

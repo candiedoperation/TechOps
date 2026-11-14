@@ -6,7 +6,7 @@ import { isAppearance } from '../../theme/appearance'
 export function SettingsPage() {
   const { appearance, resolved, setAppearance, storageAvailable } = useAppearance()
   return (
-    <>
+    <div className="settings-page">
       <div className="page-intro">
         <div>
           <p className="eyebrow">WORKSPACE PREFERENCES</p>
@@ -71,6 +71,6 @@ export function SettingsPage() {
           appearance does not enable data access or change permissions.
         </p>
       </Card>
-    </>
+    </div>
   )
 }

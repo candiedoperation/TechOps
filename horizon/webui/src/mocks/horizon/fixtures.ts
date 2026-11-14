@@ -3,6 +3,8 @@ import type { ProjectMeta, ProjectSummary, SowTask } from '../../api/contracts/p
 import type { RankingRow, RankingRun } from '../../api/contracts/rankings'
 import type { MemberDocument } from '../../api/contracts/member'
 
+import type { PortfolioProject, PortfolioSnapshot } from '../../api/contracts/provisional/portfolio'
+
 const latencyMs = 280
 const hour = 60 * 60 * 1000
 const clock = new Date()
@@ -26,6 +28,9 @@ function fixtureFor(season: string) {
     { projectPk: 'beacon', friendlyName: 'Project Beacon', hasSow: true },
     { projectPk: 'atlas', friendlyName: 'Project Atlas', hasSow: false },
     { projectPk: 'meridian', friendlyName: 'Project Meridian', hasSow: true },
+    { projectPk: 'orchard', friendlyName: 'Project Orchard', hasSow: false },
+    { projectPk: 'signal', friendlyName: 'Project Signal', hasSow: false },
+    { projectPk: 'trellis', friendlyName: 'Project Trellis', hasSow: false },
   ]
   const ranks = [
     [0, 'member-a', 'Avery Example', 'engineer', 'ranked', 1, 92, 0.94],
@@ -207,12 +212,163 @@ function fixtureFor(season: string) {
       }),
     }
   }
+  const portfolio = [
+    [
+      'northstar',
+      'Northstar Studio',
+      'watch',
+      'Two handoff tasks are awaiting review.',
+      4,
+      6,
+      1.5,
+      9,
+      2,
+      11,
+    ],
+    [
+      'northstar',
+      'Northstar Studio',
+      'insufficient',
+      'Initial reporting is still being collected.',
+      null,
+      2,
+      null,
+      3,
+      1,
+      4,
+    ],
+    [
+      'fieldwork',
+      'Fieldwork Labs',
+      'clear',
+      'Release milestones are on schedule.',
+      5,
+      3,
+      0.8,
+      4,
+      1,
+      7,
+    ],
+    [
+      'fieldwork',
+      'Fieldwork Labs',
+      'risk',
+      'The integration review is overdue.',
+      3,
+      8,
+      3.2,
+      14,
+      4,
+      15,
+    ],
+    [
+      'common-ground',
+      'Common Ground',
+      'clear',
+      'The pilot is ready for its next review.',
+      5,
+      2,
+      1,
+      2,
+      0,
+      5,
+    ],
+    [
+      'common-ground',
+      'Common Ground',
+      'watch',
+      'The team is working through a review backlog.',
+      4,
+      5,
+      2.4,
+      7,
+      3,
+      9,
+    ],
+  ] as const satisfies ReadonlyArray<
+    readonly [
+      string,
+      string,
+      PortfolioProject['status'],
+      string,
+      number | null,
+      number,
+      number | null,
+      number,
+      number,
+      number,
+    ]
+  >
+  function portfolioSnapshot(run: RankingRun): PortfolioSnapshot {
+    const age = runs.indexOf(run)
+    return {
+      snapshotId: run.runId,
+      snapshots: runs.map((entry) => ({
+        id: entry.runId,
+        label: new Intl.DateTimeFormat(undefined, {
+          dateStyle: 'medium',
+          timeZone: 'UTC',
+        }).format(new Date(entry.asOf)),
+      })),
+      publication: {
+        state: run.stale ? 'stale' : 'current',
+        publishedAt: run.asOf,
+        sourceAsOf: run.asOf,
+        publicationId: run.runId,
+        runId: run.runId,
+      },
+      projects: portfolio.map(
+        (
+          [
+            companyId,
+            company,
+            status,
+            summary,
+            activityDays,
+            openPrs,
+            reviewLatencyDays,
+            oldestPrDays,
+            branchesAhead,
+            openIssues,
+          ],
+          index,
+        ) => ({
+          id: projects[index]!.projectPk,
+          name: projects[index]!.friendlyName,
+          companyId,
+          company,
+          semester: season,
+          status: age > 0 && index === 0 ? 'risk' : status,
+          summary,
+          concerns: status === 'watch' || status === 'risk' ? [summary] : [],
+          activityDays,
+          openPrs: openPrs + age,
+          reviewLatencyDays,
+          oldestPrDays: oldestPrDays + age,
+          branchesAhead,
+          openIssues: openIssues + age,
+        }),
+      ),
+      changes:
+        age === 0
+          ? [
+              'Project Beacon closed three pull requests and moved from At Risk to Watch.',
+              'Project Meridian completed its release review.',
+              'Project Signal cleared its oldest open pull request.',
+            ]
+          : [
+              'Project Orchard flagged an overdue integration review.',
+              'Project Atlas began collecting weekly activity.',
+            ],
+    }
+  }
   return (url: URL) => {
-    const selection = url.searchParams.get('run') ?? 'current'
+    const selection = url.searchParams.get('run') || url.searchParams.get('snapshot') || 'current'
     const run = ['current', 'latest'].includes(selection)
       ? runs[0]
       : runs.find((entry) => (selection === 'final' ? entry.isFinal : entry.runId === selection))
     if (!run) return undefined
+    if (url.pathname === '/mock/portfolio') return portfolioSnapshot(run)
     const meta: ProjectMeta = { runId: run.runId, asOf: run.asOf, stale: run.stale }
     if (url.pathname === '/api/v1/rankings/runs') return runs.map(wireRun)
     if (url.pathname === '/api/v1/rankings') {
@@ -328,7 +484,10 @@ export const mockSource: HorizonReadClient = {
             seasonType: season.split('-')[0],
             seasonYear: year,
           }))
-        : seasons.get(url.searchParams.get('season') ?? '')?.(url)
+        : seasons.get(
+            url.searchParams.get('season') ??
+              (url.pathname === '/mock/portfolio' ? currentSeason : ''),
+          )?.(url)
     if (value === undefined)
       throw new ReadApiError('http', 'No demo publication matches this selection.', 404)
     return operation.parse(value)

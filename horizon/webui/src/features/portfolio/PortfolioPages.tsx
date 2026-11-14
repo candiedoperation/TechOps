@@ -5,6 +5,7 @@ import { DataTable } from '../../components/ui/DataTable'
 import { QueryState } from '../../components/ui/QueryState'
 import { EmptyState } from '../../components/ui/States'
 import type { PortfolioProject, PortfolioStatus } from '../../api/contracts/provisional/portfolio'
+import { useMockSource } from '../../api/data-source'
 import { PortfolioContext, usePortfolio } from './context'
 
 const labels = {
@@ -104,6 +105,7 @@ function Filters({ value, onChange }: { value: string; onChange: (value: Filter)
 }
 
 export function PortfolioDashboard() {
+  const filteredProjectsPath = useMockSource() ? '/project-health' : '/projects'
   const { query } = usePortfolio()
   const data = query.data?.publication.state === 'missing' ? undefined : query.data
   const projects = data?.projects ?? []
@@ -138,7 +140,11 @@ export function PortfolioDashboard() {
       )}
       <div className="portfolio-summary">
         {summary.map((item) => (
-          <Link key={item.filter} to={`/projects?status=${item.filter}`} className="summary-tile">
+          <Link
+            key={item.filter}
+            to={`${filteredProjectsPath}?status=${item.filter}`}
+            className="summary-tile"
+          >
             <span>{item.label}</span>
             <strong>{data ? item.count : '—'}</strong>
             <small>
@@ -167,7 +173,7 @@ export function PortfolioDashboard() {
                 return (
                   <Link
                     key={id}
-                    to={`/projects?company=${encodeURIComponent(id)}`}
+                    to={`${filteredProjectsPath}?company=${encodeURIComponent(id)}`}
                     className="company-overview"
                   >
                     <div>
@@ -427,7 +433,15 @@ export function PortfolioProjects() {
                     </dl>
                     <Link
                       className="read-link"
-                      to={`/projects/${encodeURIComponent(selected.id)}?periodId=${encodeURIComponent(snapshotId)}`}
+                      to={{
+                        pathname: `/projects/${encodeURIComponent(selected.id)}`,
+                        search: /^\w+-\d{4}$/.test(selected.semester)
+                          ? new URLSearchParams({
+                              season: selected.semester,
+                              run: snapshotId,
+                            }).toString()
+                          : new URLSearchParams({ periodId: snapshotId }).toString(),
+                      }}
                     >
                       Inspect component evidence →
                     </Link>
