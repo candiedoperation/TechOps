@@ -1,0 +1,37 @@
+.trend-chart {
+  margin-block: 0.75rem;
+  min-width: 0;
+}
+
+.trend-chart figcaption {
+  font-weight: 600;
+}
+
+.trend-chart svg {
+  display: block;
+  width: 100%;
+}
+
+.trend-chart text {
+  fill: var(--text-secondary);
+  font-size: 12px;
+}
+
+.trend-axis {
+  stroke: var(--border);
+  fill: none;
+}
+
+.trend-line {
+  stroke: var(--chart-primary);
+  stroke-width: 2;
+}
+
+.trend-point {
+  fill: var(--chart-primary);
+}
+
+.trend-chart summary {
+  color: var(--accent-text);
+  cursor: pointer;
+}

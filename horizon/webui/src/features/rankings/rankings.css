@@ -48,3 +48,35 @@
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
+
+.member-profile {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1rem;
+}
+
+.member-profile > button,
+.member-project {
+  justify-self: start;
+  width: fit-content;
+}
+
+.member-project {
+  display: grid;
+  margin-top: 1rem;
+}
+
+.member-metrics div + div {
+  border-top: 1px solid var(--border);
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+}
+
+.member-metrics dt {
+  font-weight: 600;
+}
+
+.member-metrics a {
+  color: var(--accent-text);
+  text-decoration: underline;
+}

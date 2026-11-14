@@ -256,3 +256,14 @@ def test_versioned_rankings_keep_executive_guard(api):
     client, *_ = api
     for path in ("rankings", "rankings/runs"):
         assert client.get(f"/api/v1/{path}?season=FALL-2026").status_code == 401
+
+
+def test_versioned_member_uses_exact_run_and_audit(executive):
+    client, _, _, audit = executive
+    run_id = str(UUID(int=1))
+    path = f"/api/v1/rankings/members/fiction-user-1?season=FALL-2026&run={run_id}"
+    response = client.get(path)
+    assert response.status_code == 200
+    assert response.json()["rankingRunId"] == run_id
+    assert len(response.json()["history"]) == 3
+    assert audit.events[-1][1:] == ("member_detail", UUID(run_id), "fiction-user-1")

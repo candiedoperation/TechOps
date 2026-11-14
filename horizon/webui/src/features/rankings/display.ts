@@ -1,12 +1,3 @@
-export const percent = new Intl.NumberFormat(undefined, {
-  style: 'percent',
-  maximumFractionDigits: 1,
-})
-export const shortDate = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeZone: 'UTC',
-})
-
 export const rankingStatus = {
   ranked: { label: 'Ranked', reason: 'The member has a published rank.' },
   unranked: { label: 'Unranked', reason: 'No rank was published for this member.' },

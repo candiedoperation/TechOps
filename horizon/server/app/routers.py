@@ -176,3 +176,14 @@ def published_rankings(
             )
         ],
     )
+
+
+@router.get("/v1/rankings/members/{userPk}", response_model=MemberDetail)
+def published_member(
+    user_pk: Annotated[str, Path(alias="userPk", min_length=1, max_length=200)],
+    user: Executive,
+    selection: Annotated[RankingSelection, Depends()],
+    store: Store,
+    audit: Audit,
+):
+    return member(user_pk, user, selection, store, audit)

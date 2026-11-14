@@ -4,7 +4,14 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    model_validator,
+)
 from pydantic.alias_generators import to_camel
 
 SeasonType = Literal["FALL", "SPRING"]
@@ -126,6 +133,7 @@ class MemberRow(Model):
     metrics: list[Metric]
     evidence: list[Evidence]
     explanations: list[Explanation]
+    document: dict[str, JsonValue] | None = None
 
 
 class History(Model):

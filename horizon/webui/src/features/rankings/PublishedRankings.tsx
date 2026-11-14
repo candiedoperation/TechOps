@@ -7,7 +7,8 @@ import { DataTable, type TableColumn } from '../../components/ui/DataTable'
 import { Pagination } from '../../components/ui/Pagination'
 import { ScoreBar } from '../../components/ui/ScoreBar'
 import { rubricV1 } from '../../rubric'
-import { percent, rankingStatus, shortDate } from './display'
+import { percent, shortDate } from '../../format'
+import { rankingStatus } from './display'
 import './rankings.css'
 
 function groupedRows(rows: RankingRow[], engineers: boolean) {

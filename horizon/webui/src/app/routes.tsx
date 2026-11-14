@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ChartNoAxesCombined, LayoutDashboard, Settings2, UsersRound } from 'lucide-react'
+import { MemberPage } from '../features/rankings/MemberPage'
 import { RankingsPage } from '../features/rankings/RankingsPage'
 import {
   PortfolioDashboard,
@@ -59,13 +60,7 @@ export const horizonRoutes: readonly HorizonRoute[] = [
     title: 'Member profile',
     protected: true,
     executiveOnly: true,
-    element: (
-      <EmptyState
-        title="Member detail pending"
-        description="Authorized published member detail is not connected yet."
-        locked
-      />
-    ),
+    element: <MemberPage />,
   },
   {
     path: '/projects/:projectPk',
