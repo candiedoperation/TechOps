@@ -16,6 +16,6 @@ case "${1:-}" in
 esac
 lock_stack
 compose down --volumes --remove-orphans
-rm -f -- "$STACK_DIR/.oidc" "$STACK_DIR/.gitea-token"
+rm -f -- "$STATE_DIR/.oidc" "$STATE_DIR/.gitea-token"
 echo 'Volumes removed; .env and the server env were preserved. Run scripts/up.sh to bootstrap again.' >&2
 echo 'The Gitea API token changes after reset. Replace it in the server env using the printed block.' >&2

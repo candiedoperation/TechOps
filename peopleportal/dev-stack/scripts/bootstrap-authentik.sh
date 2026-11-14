@@ -9,5 +9,5 @@ wait_url "http://127.0.0.1:$AUTHENTIK_PORT/-/health/ready/"
 # Python comes from the pinned authentik image, never from the host.
 credentials=$(compose exec -T authentik-worker python - <"$STACK_DIR/scripts/authentik-bootstrap.py")
 [[ $credentials == *PORTAL_OIDC_CLIENT_SECRET=* && $credentials == *GITEA_OIDC_CLIENT_SECRET=* ]] || die "Authentik returned incomplete credentials."
-private_file "$STACK_DIR/.oidc" <<<"$credentials"
+private_file "$STATE_DIR/.oidc" <<<"$credentials"
 echo "Authentik applications verified; credentials saved in .oidc (mode 600)." >&2

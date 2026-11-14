@@ -116,6 +116,24 @@ satisfy startup checks only. Do not enable AWS provisioning on local teams.
 Discord and photo checks remain disabled. Browser login/logout needs a separate
 end-to-end test; the included smoke checks verify service APIs and OIDC discovery.
 
+## Parallel stacks
+
+To review several pull requests at once, run each in its own slot: an
+independent Compose project with its own ports (`20000 + N*20 + offset`),
+hostname (`ppN.localhost`) and state under `slots/N/`. The default stack
+described above is slot 0 and is never touched by slot commands.
+
+```bash
+./scripts/pr.sh 123 --fixture default   # worktree, slot, containers, server, UI, seeded data
+./scripts/slot.sh list
+./scripts/pr.sh 123 --down --purge
+```
+
+See [PARALLEL.md](PARALLEL.md) for the manual `up.sh --slot N` and `slot.sh`
+workflow, the port table, fixtures (`fixture.sh save/load/check`, the default
+logins) and known gotchas, and [fixtures/README.md](fixtures/README.md) for
+the fixture formats.
+
 ## Verify, stop and reset
 
 From `peopleportal/dev-stack`:

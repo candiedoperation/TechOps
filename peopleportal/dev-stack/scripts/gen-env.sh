@@ -5,7 +5,8 @@ set -euo pipefail
 source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
 require_tools openssl
 cd -- "$STACK_DIR"
-read_settings "$STACK_DIR/.env"
+read_settings "$ENV_FILE"
+apply_slot_defaults
 
 # Template defaults and exported overrides precede derived URLs and secrets.
 while IFS= read -r line || [[ -n $line ]]; do
@@ -51,5 +52,5 @@ render_settings() {
   done <.env.example
 }
 settings=$(render_settings)
-private_file "$STACK_DIR/.env" <<<"$settings"
-echo "Local .env ready (mode 600); existing nonempty values preserved." >&2
+private_file "$ENV_FILE" <<<"$settings"
+echo "Local $ENV_FILE ready (mode 600); existing nonempty values preserved." >&2

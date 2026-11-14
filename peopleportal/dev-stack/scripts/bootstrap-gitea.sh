@@ -6,7 +6,7 @@ source "$(dirname -- "${BASH_SOURCE[0]}")/common.sh"
 require_tools openssl
 require_docker
 load_env
-[[ -s .oidc ]] || die "Run scripts/bootstrap-authentik.sh first."
+[[ -s $STATE_DIR/.oidc ]] || die "Run scripts/bootstrap-authentik.sh first."
 # The blueprint uses the stable credentials in .env; .oidc records API verification.
 url="http://127.0.0.1:$GITEA_PORT"
 wait_url "$url/api/healthz"
@@ -18,8 +18,8 @@ if ! awk -v user="$GITEA_ADMIN_USER" '$2 == user { found=1 } END { exit !found }
 fi
 
 token_valid=false
-if [[ -s .gitea-token ]]; then
-  token=$(<.gitea-token)
+if [[ -s $STATE_DIR/.gitea-token ]]; then
+  token=$(<"$STATE_DIR/.gitea-token")
   if curl --fail --silent --max-time 10 -H "Authorization: token $token" "$url/api/v1/user" >/dev/null; then
     token_valid=true
   fi
@@ -46,9 +46,9 @@ PY
     --token-name people-portal-dev --scopes all --raw)
   token=$(awk '/^[0-9a-fA-F]+$/ && length($0) == 40 {print}' <<<"$token")
   [[ $token =~ ^[0-9a-fA-F]{40}$ ]] || die "Gitea did not return a single raw token."
-  private_file "$STACK_DIR/.gitea-token" <<<"$token"
+  private_file "$STATE_DIR/.gitea-token" <<<"$token"
 fi
-chmod 600 .gitea-token
+chmod 600 "$STATE_DIR/.gitea-token"
 
 sources=$(gitea_admin auth list)
 source_id=$(awk '$2 == "authentik" {print $1}' <<<"$sources")

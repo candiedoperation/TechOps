@@ -1,0 +1,6 @@
+# Snapshots made with `fixture.sh save` stay local; only recipe fixtures are tracked.
+*
+!.gitignore
+!README.md
+!default/
+!default/**

@@ -9,12 +9,12 @@ case "${1:-}" in
   --write-env) [[ $# -eq 1 ]] || die "Usage: $0 [--write-env]"; write_env=true ;;
   *) die "Usage: $0 [--write-env]" ;;
 esac
-gitea_token=$(<"$STACK_DIR/.gitea-token")
+gitea_token=$(<"$STATE_DIR/.gitea-token")
 ui_env=''
-if [[ $PORTAL_PORT != 3000 ]]; then
+if [[ $PORTAL_PORT != 3000 || $STACK_SLOT != 0 ]]; then
   ui_env="PP_DEV_PORTAL_PORT=$PORTAL_PORT"
 fi
-if [[ $WEBUI_PORT != 5173 ]]; then
+if [[ $WEBUI_PORT != 5173 || $STACK_SLOT != 0 ]]; then
   ui_env="${ui_env:+$ui_env$'\n'}PP_DEV_WEBUI_PORT=$WEBUI_PORT"
 fi
 
@@ -28,6 +28,7 @@ PEOPLEPORTAL_OIDC_DSCVURL=$AUTHENTIK_URL/application/o/people-portal/.well-known
 PEOPLEPORTAL_OIDC_CLIENTID=$PORTAL_OIDC_CLIENT_ID
 PEOPLEPORTAL_OIDC_CLIENTSECRET=$PORTAL_OIDC_CLIENT_SECRET
 PEOPLEPORTAL_BASE_URL=$PORTAL_BASE_URL
+PEOPLEPORTAL_CORS_ORIGINS=http://$PUBLIC_HOST:$WEBUI_PORT
 PEOPLEPORTAL_TOKEN_SECRET=$PORTAL_TOKEN_SECRET
 PEOPLEPORTAL_MONGO_URL=mongodb://127.0.0.1:$MONGO_PORT/people-portal
 PEOPLEPORTAL_REDIS_URL=redis://127.0.0.1:$REDIS_PORT
@@ -66,7 +67,13 @@ EOF
 if [[ -n $ui_env ]]; then
   block="$block"$'\n'"$ui_env"
 fi
-if [[ $write_env == true ]]; then
+if [[ $write_env == true && $STACK_SLOT != 0 ]]; then
+  # Slots never touch the checkout's env files. The server and UI read these via
+  # the process environment (which dotenv/Vite honour first), see slot.sh.
+  printf '%s\n' "$block" | private_file "$STATE_DIR/portal.env"
+  printf '%s\n' "$ui_env" | private_file "$STATE_DIR/webui.env"
+  echo "Wrote $STATE_DIR/portal.env and webui.env; run: scripts/slot.sh server $STACK_SLOT / ui $STACK_SLOT" >&2
+elif [[ $write_env == true ]]; then
   target="$STACK_DIR/../server/.env.development"
   # noclobber creates only if absent, also refusing dangling symlinks. Never read
   # or replace an existing portal env file. Printing still works on a second run.
@@ -89,6 +96,7 @@ if [[ $write_env == true ]]; then
   fi
 fi
 echo "Ready: authentik $AUTHENTIK_URL | Gitea $GITEA_URL | Mailpit http://$PUBLIC_HOST:$MAILPIT_PORT" >&2
+if (( STACK_SLOT != 0 )); then exit 0; fi
 echo 'Log in as akadmin; password is AUTHENTIK_BOOTSTRAP_PASSWORD in dev-stack/.env.' >&2
 echo 'Paste the following into peopleportal/server/.env, or use --write-env for .env.development:' >&2
 if [[ -n $ui_env ]]; then
