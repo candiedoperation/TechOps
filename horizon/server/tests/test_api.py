@@ -223,3 +223,84 @@ def test_docs_and_openapi(api):
         "/api/rankings/members/{userPk}",
     ):
         assert schema["paths"][path]["get"]["security"] == [{"HTTPBearer": []}]
+
+
+def test_track4_member_statuses_and_bucket_scores():
+    from app.models import RankingRow
+
+    base = dict(
+        user_pk="u",
+        name="Name",
+        project_pk="p",
+        project_name="P",
+        role="engineer",
+        comparison_group="project:p:engineer",
+        comparison_group_label="Engineers on P",
+        coverage=0.9,
+        ranked_in_group=1,
+    )
+    small = RankingRow(**base, status="group_too_small", buckets=[])
+    assert small.overall_score is None and small.rank_in_group is None
+    with pytest.raises(ValidationError):
+        RankingRow(**base, status="group_too_small", rank_in_group=1, buckets=[])
+    ranked = RankingRow(
+        **base,
+        status="ranked",
+        overall_score=74.1,
+        rank_in_group=1,
+        bucket_scores={"code_ownership": 71.2, "delivery": None},
+    )
+    assert [(b.bucket_key, b.score, b.weight) for b in ranked.buckets] == [
+        ("code_ownership", 71.2, None),
+        ("delivery", None, None),
+    ]
+
+
+def test_unpublished_track4_runs_are_never_selected(executive):
+    store = executive[2]
+    for run in store.publications:
+        if run.status == "published":
+            run.status = "scored"
+    assert executive[0].get("/api/rankings", params=PARAMS).status_code == 404
+
+
+def test_unranked_rows_sorted_by_name(executive):
+    client, _, store, _ = executive
+    original = store.rows
+
+    def rows(run_id):
+        values = original(run_id)
+        for item, name in zip(values, ("Zed", "Amy", "Cara", "Bea")):
+            item.ranking.name = name
+            if item.ranking.comparison_group == "b":
+                item.ranking.status = "insufficient_data"
+                item.ranking.overall_score = item.ranking.rank_in_group = None
+        return values
+
+    store.rows = rows
+    items = client.get("/api/rankings", params=PARAMS).json()["items"]
+    assert [i["name"] for i in items if i["comparisonGroup"] == "b"] == ["Cara", "Zed"]
+
+
+def test_history_stops_at_selected_run(executive):
+    client = executive[0]
+    older = client.get(
+        "/api/rankings/members/fiction-user-1",
+        params={**PARAMS, "run": str(UUID(int=1))},
+    ).json()
+    assert [h["rankingRunId"] for h in older["history"]] == [str(UUID(int=1))]
+    latest = client.get("/api/rankings/members/fiction-user-1", params=PARAMS).json()
+    assert len(latest["history"]) == 3
+
+
+def test_unknown_route_uses_error_envelope(api):
+    response = api[0].get("/api/does-not-exist")
+    assert response.status_code == 404
+    assert response.json() == {"error": {"code": "http_404", "message": "Not Found"}}
+
+
+def test_pool_disables_prepared_statements():
+    from app.db import ReadDatabase
+
+    database = ReadDatabase("postgresql://user@localhost:6543/postgres")
+    assert database.pool.kwargs["prepare_threshold"] is None

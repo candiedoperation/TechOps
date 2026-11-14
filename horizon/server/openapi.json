@@ -487,9 +487,16 @@
             "title": "Bucketkey"
           },
           "weight": {
-            "type": "number",
-            "maximum": 1.0,
-            "minimum": 0.0,
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Weight"
           },
           "score": {
@@ -509,8 +516,7 @@
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "bucketKey",
-          "weight"
+          "bucketKey"
         ],
         "title": "Bucket"
       },
@@ -924,6 +930,17 @@
             "type": "string",
             "title": "Comparisongroup"
           },
+          "comparisonGroupLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparisongrouplabel"
+          },
           "overallScore": {
             "anyOf": [
               {
@@ -947,8 +964,8 @@
             "type": "string",
             "enum": [
               "ranked",
-              "unranked",
-              "insufficient_data"
+              "insufficient_data",
+              "group_too_small"
             ],
             "title": "Status"
           },

@@ -31,7 +31,7 @@ class FictionalStore:
                 season_year=2026,
                 as_of=now - timedelta(days=12 - index),
                 is_final=index in (1, 2),
-                status="complete"
+                status="published"
                 if index < 4
                 else "failed"
                 if index == 4
@@ -47,7 +47,7 @@ class FictionalStore:
                 season_year=2026,
                 as_of=now,
                 is_final=False,
-                status="complete",
+                status="published",
                 rubric_version="fictional-v1",
             )
         )

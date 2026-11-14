@@ -8,7 +8,8 @@ from .ports import ReadStore
 
 
 def select_run(runs: Sequence[Run], selection: str) -> Run:
-    candidates = [run for run in runs if run.status == "complete"]
+    # Only published runs are readable; running/scored/failed runs never reach users.
+    candidates = [run for run in runs if run.status == "published"]
     if selection == "final":
         # Provisional rule: latest completed final, not latest non-final fallback.
         candidates = [run for run in candidates if run.is_final]
@@ -36,11 +37,13 @@ def ranking_list(
         and (project_pk is None or item.ranking.project_pk == project_pk)
     ]
     # Persisted ranks/scores only; deterministic tie breakers keep page boundaries stable.
+    # Ranked rows by rank, then unranked rows by name.
     rows.sort(
         key=lambda row: (
             row.comparison_group,
             row.rank_in_group is None,
             row.rank_in_group or 0,
+            row.name.casefold(),
             row.user_pk,
             row.project_pk,
             row.role,
@@ -67,10 +70,19 @@ def member_detail(
     if not items:
         raise PublicationNotFound()
     history = []
+    selected = (run.as_of, str(run.ranking_run_id))
     for previous in sorted(
         semester_runs, key=lambda value: (value.as_of, str(value.ranking_run_id))
     ):
-        if previous.status != "complete":
+        # History stops at the selected run, so an older week never shows later weeks.
+        if (
+            previous.status != "published"
+            or (
+                previous.as_of,
+                str(previous.ranking_run_id),
+            )
+            > selected
+        ):
             continue
         for item in store.rows(previous.ranking_run_id):
             row = item.ranking

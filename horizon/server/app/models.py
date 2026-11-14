@@ -48,7 +48,8 @@ class Semester(Model):
 
 class Bucket(Model):
     bucket_key: str
-    weight: float = Field(ge=0, le=1)
+    # Track 4 publishes bucket_scores as {key: score} without weights.
+    weight: float | None = Field(default=None, ge=0, le=1)
     score: float | None = Field(default=None, ge=0, le=100)
 
 
@@ -59,19 +60,41 @@ class RankingRow(Model):
     project_name: str
     role: Role
     comparison_group: str
+    comparison_group_label: str | None = None
     overall_score: float | None = Field(default=None, ge=0, le=100)
     coverage: float = Field(ge=0, le=1)
-    status: Literal["ranked", "unranked", "insufficient_data"]
+    # Track 4 member statuses (horizon_ranking.ranked_members / member_scores).
+    status: Literal["ranked", "insufficient_data", "group_too_small"]
     rank_in_group: int | None = Field(default=None, ge=1)
     ranked_in_group: int = Field(ge=0)
     buckets: list[Bucket]
 
+    @model_validator(mode="before")
+    @classmethod
+    def bucket_scores_mapping(cls, value):
+        # Accept Track 4's bucket_scores JSONB ({"code_ownership": 71.2, ...}).
+        if isinstance(value, dict):
+            for key in ("buckets", "bucket_scores", "bucketScores"):
+                buckets = value.get(key)
+                if isinstance(buckets, dict):
+                    value = {
+                        k: v
+                        for k, v in value.items()
+                        if k not in ("bucket_scores", "bucketScores")
+                    }
+                    value["buckets"] = [
+                        {"bucket_key": name, "score": score}
+                        for name, score in buckets.items()
+                    ]
+                    break
+        return value
+
     @model_validator(mode="after")
     def missing_is_not_zero(self):
-        if self.status == "insufficient_data" and (
+        if self.status != "ranked" and (
             self.overall_score is not None or self.rank_in_group is not None
         ):
-            raise ValueError("Insufficient-data rows cannot have a score or rank")
+            raise ValueError("Unranked rows cannot have a score or rank")
         if self.rank_in_group is not None and self.rank_in_group > self.ranked_in_group:
             raise ValueError("Rank exceeds group size")
         return self
@@ -82,7 +105,8 @@ class Run(Semester):
     as_of: AwareDatetime
     is_final: bool
     rubric_version: str
-    status: Literal["complete", "running", "failed"]
+    # Track 4 run lifecycle (horizon_ranking.ranking_runs.status).
+    status: Literal["running", "scored", "published", "failed"]
 
 
 class RunMetadata(Model):

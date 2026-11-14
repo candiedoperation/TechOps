@@ -23,6 +23,9 @@ class ReadDatabase:
                 "connect_timeout": 5,
                 "application_name": "horizon-read-api",
                 "row_factory": dict_row,
+                # Supabase's transaction pooler (port 6543) does not support
+                # prepared statements.
+                "prepare_threshold": None,
             },
         )
 
