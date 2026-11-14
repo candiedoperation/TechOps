@@ -67,7 +67,7 @@ class JobHelperFunctions {
                 endTime: event.endTime.toLocaleString("en-US", {
                     timeZone: "America/New_York",
                 }),
-                location: event.location,
+                eventLocation: event.location,
                 inviteLink: inviteLink,
                 googleCalendarLink: gCalendarLink,
             },

@@ -175,6 +175,16 @@ const statusVariant = (
             return "secondary";
     }
 };
+const statusLabel = (status: RsvpStatus): string => {
+    switch (status) {
+        case "Accept":
+            return "Accepted";
+        case "Decline":
+            return "Declined";
+        case "Cancel":
+            return "Cancelled";
+    }
+};
 
 const EventFormDialog = ({
     open,
@@ -757,9 +767,7 @@ export const EventAttendance = () => {
                                 </CardDescription>
                             </div>
                             <Badge variant={statusVariant(rsvp.status)}>
-                                {rsvp.status === "Accept"
-                                    ? "Accepted"
-                                    : "Declined"}
+                                {statusLabel(rsvp.status)}
                             </Badge>
                         </CardHeader>
                         {updating ? (
