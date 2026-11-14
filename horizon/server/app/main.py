@@ -1,10 +1,11 @@
 from contextlib import asynccontextmanager
 
 import psycopg
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from psycopg_pool import PoolTimeout
+from starlette.exceptions import HTTPException
 
 from .auth import JwtVerifier
 from .config import Settings
@@ -42,6 +43,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             response.headers["Cache-Control"] = "no-store"
         return response
 
+    # Starlette's HTTPException also covers unknown routes and wrong methods,
+    # so every error uses the same {"error": {...}} envelope.
     @application.exception_handler(HTTPException)
     async def http_error(request, error):
         return JSONResponse(

@@ -19,7 +19,12 @@ const session: AuthState = {
   },
 }
 function adapterFor(state: AuthState): HorizonAuthAdapter {
-  return { getState: vi.fn().mockResolvedValue(state), signIn: vi.fn(), signOut: vi.fn() }
+  return {
+    getState: vi.fn().mockResolvedValue(state),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    getAccessToken: vi.fn().mockResolvedValue(null),
+  }
 }
 
 function Controls() {

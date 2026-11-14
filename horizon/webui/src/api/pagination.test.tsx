@@ -24,13 +24,20 @@ function setup(fetcher: typeof fetch) {
     origin: window.location.origin,
     enabled: () => true,
     getAuthState: async () => state,
+    getAccessToken: async () => 'test-access-token',
     onAccessDenied: () => queryClient.clear(),
     fetcher,
   })
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>
       <AuthContext.Provider
-        value={{ state, signIn: vi.fn(), signOut: vi.fn(), invalidateSession: vi.fn() }}
+        value={{
+          state,
+          signIn: vi.fn(),
+          signOut: vi.fn(),
+          invalidateSession: vi.fn(),
+          getAccessToken: vi.fn().mockResolvedValue(null),
+        }}
       >
         <ReadClientContext.Provider value={client}>{children}</ReadClientContext.Provider>
       </AuthContext.Provider>

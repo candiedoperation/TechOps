@@ -6,6 +6,7 @@ export interface AuthContextValue {
   signIn: (returnTo: string) => Promise<void>
   signOut: () => Promise<void>
   invalidateSession: (status?: 401 | 403) => void
+  getAccessToken: () => Promise<string | null>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
