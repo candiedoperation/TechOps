@@ -817,7 +817,7 @@ select,
 input {
   min-height: 34px;
   padding: 6px 10px;
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--text);
   border: 1px solid var(--horizon-border);
   border-radius: var(--radius-small);
@@ -1247,7 +1247,7 @@ tbody tr:last-child td {
   padding: 9px 12px;
   border: 1px solid var(--horizon-border);
   border-radius: 8px;
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--text);
 }
 .read-controls {

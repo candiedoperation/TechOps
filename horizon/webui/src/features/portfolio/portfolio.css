@@ -81,7 +81,7 @@
 .snapshot-control select,
 .portfolio-search input,
 .portfolio-search select {
-  background: var(--surface);
+  background-color: var(--surface);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -564,4 +564,30 @@
 .outlook-hero .portfolio-intro p:last-child {
   color: var(--foreground);
   opacity: 0.82;
+}
+
+.summary-tile-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-tile-label .portal-card-icon[data-tone='muted'] {
+  color: var(--muted-foreground);
+}
+
+.portfolio-dashboard-grid .portal-card-body,
+.portfolio-weekly .portal-card-body {
+  padding: 0;
+}
+
+.portfolio-dashboard-grid .card-heading > .button {
+  margin-inline-start: auto;
+}
+
+@media (max-width: 480px) {
+  .portal-shell .portfolio-dashboard-grid .card-heading:has(> .button) {
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
 }

@@ -1,3 +1,11 @@
+import {
+  Activity,
+  ChartPie,
+  CircleAlert,
+  CircleCheck,
+  CircleHelp,
+  FolderKanban,
+} from 'lucide-react'
 import { useContext, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
@@ -6,6 +14,7 @@ import { QueryState } from '../../components/ui/QueryState'
 import { EmptyState } from '../../components/ui/States'
 import type { PortfolioProject, PortfolioStatus } from '../../api/contracts/provisional/portfolio'
 import { useMockSource } from '../../api/data-source'
+import { PortfolioPulse, PublicationStack } from './portfolio-icons'
 import { PortfolioContext, usePortfolio } from './context'
 
 const labels = {
@@ -109,21 +118,33 @@ export function PortfolioDashboard() {
   const { query } = usePortfolio()
   const data = query.data?.publication.state === 'missing' ? undefined : query.data
   const projects = data?.projects ?? []
-  const summary: { label: string; filter: Filter; count: number }[] = [
-    { label: 'Active Projects', filter: 'all', count: projects.length },
+  const summary = [
+    {
+      label: 'Active Projects',
+      filter: 'all',
+      count: projects.length,
+      icon: FolderKanban,
+      tone: 'blue',
+    },
     {
       label: 'Needs Attention',
       filter: 'attention',
+      icon: CircleAlert,
+      tone: 'amber',
       count: projects.filter((project) => matches(project, 'attention')).length,
     },
     {
       label: 'Clear',
       filter: 'clear',
+      icon: CircleCheck,
+      tone: 'green',
       count: projects.filter((project) => project.status === 'clear').length,
     },
     {
       label: 'Insufficient Data',
       filter: 'insufficient',
+      icon: CircleHelp,
+      tone: 'muted',
       count: projects.filter((project) => project.status === 'insufficient').length,
     },
   ]
@@ -141,13 +162,21 @@ export function PortfolioDashboard() {
         </p>
       )}
       <div className="portfolio-summary">
-        {summary.map((item) => (
+        {summary.map(({ icon: Icon, ...item }) => (
           <Link
             key={item.filter}
             to={`${filteredProjectsPath}?status=${item.filter}`}
             className="summary-tile"
           >
-            <span>{item.label}</span>
+            <span className="summary-tile-label">
+              <Icon
+                size={16}
+                className="portal-card-icon"
+                data-tone={item.tone}
+                aria-hidden="true"
+              />
+              {item.label}
+            </span>
             <strong>{data ? item.count : '—'}</strong>
             <small>
               {data
@@ -160,6 +189,7 @@ export function PortfolioDashboard() {
       <div className="portfolio-dashboard-grid">
         <Card
           title="Portfolio health"
+          icon={PortfolioPulse}
           description="Companies grouped by published project status."
           action={
             <Link className="button button-secondary" to="/projects">
@@ -199,6 +229,8 @@ export function PortfolioDashboard() {
         <div className="portfolio-side-stack">
           <Card
             title="Activity snapshot"
+            icon={Activity}
+            tone="green"
             description="Available read metrics, never inferred from a status."
           >
             <div className="activity-grid">
@@ -234,7 +266,7 @@ export function PortfolioDashboard() {
               })}
             </div>
           </Card>
-          <Card title="Status breakdown">
+          <Card title="Status breakdown" icon={ChartPie} tone="amber">
             <div className="status-breakdown">
               {statuses.map((status) => (
                 <div key={status}>
@@ -250,6 +282,8 @@ export function PortfolioDashboard() {
       </div>
       <Card
         title="What Changed This Week"
+        icon={PublicationStack}
+        className="portfolio-weekly"
         description="Published snapshot notes; not an automated assessment of real projects."
       >
         <div className="weekly-changes">
