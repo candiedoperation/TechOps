@@ -223,3 +223,36 @@ def test_docs_and_openapi(api):
         "/api/rankings/members/{userPk}",
     ):
         assert schema["paths"][path]["get"]["security"] == [{"HTTPBearer": []}]
+
+
+def test_versioned_rankings_and_run_catalog(executive):
+    client, _, _, audit = executive
+    catalog = client.get("/api/v1/rankings/runs?season=FALL-2026")
+    assert catalog.status_code == 200
+    assert [item["rankingRunId"] for item in catalog.json()] == [
+        str(UUID(int=3)),
+        str(UUID(int=2)),
+        str(UUID(int=1)),
+    ]
+    assert [item["isFinal"] for item in catalog.json()] == [False, True, True]
+    assert [event[1] for event in audit.events] == ["ranking_runs"] * 3
+    response = client.get(
+        "/api/v1/rankings?season=FALL-2026&run=final&role=engineer&projectPk=unlisted"
+    )
+    assert response.status_code == 200
+    assert response.json()["rankingRunId"] == str(UUID(int=2))
+    assert response.json()["items"] == []
+    assert response.json()["projects"] == [
+        {"projectPk": "fiction-project", "friendlyName": "Fictional Lantern"}
+    ]
+    leads = client.get(
+        "/api/v1/rankings?season=FALL-2026&role=tech_lead&projectPk=unlisted"
+    ).json()
+    assert [row["status"] for row in leads["items"]] == ["ranked", "insufficient_data"]
+    assert leads["projects"] == []
+
+
+def test_versioned_rankings_keep_executive_guard(api):
+    client, *_ = api
+    for path in ("rankings", "rankings/runs"):
+        assert client.get(f"/api/v1/{path}?season=FALL-2026").status_code == 401

@@ -14,12 +14,16 @@ export function DataTable<T>({
   rows,
   rowKey,
   emptyState,
+  rowClassName,
+  onRowClick,
 }: {
   caption: string
   columns: readonly TableColumn<T>[]
   rows: readonly T[]
   rowKey: (row: T) => Key
   emptyState?: ReactNode
+  rowClassName?: (row: T) => string
+  onRowClick?: (row: T) => void
 }) {
   return (
     <div className="table-region" role="region" aria-label={caption} tabIndex={0}>
@@ -41,7 +45,19 @@ export function DataTable<T>({
         <tbody>
           {rows.length ? (
             rows.map((row) => (
-              <tr key={rowKey(row)}>
+              <tr
+                key={rowKey(row)}
+                className={rowClassName?.(row)}
+                onClick={
+                  onRowClick
+                    ? (event) => {
+                        if (event.target instanceof Element && event.target.closest('a, button'))
+                          return
+                        onRowClick(row)
+                      }
+                    : undefined
+                }
+              >
                 {columns.map((column) => (
                   <td key={column.id} className={column.align === 'right' ? 'text-right' : ''}>
                     {column.render(row)}

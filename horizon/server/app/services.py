@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from .errors import PublicationNotFound
-from .models import History, MemberDetail, RankingList, Run, metadata
+from .models import History, MemberDetail, MemberRow, RankingList, Run, metadata
 from .ports import ReadStore
 
 
@@ -22,7 +22,7 @@ def select_run(runs: Sequence[Run], selection: str) -> Run:
 
 
 def ranking_list(
-    store: ReadStore,
+    rows_in_run: Sequence[MemberRow],
     run: Run,
     role: str | None,
     project_pk: str | None,
@@ -31,7 +31,7 @@ def ranking_list(
 ) -> RankingList:
     rows = [
         item.ranking
-        for item in store.rows(run.ranking_run_id)
+        for item in rows_in_run
         if (role is None or item.ranking.role == role)
         and (project_pk is None or item.ranking.project_pk == project_pk)
     ]
@@ -39,6 +39,7 @@ def ranking_list(
     rows.sort(
         key=lambda row: (
             row.comparison_group,
+            row.status != "ranked",
             row.rank_in_group is None,
             row.rank_in_group or 0,
             row.user_pk,

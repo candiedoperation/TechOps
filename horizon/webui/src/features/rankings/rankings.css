@@ -1,0 +1,50 @@
+.ranking-filters,
+.ranking-publication,
+.bucket-bars {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ranking-publication,
+.ranking-group {
+  margin-block: 1rem;
+}
+
+.ranking-group h3 {
+  margin-block: 0.5rem;
+}
+
+.ranking-badge {
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.55rem;
+  white-space: nowrap;
+}
+
+.ranking-row,
+.unranked-row {
+  cursor: pointer;
+}
+
+.unranked-row {
+  color: var(--text-muted);
+}
+
+.bucket-bars {
+  gap: 0.35rem;
+  min-width: 8rem;
+}
+
+.bucket-bars meter {
+  width: 1.6rem;
+}
+
+.ranking-group a {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}

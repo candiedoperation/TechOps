@@ -1,4 +1,6 @@
 import { LockKeyhole, UsersRound } from 'lucide-react'
+import { useAuth } from '../../auth/context'
+import { PublishedRankings } from './PublishedRankings'
 import { ProtectedRoute } from '../../auth/ProtectedRoute'
 import { Card } from '../../components/ui/Card'
 import { DataTable, type TableColumn } from '../../components/ui/DataTable'
@@ -10,6 +12,17 @@ const columns: TableColumn<never>[] = ['Member', 'Overall score', 'Coverage', 'L
 )
 
 export function RankingsPage() {
+  const { state } = useAuth()
+  if (state.status === 'authenticated' && state.session.isExec === true) {
+    return (
+      <>
+        <div className="page-intro">
+          <h1>Member Rankings</h1>
+        </div>
+        <PublishedRankings />
+      </>
+    )
+  }
   return (
     <>
       <div className="page-intro">

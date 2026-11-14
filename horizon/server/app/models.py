@@ -59,9 +59,10 @@ class RankingRow(Model):
     project_name: str
     role: Role
     comparison_group: str
+    comparison_group_label: str | None = None
     overall_score: float | None = Field(default=None, ge=0, le=100)
     coverage: float = Field(ge=0, le=1)
-    status: Literal["ranked", "unranked", "insufficient_data"]
+    status: Literal["ranked", "unranked", "insufficient_data", "group_too_small"]
     rank_in_group: int | None = Field(default=None, ge=1)
     ranked_in_group: int = Field(ge=0)
     buckets: list[Bucket]

@@ -448,6 +448,247 @@
         }
       }
     },
+    "/api/v1/rankings/runs": {
+      "get": {
+        "summary": "Ranking Runs",
+        "operationId": "ranking_runs_api_v1_rankings_runs_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "season",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(FALL|SPRING)-(20[0-9]{2}|21[0-9]{2}|2200)$",
+              "title": "Season"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunMetadata"
+                  },
+                  "title": "Response Ranking Runs Api V1 Rankings Runs Get"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/api/v1/rankings": {
+      "get": {
+        "summary": "Published Rankings",
+        "operationId": "published_rankings_api_v1_rankings_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "engineer",
+                "tech_lead"
+              ],
+              "type": "string",
+              "default": "engineer",
+              "title": "Role"
+            }
+          },
+          {
+            "name": "projectPk",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Projectpk"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000000,
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Pagesize"
+            }
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^(FALL|SPRING)-(20[0-9]{2}|21[0-9]{2}|2200)$",
+              "title": "Season"
+            }
+          },
+          {
+            "name": "run",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 36,
+              "default": "current",
+              "title": "Run"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankingPublication"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
     "/api/v1/projects": {
       "get": {
         "summary": "Projects",
@@ -1436,6 +1677,73 @@
         ],
         "title": "RankingList"
       },
+      "RankingPublication": {
+        "properties": {
+          "rankingRunId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Rankingrunid"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          },
+          "isFinal": {
+            "type": "boolean",
+            "title": "Isfinal"
+          },
+          "rubricVersion": {
+            "type": "string",
+            "title": "Rubricversion"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RankingRow"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "pageSize": {
+            "type": "integer",
+            "title": "Pagesize"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            },
+            "type": "array",
+            "title": "Projects"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rankingRunId",
+          "asOf",
+          "isFinal",
+          "rubricVersion",
+          "stale",
+          "items",
+          "page",
+          "pageSize",
+          "total",
+          "projects"
+        ],
+        "title": "RankingPublication"
+      },
       "RankingRow": {
         "properties": {
           "userPk": {
@@ -1466,6 +1774,17 @@
             "type": "string",
             "title": "Comparisongroup"
           },
+          "comparisonGroupLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparisongrouplabel"
+          },
           "overallScore": {
             "anyOf": [
               {
@@ -1490,7 +1809,8 @@
             "enum": [
               "ranked",
               "unranked",
-              "insufficient_data"
+              "insufficient_data",
+              "group_too_small"
             ],
             "title": "Status"
           },
@@ -1534,6 +1854,42 @@
           "buckets"
         ],
         "title": "RankingRow"
+      },
+      "RunMetadata": {
+        "properties": {
+          "rankingRunId": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Rankingrunid"
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Asof"
+          },
+          "isFinal": {
+            "type": "boolean",
+            "title": "Isfinal"
+          },
+          "rubricVersion": {
+            "type": "string",
+            "title": "Rubricversion"
+          },
+          "stale": {
+            "type": "boolean",
+            "title": "Stale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "rankingRunId",
+          "asOf",
+          "isFinal",
+          "rubricVersion",
+          "stale"
+        ],
+        "title": "RunMetadata"
       },
       "Semester": {
         "properties": {

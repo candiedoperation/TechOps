@@ -12,11 +12,10 @@ from pydantic import AwareDatetime, JsonValue
 from .db import ReadDatabase
 from .errors import PublicationNotFound, ReadUnavailable
 from .models import ApiError, Model
+from .query import Season
 
 router = APIRouter(prefix="/api/v1/projects")
 CACHE_CONTROL = "public, no-cache"
-SEASON_PATTERN = r"^(FALL|SPRING)-(20[0-9]{2}|21[0-9]{2}|2200)$"
-Season = Annotated[str, Query(pattern=SEASON_PATTERN)]
 RunQuery = Annotated[str, Query(max_length=36)]
 ProjectKey = Annotated[str, Path(alias="projectPk", min_length=1, max_length=200)]
 

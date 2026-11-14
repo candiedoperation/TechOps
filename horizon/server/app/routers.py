@@ -1,10 +1,23 @@
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from .auth import Principal, current_user, require_exec
-from .models import ApiError, Me, MemberDetail, RankingList, Role, SeasonType, Semester
+from .models import (
+    ApiError,
+    Me,
+    MemberDetail,
+    Project,
+    RankingList,
+    Role,
+    RunMetadata,
+    SeasonType,
+    Semester,
+    metadata,
+)
+from .query import Season
 from .ports import RankingAudit, ReadStore, get_audit, get_store
 from .services import member_detail, ranking_list, select_run
 
@@ -29,8 +42,6 @@ class Selection:
             try:
                 UUID(run)
             except ValueError:
-                from fastapi import HTTPException
-
                 raise HTTPException(
                     422, "run must be latest, final, or a UUID."
                 ) from None
@@ -70,7 +81,9 @@ def rankings(
         store.runs(selection.season_type, selection.season_year), selection.run
     )
     audit.record_read(user, "ranking_list", run.ranking_run_id, None)
-    return ranking_list(store, run, role, project_pk, page, page_size)
+    return ranking_list(
+        store.rows(run.ranking_run_id), run, role, project_pk, page, page_size
+    )
 
 
 @router.get("/rankings/members/{userPk}", response_model=MemberDetail)
@@ -85,3 +98,81 @@ def member(
     run = select_run(runs, selection.run)
     audit.record_read(user, "member_detail", run.ranking_run_id, user_pk)
     return member_detail(store, run, user_pk, runs)
+
+
+class RankingSelection(Selection):
+    def __init__(
+        self, season: Season, run: Annotated[str, Query(max_length=36)] = "current"
+    ):
+        season_type, season_year = season.split("-")
+        super().__init__(
+            season_type, int(season_year), "latest" if run == "current" else run
+        )
+
+
+class RankingPublication(RankingList):
+    projects: list[Project]
+
+
+@router.get("/v1/rankings/runs", response_model=list[RunMetadata])
+def ranking_runs(
+    user: Executive,
+    season: Season,
+    store: Store,
+    audit: Audit,
+):
+    season_type, season_year = season.split("-")
+    runs = sorted(
+        (
+            run
+            for run in store.runs(season_type, int(season_year))
+            if run.status == "complete"
+        ),
+        key=lambda run: (run.as_of, run.ranking_run_id),
+        reverse=True,
+    )
+    now = datetime.now(timezone.utc)
+    for run in runs:
+        audit.record_read(user, "ranking_runs", run.ranking_run_id, None)
+    return [metadata(run, now) for run in runs]
+
+
+@router.get("/v1/rankings", response_model=RankingPublication)
+def published_rankings(
+    user: Executive,
+    selection: Annotated[RankingSelection, Depends()],
+    store: Store,
+    audit: Audit,
+    role: Role = "engineer",
+    project_pk: Annotated[
+        str | None, Query(alias="projectPk", min_length=1, max_length=200)
+    ] = None,
+    page: Annotated[int, Query(ge=1, le=1000000)] = 1,
+    page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 25,
+):
+    run = select_run(
+        store.runs(selection.season_type, selection.season_year), selection.run
+    )
+    audit.record_read(user, "ranking_list", run.ranking_run_id, None)
+    rows = store.rows(run.ranking_run_id)
+    page_result = ranking_list(
+        rows, run, role, project_pk if role == "engineer" else None, page, page_size
+    )
+    projects = (
+        {
+            item.ranking.project_pk: item.ranking.project_name
+            for item in rows
+            if item.ranking.role == "engineer"
+        }
+        if role == "engineer"
+        else {}
+    )
+    return RankingPublication(
+        **page_result.model_dump(),
+        projects=[
+            Project(project_pk=key, friendly_name=name)
+            for key, name in sorted(
+                projects.items(), key=lambda item: (item[1], item[0])
+            )
+        ],
+    )
