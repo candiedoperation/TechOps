@@ -69,7 +69,9 @@ const PORT = envInt("PORT", 3000);
 /* First, so request timing and the request id cover every other middleware. */
 app.use(requestLogger);
 
-app.use(express.urlencoded({ extended: true }));
+/* Request bodies are JSON only. Nothing posts forms to this server: file
+   uploads go straight to S3 through presigned POSTs, and the API docs use the
+   implicit flow, so no token endpoint takes a form body. */
 app.use(express.json());
 
 app.use(
@@ -79,15 +81,27 @@ app.use(
     }),
 );
 
+const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+/* trust proxy + proxy: true let the secure cookie flag honour X-Forwarded-Proto
+   from the reverse proxy that terminates TLS in production. */
 app.set("trust proxy", true);
 app.use(
     expressSession({
         name: "peopleportal_sid",
         secret: process.env.PEOPLEPORTAL_TOKEN_SECRET,
         resave: false,
-        saveUninitialized: true,
+        /* Every flow that needs a session writes to it first (OIDC state, OTP,
+           temp redirects), so unauthenticated visitors never need one. */
+        saveUninitialized: false,
         store: new expressSession.MemoryStore() /* Use Redis for Horizontal Scaling */,
         proxy: true,
+        cookie: {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: isProduction,
+            maxAge: SESSION_MAX_AGE_MS,
+        },
     }),
 );
 
