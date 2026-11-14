@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, matchPath } from 'react-router-dom'
 import { PanelsTopLeft, PanelLeft, ChevronRight, X, Monitor, Moon, Sun, LogOut, LockKeyhole } from 'lucide-react'
 import { horizonRoutes, type HorizonRoute } from '../../app/routes'
 import { useAuth } from '../../auth/context'
 import { useAppearance } from '../../theme/context'
 import { SnapshotControl } from '../../features/portfolio/PortfolioPages'
+import { moveFrom } from '../ui/motion'
 import './portal-shell.css'
 
 function Navigation({
@@ -15,6 +16,15 @@ function Navigation({
   onNavigate?: () => void
 }) {
   const { state } = useAuth()
+  const location = useLocation()
+  const navigation = useRef<HTMLElement>(null)
+  const previous = useRef<DOMRect>(null)
+  useLayoutEffect(() => {
+    const marker = navigation.current?.querySelector<HTMLElement>('.active .portal-nav-marker')
+    if (!marker) return
+    if (previous.current) moveFrom(marker, previous.current)
+    previous.current = marker.getBoundingClientRect()
+  }, [location.pathname])
   const order = ['/dashboard', '/projects', '/insights', '/rankings', '/settings']
   const visible = routes
     .filter(
@@ -25,7 +35,7 @@ function Navigation({
     )
     .sort((a, b) => order.indexOf(a.path) - order.indexOf(b.path))
   return (
-    <nav aria-label="Primary navigation" className="portfolio-navigation">
+    <nav ref={navigation} aria-label="Primary navigation" className="portfolio-navigation">
       {visible.map((route) => (
         <NavLink
           key={route.path}
@@ -33,6 +43,7 @@ function Navigation({
           onClick={onNavigate}
           className={({ isActive }) => (isActive ? 'top-nav-link active' : 'top-nav-link')}
         >
+          <i className="portal-nav-marker" aria-hidden="true" />
           {route.navigation && <route.navigation.icon size={16} aria-hidden="true" />}
           <span>{route.title}</span>
         </NavLink>
@@ -59,6 +70,12 @@ export function AppLayout({
   const AppearanceIcon = appearance === 'system' ? Monitor : resolved === 'dark' ? Moon : Sun
   const [logoutError, setLogoutError] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => {
+    const sync = () => { document.documentElement.dataset.paused = String(document.hidden) }
+    sync()
+    document.addEventListener('visibilitychange', sync)
+    return () => document.removeEventListener('visibilitychange', sync)
+  }, [])
   useEffect(() => {
     document.title = title + ' · Horizon'
     mainRef.current?.focus({ preventScroll: true })

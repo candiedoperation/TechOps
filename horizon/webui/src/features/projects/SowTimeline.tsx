@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { memo, useEffect, useRef, type CSSProperties } from 'react'
 import { Check, Circle, CircleAlert, ListTodo } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import type { SowTask, SowTimelineDocument } from '../../api/contracts/projects'
 import { externalHttpUrl, taskAnchor } from '../../api/links'
 import { Card } from '../../components/ui/Card'
+import { whenVisible } from '../../components/ui/motion'
 import { EmptyState } from '../../components/ui/States'
 import { percent, shortDate } from '../../format'
 
@@ -16,14 +17,14 @@ const status = {
 
 const today = () => new Date()
 
-function Task({ task, selected }: { task: SowTask; selected: boolean }) {
+const Task = memo(function Task({ task, selected, index }: { task: SowTask; selected: boolean; index: number }) {
   const { label, icon: Icon } = status[task.timelineStatus]
   const override = task.override
   const pending = task.pendingOverride
   return (
-    <li id={taskAnchor(task.taskKey)} className={`sow-task sow-task-${task.timelineStatus}`}>
+    <li id={taskAnchor(task.taskKey)} className={`sow-task sow-task-${task.timelineStatus}`} style={{ '--node-delay': `${Math.min(index, 11) * 34}ms` } as CSSProperties}>
       <span className="sow-status-icon">
-        <Icon size={16} aria-hidden="true" />
+        {task.timelineStatus === 'done' ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path pathLength="1" d="m5 12 4 4L19 6" /></svg> : <Icon size={16} aria-hidden="true" />}
       </span>
       <details open={selected || undefined}>
         <summary>
@@ -40,6 +41,7 @@ function Task({ task, selected }: { task: SowTask; selected: boolean }) {
           </span>
           {pending && <span className="sow-pending">Pending next run</span>}
         </summary>
+        <div className="sow-task-details"><div>
         {task.description && <p>{task.description}</p>}
         {task.acceptanceCriteria.length > 0 && (
           <>
@@ -81,10 +83,11 @@ function Task({ task, selected }: { task: SowTask; selected: boolean }) {
             {pending.reason && ` · ${pending.reason}`}
           </p>
         )}
+        </div></div>
       </details>
     </li>
   )
-}
+})
 
 export function SowTimeline({
   document,
@@ -97,6 +100,20 @@ export function SowTimeline({
 }) {
   const { hash } = useLocation()
   const anchor = hash.slice(1)
+  const rail = useRef<HTMLOListElement>(null)
+  const markerRef = useRef<HTMLLIElement>(null)
+  useEffect(() => {
+    const list = rail.current
+    if (!list) return
+    return whenVisible(list, () => { list.dataset.motion = 'ready' })
+  }, [document])
+  useEffect(() => {
+    const marker = markerRef.current
+    if (!marker || !('IntersectionObserver' in window)) return
+    const observer = new IntersectionObserver(([entry]) => { marker.dataset.onscreen = String(entry?.isIntersecting) })
+    observer.observe(marker)
+    return () => observer.disconnect()
+  }, [document])
   useEffect(() => {
     if (anchor && document)
       window.document.getElementById(anchor)?.scrollIntoView?.({ block: 'nearest' })
@@ -128,7 +145,7 @@ export function SowTimeline({
   const lastDated = tasks.reduce((last, task, index) => (task.dueDate === null ? last : index), -1)
   const marker = future < 0 ? lastDated + 1 : future
   const todayMarker = (
-    <li key="today" className="sow-today">
+    <li key="today" ref={markerRef} className="sow-today">
       <time dateTime={todayKey}>Today</time>
     </li>
   )
@@ -145,10 +162,10 @@ export function SowTimeline({
         {progress.overdue} overdue
       </p>
       {tasks.length > 0 && (
-        <ol className="sow-timeline" aria-label="SOW tasks">
+        <ol ref={rail} className="sow-timeline" aria-label="SOW tasks">
           {tasks.flatMap((task, index) => {
             const id = taskAnchor(task.taskKey)
-            const node = <Task key={id} task={task} selected={anchor === id} />
+            const node = <Task key={id} index={index} task={task} selected={anchor === id} />
             return index === marker ? [todayMarker, node] : [node]
           })}
           {marker === tasks.length && todayMarker}

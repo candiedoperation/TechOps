@@ -230,3 +230,7 @@
 .project-totals dd {
   font-family: var(--portal-mono, monospace);
 }
+
+.sow-task-details > div > :is(p, ul) {
+  margin-block: 0.5rem;
+}

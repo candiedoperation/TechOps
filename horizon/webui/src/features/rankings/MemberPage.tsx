@@ -52,14 +52,14 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
     <div className="member-profile">
       <div className="page-intro">
         <div>
-          <h1>{member.name}</h1>
+          <h1 className="member-transition-name">{member.name}</h1>
           <p>
             {engineer ? 'Engineer' : 'Tech lead'} · {member.projectName}
           </p>
         </div>
       </div>
       <Card title="Overall ranking" icon={Award} tone="amber" className="member-overall">
-        {ranked && <ScoreBar value={overall.score} maximum={100} label="Overall score" />}
+        {ranked && <div className="member-transition-score"><ScoreBar animate value={overall.score} maximum={100} label="Overall score" /></div>}
         {ranked && overall.rank !== null && (
           <p>
             {overall.rank} of {overall.rankedInGroup} {engineer ? 'engineers on' : 'tech leads in'}{' '}

@@ -157,3 +157,12 @@
   flex-wrap: wrap;
   margin-top: 0.35rem;
 }
+
+.member-transition-name {
+  view-transition-name: member-name;
+}
+
+.member-transition-score {
+  min-width: 9rem;
+  view-transition-name: member-score;
+}

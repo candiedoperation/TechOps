@@ -35,3 +35,47 @@
   color: var(--accent-text);
   cursor: pointer;
 }
+
+.trend-chart {
+  position: relative;
+  border: 1px solid var(--border);
+  padding: 0.8rem;
+  border-radius: var(--radius);
+}
+
+.trend-chart svg {
+  aspect-ratio: 600 / 146;
+}
+
+.trend-grid {
+  stroke: var(--border);
+  stroke-dasharray: 3 4;
+}
+
+.trend-bar {
+  fill: var(--chart-2);
+}
+
+.trend-bar-point {
+  opacity: 0;
+}
+
+.trend-tooltip {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.65rem;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  font-family: var(--portal-mono, monospace);
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+
+.trend-chart summary {
+  min-height: 2rem;
+  display: list-item;
+  align-content: center;
+}

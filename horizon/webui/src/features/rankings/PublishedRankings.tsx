@@ -1,4 +1,5 @@
 import { ListOrdered } from 'lucide-react'
+import { useLayoutEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { rankingOperations, type RankingRow } from '../../api/contracts/rankings'
 import { useHorizonReadQuery } from '../../api/use-horizon-query'
@@ -6,6 +7,7 @@ import { Card } from '../../components/ui/Card'
 import { QueryState } from '../../components/ui/QueryState'
 import { DataTable, type TableColumn } from '../../components/ui/DataTable'
 import { Pagination } from '../../components/ui/Pagination'
+import { motionAllowed, moveFrom } from '../../components/ui/motion'
 import { ScoreBar } from '../../components/ui/ScoreBar'
 import { rubricV1 } from '../../rubric'
 import { percent, shortDate } from '../../format'
@@ -30,6 +32,12 @@ function memberUrl(row: RankingRow, season: string, run: string) {
   }
 }
 
+function selectTransition(row: HTMLElement | null) {
+  if (!row || !motionAllowed() || !document.startViewTransition) return
+  row.querySelector<HTMLElement>('[data-transition-name]')?.style.setProperty('view-transition-name', 'member-name')
+  row.querySelector<HTMLElement>('[data-transition-score]')?.style.setProperty('view-transition-name', 'member-score')
+}
+
 function columns(season: string, runId: string, rubricVersion: string): TableColumn<RankingRow>[] {
   return [
     {
@@ -40,7 +48,13 @@ function columns(season: string, runId: string, rubricVersion: string): TableCol
     {
       id: 'name',
       heading: 'Name',
-      render: (row) => <Link to={memberUrl(row, season, runId)}>{row.name}</Link>,
+      render: (row) => <Link to={memberUrl(row, season, runId)}
+        viewTransition={motionAllowed()}
+        onClick={(event) => {
+          if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey)
+            selectTransition(event.currentTarget.closest('tr'))
+        }}
+        data-transition-name>{row.name}</Link>,
     },
     { id: 'project', heading: 'Project', render: (row) => row.projectName },
     {
@@ -53,7 +67,7 @@ function columns(season: string, runId: string, rubricVersion: string): TableCol
       heading: 'Overall score',
       render: (row) =>
         row.status === 'ranked' ? (
-          <ScoreBar value={row.overallScore} maximum={100} label={`${row.name} overall score`} />
+          <div data-transition-score><ScoreBar value={row.overallScore} maximum={100} label={`${row.name} overall score`} /></div>
         ) : (
           '—'
         ),
@@ -97,6 +111,8 @@ function columns(season: string, runId: string, rubricVersion: string): TableCol
 
 export function PublishedRankings() {
   const navigate = useNavigate()
+  const tables = useRef<HTMLDivElement>(null)
+  const previous = useRef(new Map<string, DOMRect>())
   const [search, setSearch] = useSearchParams()
   const semesters = useHorizonReadQuery({
     feature: 'ranking-semesters',
@@ -121,9 +137,28 @@ export function PublishedRankings() {
     available: Boolean(season),
   })
 
+  useLayoutEffect(() => {
+    if (!rankings.data || !motionAllowed()) return
+    const rows = tables.current?.querySelectorAll<HTMLElement>('[data-row-key]')
+    if (!rows || rows.length > 50) return
+    for (const row of rows) {
+      const prior = previous.current.get(row.dataset.rowKey ?? '')
+      if (prior) {
+        row.style.animation = 'none'
+        moveFrom(row, prior)
+      }
+    }
+    previous.current.clear()
+  }, [rankings.data])
+
   function update(changes: Record<string, string>) {
     const next = new URLSearchParams({ season, role, run, projectPk, ...changes })
     if (!next.get('projectPk')) next.delete('projectPk')
+    previous.current.clear()
+    const rows = tables.current?.querySelectorAll<HTMLElement>('[data-row-key]')
+    if (motionAllowed() && rows && rows.length <= 50) {
+      for (const row of rows) previous.current.set(row.dataset.rowKey ?? '', row.getBoundingClientRect())
+    }
     setSearch(next)
   }
 
@@ -213,7 +248,7 @@ export function PublishedRankings() {
         isEmpty={() => false}
       >
         {({ meta, items, page, pageSize, total }) => (
-          <>
+          <div ref={tables}>
             <p className="ranking-publication">
               <span>
                 {meta.stale ? 'Stale' : 'Updated'} ·{' '}
@@ -233,9 +268,16 @@ export function PublishedRankings() {
                     ...group.rows.filter((row) => row.status === 'ranked'),
                     ...group.rows.filter((row) => row.status !== 'ranked'),
                   ]}
+                  motion
                   rowKey={(row) => JSON.stringify([row.userPk, row.projectPk, row.role])}
                   rowClassName={(row) => (row.status !== 'ranked' ? 'unranked-row' : 'ranking-row')}
-                  onRowClick={(row) => void navigate(memberUrl(row, season, meta.runId))}
+                  onRowClick={(row) => {
+                    const key = JSON.stringify([row.userPk, row.projectPk, row.role])
+                    const element = [...(tables.current?.querySelectorAll<HTMLElement>('[data-row-key]') ?? [])]
+                      .find((element) => element.dataset.rowKey === key)
+                    selectTransition(element ?? null)
+                    void navigate(memberUrl(row, season, meta.runId), { viewTransition: motionAllowed() })
+                  }}
                 />
               </section>
             ))}
@@ -248,7 +290,7 @@ export function PublishedRankings() {
                 onNext={() => update({ page: String(page + 1) })}
               />
             )}
-          </>
+          </div>
         )}
       </QueryState>
     </Card>

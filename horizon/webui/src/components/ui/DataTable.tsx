@@ -1,4 +1,4 @@
-import type { Key, ReactNode } from 'react'
+import type { CSSProperties, Key, ReactNode } from 'react'
 import { EmptyState } from './States'
 
 export interface TableColumn<T> {
@@ -15,6 +15,7 @@ export function DataTable<T>({
   rowKey,
   emptyState,
   rowClassName,
+  motion = false,
   onRowClick,
 }: {
   caption: string
@@ -22,6 +23,7 @@ export function DataTable<T>({
   rows: readonly T[]
   rowKey: (row: T) => Key
   emptyState?: ReactNode
+  motion?: boolean
   rowClassName?: (row: T) => string
   onRowClick?: (row: T) => void
 }) {
@@ -44,9 +46,11 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {rows.length ? (
-            rows.map((row) => (
+            rows.map((row, index) => (
               <tr
                 key={rowKey(row)}
+                data-row-key={motion ? rowKey(row) : undefined}
+                style={motion ? { '--row-delay': `${Math.min(12, index) * 22}ms` } as CSSProperties : undefined}
                 className={rowClassName?.(row)}
                 onClick={
                   onRowClick

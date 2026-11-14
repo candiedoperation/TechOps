@@ -1,10 +1,9 @@
-import { AlertCircle, Clock3, Inbox, LoaderCircle, LockKeyhole, RefreshCw } from 'lucide-react'
+import { AlertCircle, Clock3, Inbox, LockKeyhole, RefreshCw } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 export function LoadingState({ label = 'Loading Horizon data' }: { label?: string }) {
   return (
     <div className="content-state" role="status">
-      <LoaderCircle className="animate-spin state-icon" aria-hidden="true" />
       <p>{label}</p>
       <div className="skeleton-lines" aria-hidden="true">
         <span />

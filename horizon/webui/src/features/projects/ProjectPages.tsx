@@ -1,3 +1,4 @@
+import { CountUp } from '../../components/ui/CountUp'
 import { ArrowLeft, ArrowUpRight, ChartNoAxesCombined, FolderKanban, History, ListTodo, MessageSquareText, ShieldAlert, UsersRound } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -221,11 +222,11 @@ function ProjectPublication({
                         Done: summary.tasksDone,
                         Partial: summary.tasksPartial,
                         Overdue: summary.tasksOverdue,
-                        Complete: `${summary.percentComplete}%`,
+                        Complete: summary.percentComplete,
                       }).map(([label, value]) => (
                         <div key={label}>
                           <dt>{label}</dt>
-                          <dd>{value}</dd>
+                          <dd><CountUp value={value} />{label === 'Complete' && '%'}</dd>
                         </div>
                       ))}
                     </dl>
@@ -250,6 +251,7 @@ function ProjectPublication({
                         key={key}
                         title={title}
                         unit={unit}
+                        bars={key === 'prsMerged'}
                         points={detail.metrics.map((week) => ({
                           id: week.week,
                           at: week.week,
