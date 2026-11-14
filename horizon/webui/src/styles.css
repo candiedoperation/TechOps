@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '../../../peopleportal/webui/src/portal-tokens.css';
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* Component colors are semantic. Appearance never depends on auth or live data. */
@@ -79,7 +80,7 @@
   --chart-muted: #91a2bb;
 }
 @theme inline {
-  --font-sans: 'Inter', 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-foreground: var(--text);

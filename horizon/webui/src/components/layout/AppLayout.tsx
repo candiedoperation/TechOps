@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, matchPath } from 'react-router-dom'
-import { Menu, X, Monitor, Moon, Sun, LogOut, LockKeyhole } from 'lucide-react'
+import { PanelLeft, ChevronRight, X, Monitor, Moon, Sun, LogOut, LockKeyhole } from 'lucide-react'
 import { horizonRoutes, type HorizonRoute } from '../../app/routes'
 import { useAuth } from '../../auth/context'
 import { useAppearance } from '../../theme/context'
 import { SnapshotControl } from '../../features/portfolio/PortfolioPages'
+import './portal-shell.css'
 
 function Navigation({
   routes,
@@ -32,7 +33,8 @@ function Navigation({
           onClick={onNavigate}
           className={({ isActive }) => (isActive ? 'top-nav-link active' : 'top-nav-link')}
         >
-          {route.title}
+          {route.navigation && <route.navigation.icon size={16} aria-hidden="true" />}
+          <span>{route.title}</span>
         </NavLink>
       ))}
     </nav>
@@ -54,40 +56,51 @@ export function AppLayout({
   const { appearance, resolved } = useAppearance()
   const AppearanceIcon = appearance === 'system' ? Monitor : resolved === 'dark' ? Moon : Sun
   const [logoutError, setLogoutError] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   useEffect(() => {
     document.title = title + ' · Horizon'
     mainRef.current?.focus({ preventScroll: true })
   }, [title])
   return (
-    <div className="portfolio-shell">
+    <div className="portfolio-shell portal-shell" data-sidebar-collapsed={collapsed}>
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
-      {banner}
-      <header className="portfolio-header">
-        <div className="portfolio-brand-nav">
+      <aside className="portal-sidebar">
+        <Link className="portfolio-brand" to="/dashboard" aria-label="Horizon dashboard">
+          <span className="portfolio-logo" aria-hidden="true">H</span>
+          <strong>App Dev Horizon</strong>
+        </Link>
+        <Navigation routes={routes} />
+      </aside>
+      <div className="portal-inset">
+        {banner}
+        <header className="portal-toolbar">
           <button
-            className="icon-button mobile-menu"
+            type="button"
+            className="icon-button portal-sheet-trigger"
             aria-label="Open navigation"
             onClick={() => dialogRef.current?.showModal()}
           >
-            <Menu size={21} />
+            <PanelLeft size={18} />
           </button>
-          <Link className="portfolio-brand" to="/dashboard" aria-label="Horizon dashboard">
-            <span className="portfolio-logo" aria-hidden="true">
-              H
-            </span>
-            <span>
-              <strong>App Dev Horizon</strong>
-              <small>INTELLIGENCE</small>
-            </span>
-          </Link>
-          <div className="portfolio-topnav">
-            <Navigation routes={routes} />
-          </div>
-        </div>
-        <div className="portfolio-header-actions">
-          <SnapshotControl />
+          <button
+            type="button"
+            className="icon-button portal-sidebar-trigger"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+            onClick={() => setCollapsed((value) => !value)}
+          >
+            <PanelLeft size={18} />
+          </button>
+          <span className="portal-divider" aria-hidden="true" />
+          <nav aria-label="Breadcrumb" className="portal-breadcrumb">
+            <Link to="/dashboard">Horizon</Link>
+            <ChevronRight size={13} aria-hidden="true" />
+            <span aria-current="page">{title}</span>
+          </nav>
+          <div className="portfolio-header-actions">
+          {['/dashboard', '/insights', '/project-health'].includes(location.pathname) && <SnapshotControl />}
           <Link
             to="/settings"
             className="icon-button"
@@ -142,9 +155,10 @@ export function AppLayout({
         <Outlet />
       </main>
       <footer className="portfolio-footer">
-        <span>Horizon / A shared perspective.</span>
+        <span>App Dev Horizon</span>
         <Link to="/sign-in">Access &amp; connection</Link>
       </footer>
+      </div>
     </div>
   )
 }
