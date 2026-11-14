@@ -7,12 +7,12 @@ export function isAppearance(value: unknown): value is Appearance {
   return value === 'system' || value === 'light' || value === 'dark'
 }
 
-export function readAppearance(): Appearance {
+export function readAppearance(fallback: Appearance = 'system'): Appearance {
   try {
     const stored = localStorage.getItem(APPEARANCE_STORAGE_KEY)
-    return isAppearance(stored) ? stored : 'system'
+    return stored === null ? fallback : isAppearance(stored) ? stored : 'system'
   } catch {
-    return 'system'
+    return fallback
   }
 }
 

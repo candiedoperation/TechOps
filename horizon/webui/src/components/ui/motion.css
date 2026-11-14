@@ -360,3 +360,31 @@ html[data-paused='true'] .skeleton-lines::after {
     display: none;
   }
 }
+
+@supports selector(details::details-content) {
+  .sow-task details::details-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    overflow: clip;
+    transition:
+      grid-template-rows var(--motion-fast) var(--motion-ease),
+      opacity var(--motion-fast),
+      content-visibility var(--motion-fast) allow-discrete;
+  }
+
+  .sow-task details[open]::details-content {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  .sow-task-details {
+    min-height: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sow-task details::details-content {
+    transition: none !important;
+  }
+}

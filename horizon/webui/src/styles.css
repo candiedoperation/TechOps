@@ -5,16 +5,16 @@
 /* Component colors are semantic. Appearance never depends on auth or live data. */
 :root {
   color-scheme: light;
-  --background: #f8fafc;
+  --horizon-background: #f8fafc;
   --surface: #ffffff;
   --surface-secondary: #f8fafc;
   --surface-hover: #eef2f7;
   --text: #0f172a;
   --text-secondary: #536278;
   --text-muted: #617087;
-  --border: #dce3ec;
+  --horizon-border: #dce3ec;
   --border-subtle: #e9edf3;
-  --accent: #2563eb;
+  --horizon-accent: #2563eb;
   --accent-hover: #1d478b;
   --accent-text: #244f93;
   --accent-surface: #edf3fc;
@@ -35,7 +35,7 @@
   --chart-primary: #2858a5;
   --chart-secondary: #427f77;
   --chart-muted: #8391a5;
-  --radius: 8px;
+  --horizon-radius: 8px;
   --radius-small: 5px;
   --space-1: 4px;
   --space-2: 8px;
@@ -48,16 +48,16 @@
 }
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --background: #141a23;
+  --horizon-background: #141a23;
   --surface: #1b2330;
   --surface-secondary: #202a38;
   --surface-hover: #2a3647;
   --text: #e4eaf3;
   --text-secondary: #bdc9d9;
   --text-muted: #a1b0c5;
-  --border: #344154;
+  --horizon-border: #344154;
   --border-subtle: #2b3748;
-  --accent: #3969b7;
+  --horizon-accent: #3969b7;
   --accent-hover: #315ca1;
   --accent-text: #a8c8ff;
   --accent-surface: #233651;
@@ -83,12 +83,12 @@
   --font-sans:
     ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
     'Noto Color Emoji';
-  --color-background: var(--background);
+  --color-background: var(--horizon-background);
   --color-surface: var(--surface);
   --color-foreground: var(--text);
   --color-muted-foreground: var(--text-muted);
-  --color-border: var(--border);
-  --color-primary: var(--accent);
+  --color-border: var(--horizon-border);
+  --color-primary: var(--horizon-accent);
   --color-primary-foreground: var(--on-accent);
 }
 * {
@@ -97,7 +97,7 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--background);
+  background: var(--horizon-background);
   color: var(--text);
   font: 13px/1.5 var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -160,7 +160,7 @@ h1 {
   padding: var(--space-6) var(--space-4) var(--space-4);
   overflow-y: auto;
   background: var(--surface);
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--horizon-border);
 }
 .brand {
   display: flex;
@@ -177,8 +177,8 @@ h1 {
   place-items: center;
   width: 36px;
   height: 36px;
-  border-radius: var(--radius);
-  background: var(--accent);
+  border-radius: var(--horizon-radius);
+  background: var(--horizon-accent);
   color: var(--on-accent);
 }
 .brand-subtitle {
@@ -239,8 +239,8 @@ h1 {
 }
 .sidebar-note {
   padding: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--horizon-border);
+  border-radius: var(--horizon-radius);
   background: var(--surface-secondary);
 }
 .sidebar-note-icon {
@@ -272,7 +272,7 @@ h1 {
   align-items: center;
   margin-top: 20px;
   padding: 18px 4px 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--horizon-border);
   font-size: 11px;
   font-weight: 600;
 }
@@ -288,7 +288,7 @@ h1 {
   place-items: center;
   width: 30px;
   height: 30px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--horizon-border);
   background: var(--surface-secondary);
   border-radius: var(--radius-small);
   font-size: 12px;
@@ -308,7 +308,7 @@ h1 {
   min-height: 62px;
   padding: 0 var(--space-8);
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--horizon-border);
 }
 .header-left,
 .header-actions {
@@ -340,7 +340,7 @@ h1 {
 .header-divider {
   width: 1px;
   height: 20px;
-  background: var(--border);
+  background: var(--horizon-border);
 }
 .access-link {
   display: flex;
@@ -390,7 +390,7 @@ h1 {
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
-  border: 1px solid var(--border);
+  border: 1px solid var(--horizon-border);
   border-radius: var(--radius-small);
 }
 .pill-neutral {
@@ -405,7 +405,7 @@ h1 {
   color: var(--text);
   background: var(--accent-surface);
   border: 1px solid var(--accent-border);
-  border-radius: var(--radius);
+  border-radius: var(--horizon-radius);
 }
 .hero-content {
   display: grid;
@@ -463,7 +463,7 @@ h1 {
 .button-secondary {
   color: var(--text);
   background: var(--surface);
-  border-color: var(--border);
+  border-color: var(--horizon-border);
 }
 .button-white:hover,
 .button-secondary:hover {
@@ -471,7 +471,7 @@ h1 {
 }
 .button-primary {
   color: var(--on-accent);
-  background: var(--accent);
+  background: var(--horizon-accent);
 }
 .button-primary:hover:enabled {
   background: var(--accent-hover);
@@ -489,8 +489,8 @@ h1 {
   position: relative;
   padding: 18px 20px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--horizon-border);
+  border-radius: var(--horizon-radius);
 }
 .summary-icon {
   position: absolute;
@@ -532,8 +532,8 @@ h1 {
   min-width: 0;
   overflow: hidden;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--horizon-border);
+  border-radius: var(--horizon-radius);
   box-shadow: var(--shadow);
 }
 .card-heading {
@@ -607,7 +607,7 @@ h1 {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
-  border-radius: var(--radius);
+  border-radius: var(--horizon-radius);
   color: var(--accent-text);
   background: var(--accent-surface);
 }
@@ -690,8 +690,8 @@ h1 {
   width: 36px;
   height: 36px;
   margin-bottom: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--horizon-border);
+  border-radius: var(--horizon-radius);
   background: var(--surface-secondary);
   color: var(--text-muted);
 }
@@ -782,7 +782,7 @@ h1 {
   background: var(--accent-surface);
   color: var(--accent-text);
   border: 1px solid var(--accent-border);
-  border-radius: var(--radius);
+  border-radius: var(--horizon-radius);
 }
 .access-notice strong {
   font-size: 12px;
@@ -819,7 +819,7 @@ input {
   padding: 6px 10px;
   background: var(--surface);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--horizon-border);
   border-radius: var(--radius-small);
   font-size: 12px;
 }
@@ -875,7 +875,7 @@ tbody tr:last-child td {
   align-items: center;
   gap: 12px;
   padding: 16px var(--space-8);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--horizon-border);
   color: var(--text-muted);
   font-size: 11px;
 }
@@ -901,7 +901,7 @@ tbody tr:last-child td {
   background: var(--accent-surface);
   color: var(--accent-text);
   border: 1px solid var(--accent-border);
-  border-radius: var(--radius);
+  border-radius: var(--horizon-radius);
 }
 .sign-in-description {
   margin: 16px 0 24px;
@@ -959,8 +959,8 @@ tbody tr:last-child td {
   padding: 16px;
   background: var(--surface-secondary);
   color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--horizon-border);
+  border-radius: var(--horizon-radius);
   text-align: left;
 }
 .appearance-option:hover {
@@ -1023,7 +1023,7 @@ tbody tr:last-child td {
   background: var(--surface);
   color: var(--text);
   border: 0;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--horizon-border);
 }
 .mobile-drawer[open] {
   display: flex;
@@ -1045,7 +1045,7 @@ tbody tr:last-child td {
   padding: 12px 16px;
   color: var(--accent-text);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--horizon-border);
   border-radius: var(--radius-small);
 }
 .skip-link:focus {
@@ -1215,7 +1215,7 @@ tbody tr:last-child td {
 }
 .score-bar meter {
   width: 100%;
-  accent-color: var(--accent);
+  accent-color: var(--horizon-accent);
 }
 .demo-banner {
   display: flex;
@@ -1245,7 +1245,7 @@ tbody tr:last-child td {
 .read-controls select,
 .read-controls input {
   padding: 9px 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--horizon-border);
   border-radius: 8px;
   background: var(--surface);
   color: var(--text);
@@ -1291,7 +1291,7 @@ tbody tr:last-child td {
 .signal-panel {
   min-width: 0;
   padding: 18px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--horizon-border);
   border-radius: 12px;
 }
 .signal-panel h3 {

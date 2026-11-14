@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 const css = readFileSync('src/styles.css', 'utf8')
+const portal = readFileSync('src/components/layout/portal-shell.css', 'utf8')
+const project = readFileSync('src/features/projects/projects.css', 'utf8')
 const portfolio = readFileSync('src/features/portfolio/portfolio.css', 'utf8')
 function rule(source: string, selector: string) {
   const normalized = source.replace(/\s+/g, ' ')
@@ -24,6 +26,15 @@ describe('Horizon layout regression guards', () => {
     expect(controls).toContain('width: 100%')
     expect(controls).toContain('min-width: 0')
     expect(controls).toContain('min-height: 42px')
+  })
+  it('switches to a navigation sheet and a single-column timeline at narrow widths', () => {
+    expect(portal).toMatch(
+      /@media \(max-width: 760px\)[\s\S]+\.portal-sheet-trigger\s*\{\s*display: inline-flex/,
+    )
+    expect(portal).toContain('min-height: 44px')
+    expect(project).toMatch(
+      /@media \(min-width: 1080px\)[\s\S]+grid-template-columns: minmax\(0, 1fr\) minmax\(300px, 360px\)/,
+    )
   })
   it('insets component panels and prevents navigation labels splitting', () => {
     expect(rule(css, '.signal-grid')).toContain('padding: 20px')

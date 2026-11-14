@@ -12,6 +12,7 @@ import { AppLayout } from '../components/layout/AppLayout'
 import { EmptyState } from '../components/ui/States'
 import { AppErrorBoundary } from './AppErrorBoundary'
 import { horizonRoutes, type HorizonRoute } from './routes'
+import type { Appearance } from '../theme/appearance'
 import { AppearanceProvider } from '../theme/AppearanceProvider'
 import { PortfolioProvider } from '../features/portfolio/PortfolioProvider'
 
@@ -38,14 +39,19 @@ const fixtureSession: HorizonAuthAdapter = {
 export function App({
   experience,
   mockSource,
-}: { experience?: AppExperience; mockSource?: HorizonReadClient | null } = {}) {
+  defaultAppearance,
+}: {
+  experience?: AppExperience
+  mockSource?: HorizonReadClient | null
+  defaultAppearance?: Appearance
+} = {}) {
   const [queryClient] = useState(createHorizonQueryClient)
   const ReadProvider = experience?.ReadProvider ?? HorizonReadProvider
   const routes = experience?.routes ?? horizonRoutes
   const PortfolioBoundary = experience?.PortfolioProvider ?? PortfolioProvider
   return (
     <AppErrorBoundary>
-      <AppearanceProvider>
+      <AppearanceProvider defaultAppearance={defaultAppearance}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider adapter={mockSource ? fixtureSession : undefined}>
             <MockSourceContext.Provider value={mockSource ?? null}>

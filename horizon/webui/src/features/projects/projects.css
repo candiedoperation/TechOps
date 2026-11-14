@@ -29,7 +29,13 @@
 .published-project-list progress,
 .sow-overall {
   width: 100%;
-  accent-color: var(--accent);
+  accent-color: var(--chart-2);
+  appearance: none;
+  height: 0.5rem;
+  background: var(--secondary);
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
 }
 
 .project-badges li {
@@ -233,4 +239,37 @@
 
 .sow-task-details > div > :is(p, ul) {
   margin-block: 0.5rem;
+}
+
+@media (max-width: 760px) {
+  .sow-task summary {
+    min-height: 44px;
+  }
+
+  .project-season {
+    gap: 0.55rem;
+  }
+}
+
+@media (max-width: 1079px) {
+  .published-project-detail .project-rail {
+    max-height: none;
+  }
+}
+
+.published-project-list progress::-webkit-progress-bar,
+.sow-overall::-webkit-progress-bar {
+  background: var(--secondary);
+}
+
+.published-project-list progress::-webkit-progress-value,
+.sow-overall::-webkit-progress-value {
+  background: var(--chart-2);
+  border-radius: 999px;
+}
+
+.published-project-list progress::-moz-progress-bar,
+.sow-overall::-moz-progress-bar {
+  background: var(--chart-2);
+  border-radius: 999px;
 }

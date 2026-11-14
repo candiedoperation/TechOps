@@ -166,3 +166,61 @@
   min-width: 9rem;
   view-transition-name: member-score;
 }
+
+@media (max-width: 760px) {
+  .ranking-filters {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0.35rem 0.3rem 0.65rem;
+  }
+
+  .ranking-filters label {
+    flex: 0 0 9rem;
+    min-width: 0;
+  }
+
+  .ranking-filters select {
+    width: 100%;
+  }
+
+  .ranking-group :is(td, th):nth-child(2) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--card);
+  }
+
+  .ranking-group th:nth-child(2) {
+    z-index: 3;
+  }
+
+  .ranking-group td:nth-child(2) a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+.ranking-status summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.ranking-status summary::-webkit-details-marker {
+  display: none;
+}
+
+.ranking-status-note {
+  display: block;
+  margin-top: 0.4rem;
+  max-width: 15rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+@media (pointer: coarse) {
+  .ranking-status summary {
+    min-height: 44px;
+    align-content: center;
+  }
+}

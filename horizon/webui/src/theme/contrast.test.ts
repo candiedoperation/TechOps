@@ -29,12 +29,12 @@ describe('Semantic theme contrast', () => {
       ]),
     )
     for (const foreground of ['--text', '--text-secondary', '--text-muted']) {
-      for (const background of ['--background', '--surface', '--surface-secondary'])
+      for (const background of ['--horizon-background', '--surface', '--surface-secondary'])
         expect(ratio(tokens[foreground]!, tokens[background]!)).toBeGreaterThanOrEqual(4.5)
     }
     for (const [foreground, background] of [
       ['--accent-text', '--accent-surface'],
-      ['--on-accent', '--accent'],
+      ['--on-accent', '--horizon-accent'],
       ['--success', '--success-surface'],
       ['--warning', '--warning-surface'],
       ['--danger', '--danger-surface'],

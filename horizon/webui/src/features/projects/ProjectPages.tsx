@@ -120,10 +120,12 @@ function ProjectPublication({
                     )}
                   </Card>
                   <Card title="Weekly engineering activity" icon={ChartNoAxesCombined} tone="blue">
-                    <Suspense fallback={<div className="chart-placeholder" aria-hidden="true" />}>
-                      {series.map(([title, key, unit]) => (
+                    {series.map(([title, key, unit]) => (
+                      <Suspense
+                        key={key}
+                        fallback={<div className="chart-placeholder" aria-hidden="true" />}
+                      >
                         <TrendChart
-                          key={key}
                           title={title}
                           unit={unit}
                           bars={key === 'prsMerged'}
@@ -133,8 +135,8 @@ function ProjectPublication({
                             value: week[key],
                           }))}
                         />
-                      ))}
-                    </Suspense>
+                      </Suspense>
+                    ))}
                   </Card>
                   <Card title="Ownership" icon={UsersRound} tone="green">
                     {Object.keys(detail.ownership).length ? (

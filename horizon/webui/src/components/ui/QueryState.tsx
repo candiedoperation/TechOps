@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { EmptyState, ErrorState, LoadingState, StaleState } from './States'
 import { ReadApiError } from '../../api/client'
 import type { PublicationFreshness } from '../../api/publication'
@@ -43,6 +44,12 @@ export function QueryState<T>({
       <EmptyState
         title={error.kind === 'unauthorized' ? 'Session expired' : 'Access restricted'}
         description={error.message}
+        action={
+          <button className="button button-secondary" onClick={onRefresh}>
+            <RefreshCw size={14} aria-hidden="true" />
+            Try again
+          </button>
+        }
         locked
       />
     )
@@ -55,7 +62,15 @@ export function QueryState<T>({
       />
     )
   if (data === undefined) {
-    if (error) return <ErrorState onRetry={onRefresh} />
+    if (error)
+      return (
+        <ErrorState
+          description={
+            error instanceof ReadApiError && error.kind === 'network' ? error.message : undefined
+          }
+          onRetry={onRefresh}
+        />
+      )
     if (pending) return <LoadingState />
     return <EmptyState description="No published result is available yet." />
   }

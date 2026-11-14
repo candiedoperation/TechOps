@@ -10,8 +10,14 @@ import {
 } from './appearance'
 
 /** Same three preferences as People Portal, with live system updates and safe storage access. */
-export function AppearanceProvider({ children }: { children: ReactNode }) {
-  const [appearance, setPreference] = useState<Appearance>(readAppearance)
+export function AppearanceProvider({
+  children,
+  defaultAppearance = 'system',
+}: {
+  children: ReactNode
+  defaultAppearance?: Appearance
+}) {
+  const [appearance, setPreference] = useState<Appearance>(() => readAppearance(defaultAppearance))
   const [systemIsDark, setSystemIsDark] = useState(
     () => window.matchMedia(SYSTEM_APPEARANCE_QUERY).matches,
   )
@@ -31,20 +37,23 @@ export function AppearanceProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useLayoutEffect(() => {
-    applyAppearance(appearance, systemIsDark)
+    const theme = applyAppearance(appearance, systemIsDark)
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#0a0a0a' : '#ffffff')
   }, [appearance, systemIsDark])
 
   useLayoutEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key === APPEARANCE_STORAGE_KEY || event.key === null) {
-        setPreference(isAppearance(event.newValue) ? event.newValue : 'system')
+        setPreference(isAppearance(event.newValue) ? event.newValue : defaultAppearance)
       }
     }
     window.addEventListener('storage', onStorage)
     return () => {
       window.removeEventListener('storage', onStorage)
     }
-  }, [])
+  }, [defaultAppearance])
 
   const setAppearance = useCallback((next: Appearance) => {
     setPreference(next)

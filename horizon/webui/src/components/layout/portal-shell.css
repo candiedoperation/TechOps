@@ -1,5 +1,13 @@
-.portal-shell {
+.portfolio-shell.portal-shell {
   --portal-sidebar-width: 15rem;
+  --surface: var(--card);
+  --surface-secondary: var(--muted);
+  --surface-hover: var(--sidebar-accent);
+  --text: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--muted-foreground);
+  --horizon-border: var(--border);
+  --border-subtle: var(--border);
   --portal-mono:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
     monospace;
@@ -43,9 +51,8 @@
   height: 2rem;
   flex: none;
   border-radius: 0.5rem;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: 1rem;
+  background: transparent;
+  overflow: hidden;
 }
 
 .portal-shell .portfolio-navigation {
@@ -160,7 +167,7 @@
 }
 
 @media (max-width: 760px) {
-  .portal-shell {
+  .portfolio-shell.portal-shell {
     display: block;
     padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   }
@@ -214,11 +221,6 @@
   padding: 0.15rem 0.45rem;
   font: 0.72rem var(--portal-mono);
   white-space: nowrap;
-}
-
-.portal-sidebar .portfolio-logo {
-  background: oklch(0.58 0.19 247);
-  color: white;
 }
 
 .portal-brand-label {
@@ -350,7 +352,11 @@
 }
 
 .chart-placeholder {
-  min-height: 9rem;
+  margin-block: 0.75rem;
+  aspect-ratio: 600 / 146;
+  min-height: 8.5rem;
+  padding-block: 1.5rem;
+  box-sizing: content-box;
   background: var(--muted);
   border-radius: var(--radius);
 }
@@ -359,4 +365,76 @@
 .member-profile > .card:nth-child(n + 4) {
   content-visibility: auto;
   contain-intrinsic-size: auto 14rem;
+}
+
+@media (max-width: 760px) {
+  .portfolio-shell.portal-shell {
+    padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom);
+  }
+
+  .portal-shell .select-label :is(input, select) {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .portal-shell :is(.button, .portal-back, .drawer-close, .trend-chart summary) {
+    min-height: 44px;
+  }
+
+  .portal-shell .mobile-drawer {
+    height: 100dvh;
+    max-height: 100dvh;
+    padding-block: max(1.25rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-bottom));
+  }
+
+  .portal-toolbar .portfolio-header-actions > .button {
+    font-size: 0.75rem;
+    padding-inline: 0.45rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .portal-toolbar .icon-button {
+    flex: none;
+    padding: 0.3rem;
+  }
+
+  .portal-toolbar {
+    gap: 0.35rem;
+  }
+}
+
+.portal-shell :is(.ranking-filters, .project-season, .member-project) .select-label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.portal-shell :is(.ranking-filters, .project-season, .member-project) :is(input, select) {
+  min-width: 0;
+  background: color-mix(in oklch, var(--muted) 30%, var(--background));
+  border-color: var(--input);
+  color: var(--foreground);
+}
+
+.portal-shell .ranking-filters select {
+  min-width: min(100%, 8rem);
+}
+
+.portal-toolbar .button {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .portal-toolbar .button {
+    font-size: 0.7rem;
+  }
+}
+
+.portal-shell[data-workspace='project'] .portfolio-main {
+  min-height: calc(100dvh - 3.5rem);
+}
+
+.project-main > .card:has(.chart-placeholder) ~ .card {
+  visibility: hidden;
 }

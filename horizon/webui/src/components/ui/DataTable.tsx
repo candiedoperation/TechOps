@@ -59,7 +59,10 @@ export function DataTable<T>({
                 onClick={
                   onRowClick
                     ? (event) => {
-                        if (event.target instanceof Element && event.target.closest('a, button'))
+                        if (
+                          event.target instanceof Element &&
+                          event.target.closest('a, button, summary')
+                        )
                           return
                         onRowClick(row)
                       }

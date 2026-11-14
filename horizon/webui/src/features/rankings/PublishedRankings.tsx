@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom'
 import { ListOrdered } from 'lucide-react'
 import { useLayoutEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
@@ -38,12 +39,11 @@ function memberUrl(row: RankingRow, season: string, run: string) {
 }
 
 function selectTransition(row: HTMLElement | null) {
-  if (!row || !motionAllowed() || !document.startViewTransition) return
   row
-    .querySelector<HTMLElement>('[data-transition-name]')
+    ?.querySelector<HTMLElement>('[data-transition-name]')
     ?.style.setProperty('view-transition-name', 'member-name')
   row
-    .querySelector<HTMLElement>('[data-transition-score]')
+    ?.querySelector<HTMLElement>('[data-transition-score]')
     ?.style.setProperty('view-transition-name', 'member-score')
 }
 
@@ -52,6 +52,7 @@ function columns(
   runId: string,
   rubricVersion: string,
   prefetch: (row: RankingRow, run: string) => Promise<void>,
+  open: (row: RankingRow, run: string, element: HTMLElement | null) => void,
 ): TableColumn<RankingRow>[] {
   return [
     {
@@ -65,10 +66,17 @@ function columns(
       render: (row) => (
         <Link
           to={memberUrl(row, season, runId)}
-          viewTransition={motionAllowed()}
           onClick={(event) => {
-            if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey)
-              selectTransition(event.currentTarget.closest('tr'))
+            if (
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            )
+              return
+            event.preventDefault()
+            open(row, runId, event.currentTarget.closest('tr'))
           }}
           onPointerEnter={() => void prefetch(row, runId)}
           onPointerDown={() => void prefetch(row, runId)}
@@ -102,9 +110,16 @@ function columns(
       id: 'status',
       heading: 'Status',
       render: ({ status }) => (
-        <span className="ranking-badge" data-status={status} title={rankingStatus[status].reason}>
-          {rankingStatus[status].label}
-        </span>
+        <details className="ranking-status">
+          <summary
+            className="ranking-badge"
+            data-status={status}
+            title={rankingStatus[status].reason}
+          >
+            {rankingStatus[status].label}
+          </summary>
+          <span className="ranking-status-note">{rankingStatus[status].reason}</span>
+        </details>
       ),
     },
     {
@@ -175,6 +190,41 @@ export function PublishedRankings() {
         queryFn: ({ signal }) => client.get(memberOperation(row.userPk, { season, run }), signal),
       }),
     ]).then(() => {})
+  }
+
+  function openMember(row: RankingRow, run: string, element: HTMLElement | null) {
+    const open = () => {
+      void navigate(memberUrl(row, season, run))
+    }
+    if (!motionAllowed() || !document.startViewTransition) {
+      open()
+      return
+    }
+    // The prefetch supplies the data and route before the new snapshot, with a
+    // short bound so navigation also works under a slow connection.
+    const location = window.location.href
+    let timer: ReturnType<typeof setTimeout>
+    const wait = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, 350)
+    })
+    void Promise.race([prefetch(row, run), wait])
+      .catch(() => {})
+      .then(() => {
+        clearTimeout(timer)
+        if (window.location.href !== location || !element?.isConnected) return
+        selectTransition(element)
+        document.startViewTransition(async () => {
+          flushSync(open)
+          // React.lazy can reveal the already fetched module on the next frame.
+          const started = performance.now()
+          while (
+            !document.querySelector('.member-transition-name') &&
+            performance.now() - started < 150
+          ) {
+            await new Promise(requestAnimationFrame)
+          }
+        })
+      })
   }
 
   useLayoutEffect(() => {
@@ -304,7 +354,7 @@ export function PublishedRankings() {
                 {key && <h3>{group.label}</h3>}
                 <DataTable
                   caption={`Rankings · ${group.label}`}
-                  columns={columns(season, meta.runId, meta.rubricVersion, prefetch)}
+                  columns={columns(season, meta.runId, meta.rubricVersion, prefetch, openMember)}
                   rows={[
                     ...group.rows.filter((row) => row.status === 'ranked'),
                     ...group.rows.filter((row) => row.status !== 'ranked'),
@@ -317,13 +367,7 @@ export function PublishedRankings() {
                     const element = [
                       ...(tables.current?.querySelectorAll<HTMLElement>('[data-row-key]') ?? []),
                     ].find((element) => element.dataset.rowKey === key)
-                    const animate = motionAllowed() && Boolean(document.startViewTransition)
-                    const open = () => {
-                      selectTransition(element ?? null)
-                      void navigate(memberUrl(row, season, meta.runId), { viewTransition: animate })
-                    }
-                    if (animate) void prefetch(row, meta.runId).then(open, open)
-                    else open()
+                    openMember(row, meta.runId, element ?? null)
                   }}
                 />
               </section>

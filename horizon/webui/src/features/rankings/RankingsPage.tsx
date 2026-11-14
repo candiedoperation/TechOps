@@ -4,7 +4,7 @@ import { PublishedRankings } from './PublishedRankings'
 import { ProtectedRoute } from '../../auth/ProtectedRoute'
 import { Card } from '../../components/ui/Card'
 import { DataTable, type TableColumn } from '../../components/ui/DataTable'
-import { EmptyState } from '../../components/ui/States'
+import { EmptyState, LoadingState } from '../../components/ui/States'
 
 // Column labels are presentation only; no ranking response contract is assumed.
 const columns: TableColumn<never>[] = ['Member', 'Overall score', 'Coverage', 'Last published'].map(
@@ -13,6 +13,7 @@ const columns: TableColumn<never>[] = ['Member', 'Overall score', 'Coverage', 'L
 
 export function RankingsPage() {
   const { state } = useAuth()
+  if (state.status === 'loading') return <LoadingState />
   if (state.status === 'authenticated' && state.session.isExec === true) {
     return (
       <>

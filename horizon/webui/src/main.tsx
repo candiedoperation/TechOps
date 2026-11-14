@@ -11,8 +11,8 @@ const root = createRoot(document.getElementById('root')!)
 function render(experience?: AppExperience, mockSource?: HorizonReadClient | null) {
   root.render(
     <StrictMode>
-      <BrowserRouter>
-        <App experience={experience} mockSource={mockSource} />
+      <BrowserRouter useTransitions={false}>
+        <App experience={experience} mockSource={mockSource} defaultAppearance="dark" />
       </BrowserRouter>
     </StrictMode>,
   )

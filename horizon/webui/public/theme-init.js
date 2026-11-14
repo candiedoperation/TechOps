@@ -3,10 +3,11 @@
  * This stores appearance only, never identity or credentials.
  */
 ;(function () {
-  var preference = 'system'
+  var preference = 'dark'
   try {
     var stored = localStorage.getItem('horizon-ui-theme')
     if (stored === 'light' || stored === 'dark' || stored === 'system') preference = stored
+    else if (stored != null) preference = 'system'
   } catch (_) {
     /* Storage may be blocked; System still works. */
   }

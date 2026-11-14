@@ -1,16 +1,7 @@
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, matchPath } from 'react-router-dom'
-import {
-  PanelsTopLeft,
-  PanelLeft,
-  ChevronRight,
-  X,
-  Monitor,
-  Moon,
-  Sun,
-  LogOut,
-  LockKeyhole,
-} from 'lucide-react'
+import { PanelLeft, ChevronRight, X, Monitor, Moon, Sun, LogOut, LockKeyhole } from 'lucide-react'
+import portalLogo from '../../../../../peopleportal/webui/src/assets/logo.svg'
 import { horizonRoutes, type HorizonRoute } from '../../app/routes'
 import { useAuth } from '../../auth/context'
 import { useAppearance } from '../../theme/context'
@@ -97,14 +88,18 @@ export function AppLayout({
     mainRef.current?.focus({ preventScroll: true })
   }, [title])
   return (
-    <div className="portfolio-shell portal-shell" data-sidebar-collapsed={collapsed}>
+    <div
+      className="portfolio-shell portal-shell"
+      data-sidebar-collapsed={collapsed}
+      data-workspace={location.pathname.startsWith('/projects/') ? 'project' : undefined}
+    >
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
       <aside className="portal-sidebar">
         <Link className="portfolio-brand" to="/dashboard" aria-label="Horizon dashboard">
           <span className="portfolio-logo" aria-hidden="true">
-            <PanelsTopLeft size={17} />
+            <img src={portalLogo} width={32} height={32} alt="" />
           </span>
           <span className="portal-brand-label">
             <strong>App Dev Club</strong>
@@ -142,7 +137,8 @@ export function AppLayout({
           </nav>
           <div className="portfolio-header-actions">
             {demoData && <span className="portal-demo-badge">Demo data</span>}
-            {['/dashboard', '/insights', '/project-health'].includes(location.pathname) && (
+            {(banner ||
+              ['/dashboard', '/insights', '/project-health'].includes(location.pathname)) && (
               <SnapshotControl />
             )}
             <Link
