@@ -1,3 +1,4 @@
+import { Award, ArrowLeft, BookOpen, ChartNoAxesCombined, CircleGauge } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   memberOperation,
@@ -57,7 +58,7 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
           </p>
         </div>
       </div>
-      <Card title="Overall ranking">
+      <Card title="Overall ranking" icon={Award} tone="amber" className="member-overall">
         {ranked && <ScoreBar value={overall.score} maximum={100} label="Overall score" />}
         {ranked && overall.rank !== null && (
           <p>
@@ -66,13 +67,14 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
           </p>
         )}
         <p>Coverage {percent.format(overall.coverage)}</p>
-        <span className="ranking-badge" title={rankingStatus[overall.status].reason}>
+        <span className="ranking-badge" data-status={overall.status} title={rankingStatus[overall.status].reason}>
           {rankingStatus[overall.status].label}
         </span>
         {!ranked && <p>{rankingStatus[overall.status].reason}</p>}
       </Card>
       {explanation && (
         <Card
+          icon={BookOpen}
           title={
             explanation.generated
               ? 'Generated explanation of the numbers below'
@@ -93,7 +95,7 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
         </Card>
       )}
       {buckets.map((bucket) => (
-        <Card key={bucket.label} title={bucket.label}>
+        <Card key={bucket.label} title={bucket.label} icon={CircleGauge}>
           <div className="ranking-publication">
             {bucket.weight > 0 && <span>Weight {percent.format(bucket.weight)}</span>}
             {ranked && (
@@ -132,7 +134,7 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
           </dl>
         </Card>
       ))}
-      <Card title="Semester trend">
+      <Card title="Semester trend" icon={ChartNoAxesCombined} tone="green">
         <TrendChart
           title="Score by run"
           maximum={100}
@@ -174,8 +176,8 @@ export function MemberPage() {
   const list = new URLSearchParams({ ...(season ? { season } : {}), run })
   return (
     <>
-      <Link className="text-button" to={`/rankings?${list}`}>
-        Back to rankings
+      <Link className="portal-back text-button" to={`/rankings?${list}`}>
+        <ArrowLeft size={15} aria-hidden="true" /> Back to rankings
       </Link>
       {season ? (
         <QueryState

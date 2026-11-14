@@ -80,3 +80,80 @@
   color: var(--accent-text);
   text-decoration: underline;
 }
+
+.ranking-badge {
+  font-family: var(--portal-mono, monospace);
+  color: var(--muted-foreground);
+  border-color: var(--input);
+  border-radius: 0.5rem;
+}
+
+.ranking-badge[data-status='ranked'] {
+  color: var(--success);
+  background: var(--success-surface);
+}
+
+.ranking-badge:is([data-status='insufficient_data'], [data-status='group_too_small']) {
+  color: var(--warning);
+  background: var(--warning-surface);
+}
+
+.ranking-group .table-region {
+  max-height: 30rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.ranking-group table {
+  min-width: 42rem;
+}
+
+.ranking-group th {
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  z-index: 2;
+}
+
+.ranking-group :is(td, th) {
+  border-color: var(--border);
+  min-height: 2.75rem;
+}
+
+.ranking-group td:nth-child(2) a {
+  color: var(--foreground);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ranking-group td:nth-child(2) a:hover {
+  text-decoration: underline;
+}
+
+.member-overall .portal-card-body {
+  display: grid;
+  gap: 0.55rem;
+  justify-items: start;
+}
+
+.member-metrics dd {
+  color: var(--muted-foreground);
+}
+
+.member-metrics a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.875rem;
+  padding-inline: 0.45rem;
+  border: 1px solid var(--input);
+  border-radius: 0.45rem;
+  font-family: var(--portal-mono, monospace);
+  text-decoration: none;
+}
+
+.member-metrics ul {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}

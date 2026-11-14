@@ -1,3 +1,4 @@
+import { ArrowLeft, ArrowUpRight, ChartNoAxesCombined, FolderKanban, History, ListTodo, MessageSquareText, ShieldAlert, UsersRound } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   projectOperations,
@@ -51,7 +52,7 @@ export function ProjectsPage() {
   return (
     <>
       <header className="page-intro">
-        <h1>All projects</h1>
+        <div><h1>All projects</h1><p>Track published progress and delivery risks across the semester.</p></div>
       </header>
       <form
         className="project-season"
@@ -112,7 +113,7 @@ export function ProjectsPage() {
               )}
               <div className="published-project-list">
                 {data.map((project) => (
-                  <Card key={project.projectPk} title={project.friendlyName}>
+                  <Card key={project.projectPk} title={project.friendlyName} icon={FolderKanban} className="project-card">
                     {project.hasSow ? (
                       <>
                         <p>
@@ -129,7 +130,7 @@ export function ProjectsPage() {
                     )}
                     <RiskBadges counts={project.riskCounts} />
                     <Link
-                      className="read-link"
+                      className="button button-secondary project-open"
                       to={{
                         pathname: `/projects/${encodeURIComponent(project.projectPk)}`,
                         search: new URLSearchParams({
@@ -139,7 +140,7 @@ export function ProjectsPage() {
                       }}
                       aria-label={`View ${project.friendlyName}`}
                     >
-                      View project →
+                      View project <ArrowUpRight size={14} aria-hidden="true" />
                     </Link>
                   </Card>
                 ))}
@@ -181,8 +182,8 @@ function ProjectPublication({
 
   return (
     <>
-      <Link className="text-button" to={`/projects?${new URLSearchParams(selection)}`}>
-        Back to projects
+      <Link className="portal-back text-button" to={`/projects?${new URLSearchParams(selection)}`}>
+        <ArrowLeft size={15} aria-hidden="true" /> Back to projects
       </Link>
       {project.error instanceof ReadApiError && project.error.status === 404 ? (
         <EmptyState
@@ -212,7 +213,7 @@ function ProjectPublication({
               </header>
               <div className="published-project-detail">
                 <div className="project-main">
-                  <Card title="Project progress">
+                  <Card title="Project progress" icon={ListTodo} tone="blue">
                     <dl className="project-totals">
                       {Object.entries({
                         Tasks: summary.tasksTotal,
@@ -229,7 +230,7 @@ function ProjectPublication({
                       ))}
                     </dl>
                   </Card>
-                  <Card title="Risk flags">
+                  <Card title="Risk flags" icon={ShieldAlert} tone="amber">
                     {detail.riskFlags.length ? (
                       <ul>
                         {detail.riskFlags.map((risk) => (
@@ -243,7 +244,7 @@ function ProjectPublication({
                       <p>No published risk flags.</p>
                     )}
                   </Card>
-                  <Card title="Weekly engineering activity">
+                  <Card title="Weekly engineering activity" icon={ChartNoAxesCombined} tone="blue">
                     {series.map(([title, key, unit]) => (
                       <TrendChart
                         key={key}
@@ -257,7 +258,7 @@ function ProjectPublication({
                       />
                     ))}
                   </Card>
-                  <Card title="Ownership">
+                  <Card title="Ownership" icon={UsersRound} tone="green">
                     {Object.keys(detail.ownership).length ? (
                       <dl className="project-totals">
                         {Object.entries(detail.ownership).map(([key, value]) => (
@@ -271,7 +272,7 @@ function ProjectPublication({
                       <p>No published ownership metrics.</p>
                     )}
                   </Card>
-                  <Card title="Findings">
+                  <Card title="Findings" icon={MessageSquareText} tone="amber">
                     {detail.findings.length ? (
                       <ul>
                         {detail.findings.map((finding) => (
@@ -285,7 +286,7 @@ function ProjectPublication({
                       <p>No published findings.</p>
                     )}
                   </Card>
-                  <Card title="Publication history">
+                  <Card title="Publication history" icon={History} tone="green">
                     <QueryState
                       available
                       data={history.data}

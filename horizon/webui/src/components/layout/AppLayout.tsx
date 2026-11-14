@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, NavLink, Outlet, useLocation, matchPath } from 'react-router-dom'
-import { PanelLeft, ChevronRight, X, Monitor, Moon, Sun, LogOut, LockKeyhole } from 'lucide-react'
+import { PanelsTopLeft, PanelLeft, ChevronRight, X, Monitor, Moon, Sun, LogOut, LockKeyhole } from 'lucide-react'
 import { horizonRoutes, type HorizonRoute } from '../../app/routes'
 import { useAuth } from '../../auth/context'
 import { useAppearance } from '../../theme/context'
@@ -71,10 +71,11 @@ export function AppLayout({
       <aside className="portal-sidebar">
         <Link className="portfolio-brand" to="/dashboard" aria-label="Horizon dashboard">
           <span className="portfolio-logo" aria-hidden="true">
-            H
+            <PanelsTopLeft size={17} />
           </span>
-          <strong>App Dev Horizon</strong>
+          <span className="portal-brand-label"><strong>App Dev Club</strong><span>Horizon</span></span>
         </Link>
+        <p className="portal-nav-label">Workspace</p>
         <Navigation routes={routes} />
       </aside>
       <div className="portal-inset">
@@ -136,7 +137,7 @@ export function AppLayout({
                 Sign out
               </button>
             ) : (
-              <Link to="/sign-in" className="access-link">
+              <Link to="/sign-in" className="access-link" aria-label="Sign-in details">
                 <LockKeyhole size={15} />
                 <span>Sign-in details</span>
               </Link>

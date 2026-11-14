@@ -1,3 +1,4 @@
+import { ListOrdered } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { rankingOperations, type RankingRow } from '../../api/contracts/rankings'
 import { useHorizonReadQuery } from '../../api/use-horizon-query'
@@ -62,7 +63,7 @@ function columns(season: string, runId: string, rubricVersion: string): TableCol
       id: 'status',
       heading: 'Status',
       render: ({ status }) => (
-        <span className="ranking-badge" title={rankingStatus[status].reason}>
+        <span className="ranking-badge" data-status={status} title={rankingStatus[status].reason}>
           {rankingStatus[status].label}
         </span>
       ),
@@ -134,7 +135,7 @@ export function PublishedRankings() {
     runs.data?.some((entry) => entry.runId === run)
   const projects = rankings.data?.projects ?? []
   return (
-    <Card title="Rankings explorer">
+    <Card title="Rankings explorer" icon={ListOrdered}>
       <div className="filter-bar ranking-filters">
         <label className="select-label">
           Semester

@@ -187,3 +187,46 @@
   color: var(--accent-text);
   font-weight: 600;
 }
+
+.project-card .portal-card-body {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+}
+
+.project-card .project-open {
+  justify-self: start;
+  margin-top: 0.35rem;
+}
+
+.project-badges li,
+.sow-pending {
+  font-family: var(--portal-mono, monospace);
+  font-size: 0.72rem;
+  border: 1px solid var(--warning-border);
+  border-radius: 0.5rem;
+}
+
+.sow-pending {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  margin-top: 0.35rem;
+  background: var(--warning-surface);
+}
+
+.sow-status {
+  font-size: 0.75rem;
+}
+
+.sow-facts {
+  font-size: 0.8rem;
+}
+
+.published-project-detail .project-rail {
+  top: 4.25rem;
+  max-height: calc(100dvh - 5rem);
+}
+
+.project-totals dd {
+  font-family: var(--portal-mono, monospace);
+}

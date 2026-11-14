@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Check, Circle, CircleAlert } from 'lucide-react'
+import { Check, Circle, CircleAlert, ListTodo } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import type { SowTask, SowTimelineDocument } from '../../api/contracts/projects'
 import { externalHttpUrl, taskAnchor } from '../../api/links'
@@ -107,7 +107,7 @@ export function SowTimeline({
       'https://corp.appdevclub.com'
     const team = new URL(`/org/teams/${encodeURIComponent(projectPk)}`, peoplePortal)
     return (
-      <Card title="SOW progress">
+      <Card title="SOW progress" icon={ListTodo} tone="green">
         <EmptyState
           title="No SOW yet"
           description="The project lead uploads the statement of work on the team page in People Portal."
@@ -133,7 +133,7 @@ export function SowTimeline({
     </li>
   )
   return (
-    <Card title="SOW progress" description={document.title ?? undefined}>
+    <Card title="SOW progress" icon={ListTodo} tone="green" description={document.title ?? undefined}>
       <progress
         className="sow-overall"
         aria-label="SOW completion"
