@@ -28,6 +28,12 @@ describe('T6.2 HTTP alignment without enabling live reads', () => {
     expect(schema.paths['/api/rankings/members/{userPk}']).toBeDefined()
     expect(schema.components.schemas.MemberRow.properties).toHaveProperty('explanations')
     expect(schema.components.schemas.MemberRow.properties).toHaveProperty('evidence')
+    // Track 4 statuses, so group_too_small rows parse instead of failing validation.
+    expect(schema.components.schemas.RankingRow.properties.status.enum).toEqual([
+      'ranked',
+      'insufficient_data',
+      'group_too_small',
+    ])
   })
   it('uses run age instead of cache age', () => {
     const run = {

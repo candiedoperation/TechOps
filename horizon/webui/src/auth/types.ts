@@ -22,4 +22,6 @@ export interface HorizonAuthAdapter {
   getState(signal?: AbortSignal): Promise<AuthState>
   signIn(returnTo: string): Promise<void>
   signOut(): Promise<void>
+  /** OIDC access token sent as `Authorization: Bearer` (the API accepts nothing else). */
+  getAccessToken(signal?: AbortSignal): Promise<string | null>
 }

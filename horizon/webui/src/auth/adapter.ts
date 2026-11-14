@@ -12,4 +12,5 @@ export const horizonAuthAdapter: HorizonAuthAdapter = {
   signOut: async () => {
     throw new Error(AUTH_UNAVAILABLE)
   },
+  getAccessToken: async () => null,
 }

@@ -18,6 +18,7 @@ function withAuth(state: AuthState, child: React.ReactNode) {
           signIn: vi.fn(async () => {}),
           signOut: vi.fn(async () => {}),
           invalidateSession: vi.fn(),
+          getAccessToken: vi.fn().mockResolvedValue(null),
         }}
       >
         <MemoryRouter>{child}</MemoryRouter>

@@ -36,6 +36,7 @@ describe('Horizon React Query integration', () => {
       origin: window.location.origin,
       enabled: () => true,
       getAuthState: async () => authenticated,
+      getAccessToken: async () => 'test-access-token',
       onAccessDenied: () => queryClient.clear(),
       fetcher,
     })
@@ -43,7 +44,13 @@ describe('Horizon React Query integration', () => {
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
         <AuthContext.Provider
-          value={{ state, signIn: vi.fn(), signOut: vi.fn(), invalidateSession: vi.fn() }}
+          value={{
+            state,
+            signIn: vi.fn(),
+            signOut: vi.fn(),
+            invalidateSession: vi.fn(),
+            getAccessToken: vi.fn().mockResolvedValue(null),
+          }}
         >
           <ReadClientContext.Provider value={client}>{children}</ReadClientContext.Provider>
         </AuthContext.Provider>
@@ -82,7 +89,12 @@ describe('Horizon React Query integration', () => {
     const fetcher = vi.fn()
     vi.stubGlobal('fetch', fetcher)
     const queryClient = createHorizonQueryClient()
-    const adapter = { getState: async () => authenticated, signIn: vi.fn(), signOut: vi.fn() }
+    const adapter = {
+      getState: async () => authenticated,
+      signIn: vi.fn(),
+      signOut: vi.fn(),
+      getAccessToken: async () => 'test-access-token',
+    }
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={queryClient}>
         <AuthProvider adapter={adapter}>

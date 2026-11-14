@@ -7,6 +7,8 @@ export interface ReadClientOptions {
   origin: string
   enabled: () => boolean
   getAuthState: () => Promise<AuthState>
+  /** Bearer token for the Horizon API, which does not accept cookies. */
+  getAccessToken: () => Promise<string | null>
   onAccessDenied: (status: 401 | 403) => void
   fetcher?: typeof fetch
 }
@@ -19,7 +21,8 @@ export interface HorizonReadClient {
 
 /** Production/session guard. Demo never supplies an AuthState or changes this gate. */
 export function createHorizonReadClient(options: ReadClientOptions): HorizonReadClient {
-  const transport = createReadTransport({ ...options, credentials: 'same-origin' })
+  // The Horizon API authenticates with `Authorization: Bearer`, never cookies.
+  const transport = createReadTransport({ ...options, credentials: 'omit' })
   return {
     accessMode: 'session',
     scope: 'session',
@@ -39,7 +42,12 @@ export function createHorizonReadClient(options: ReadClientOptions): HorizonRead
           status,
         )
       }
-      return transport.get(operation, signal)
+      const token = await options.getAccessToken()
+      if (!token) {
+        options.onAccessDenied(401)
+        throw new ReadApiError('unauthorized', 'A verified Horizon session is required.', 401)
+      }
+      return transport.get(operation, signal, token)
     },
   }
 }

@@ -30,6 +30,7 @@ function setup(overrides: Partial<ReadClientOptions> = {}) {
       status: 'authenticated',
       session: { subject: 'test-subject', displayName: 'Fixture', permissions: [] },
     }),
+    getAccessToken: async () => 'test-access-token',
     onAccessDenied: denied,
     fetcher,
     ...overrides,
@@ -53,7 +54,20 @@ describe('Horizon read transport', () => {
     expect(denied).toHaveBeenCalledOnce()
   })
 
-  it('uses GET, same-origin credentials, JSON, and request cancellation', async () => {
+  it('refuses to fetch when the session has no access token', async () => {
+    const { client, fetcher, denied } = setup({ getAccessToken: async () => null })
+    await expect(client.get(operation)).rejects.toMatchObject({ kind: 'unauthorized' })
+    expect(fetcher).not.toHaveBeenCalled()
+    expect(denied).toHaveBeenCalledWith(401)
+  })
+
+  it('never sends a malformed access token', async () => {
+    const { client, fetcher } = setup({ getAccessToken: async () => 'bad\r\nX-Injected: 1' })
+    await expect(client.get(operation)).rejects.toMatchObject({ kind: 'unauthorized' })
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('uses GET, a bearer token without cookies, JSON, and request cancellation', async () => {
     const { client, fetcher } = setup()
     const controller = new AbortController()
     await expect(client.get(operation, controller.signal)).resolves.toEqual({ count: 3 })
@@ -61,7 +75,8 @@ describe('Horizon read transport', () => {
       new URL(operation.path, window.location.origin),
       expect.objectContaining({
         method: 'GET',
-        credentials: 'same-origin',
+        credentials: 'omit',
+        headers: { Accept: 'application/json', Authorization: 'Bearer test-access-token' },
         redirect: 'error',
         cache: 'no-store',
         signal: controller.signal,

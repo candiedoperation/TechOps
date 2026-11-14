@@ -71,8 +71,10 @@ export function AuthProvider({
     [queryClient],
   )
 
+  const getAccessToken = useCallback(() => adapter.getAccessToken(), [adapter])
+
   return (
-    <AuthContext.Provider value={{ state, signIn, signOut, invalidateSession }}>
+    <AuthContext.Provider value={{ state, signIn, signOut, invalidateSession, getAccessToken }}>
       {children}
     </AuthContext.Provider>
   )

@@ -30,7 +30,13 @@ export interface TransportOptions {
 /** Shared HTTP behavior; callers must enforce session access or the isolated demo policy. */
 export function createReadTransport(options: TransportOptions) {
   return {
-    async get<T>(operation: ReadOperation<T>, signal?: AbortSignal): Promise<T> {
+    async get<T>(
+      operation: ReadOperation<T>,
+      signal?: AbortSignal,
+      accessToken?: string,
+    ): Promise<T> {
+      if (accessToken !== undefined && !/^[\x21-\x7e]+$/.test(accessToken))
+        throw new ReadApiError('unauthorized', 'A verified Horizon session is required.', 401)
       const origin = new URL(options.origin)
       if (!['http:', 'https:'].includes(origin.protocol) || origin.username || origin.password) {
         throw new ReadApiError('unavailable', 'Invalid Horizon API origin.')
@@ -62,7 +68,10 @@ export function createReadTransport(options: TransportOptions) {
       try {
         response = await (options.fetcher ?? fetch)(url, {
           method: 'GET',
-          headers: { Accept: 'application/json' },
+          headers: {
+            Accept: 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
           credentials: options.credentials,
           redirect: 'error',
           cache: 'no-store',

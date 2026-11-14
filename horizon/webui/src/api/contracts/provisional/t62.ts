@@ -28,12 +28,13 @@ export interface DraftT62Ranking {
   projectName: string
   role: 'engineer' | 'tech_lead'
   comparisonGroup: string
+  comparisonGroupLabel?: string | null
   overallScore: number | null
   coverage: number
-  status: 'ranked' | 'unranked' | 'insufficient_data'
+  status: 'ranked' | 'insufficient_data' | 'group_too_small'
   rankInGroup: number | null
   rankedInGroup: number
-  buckets: { bucketKey: string; weight: number; score: number | null }[]
+  buckets: { bucketKey: string; weight: number | null; score: number | null }[]
 }
 export interface DraftT62RankingPage extends DraftT62Run {
   items: DraftT62Ranking[]
