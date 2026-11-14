@@ -64,6 +64,7 @@ export interface UserTableProps {
     showPagination?: boolean;
     onUserClick?: (userId: string) => void;
     onRemove?: (user: UserInformationBrief) => void;
+    canRemove?: boolean;
     filterPlaceholder?: string;
     className?: string;
     teamPk?: string;
@@ -74,6 +75,7 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
     showPagination = false,
     onUserClick,
     onRemove,
+    canRemove = true,
     filterPlaceholder = "Start Typing to Filter by Name",
     className = "",
     teamPk,
@@ -151,8 +153,14 @@ export const UserInformationTable: React.FC<UserTableProps> = ({
                                   e.stopPropagation();
                                   onRemove(row.original);
                               }}
-                              className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-full text-muted-foreground hover:text-red-600 transition-colors"
-                              title="Remove member"
+                              disabled={!canRemove}
+                              aria-disabled={!canRemove}
+                              className="p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-full text-muted-foreground hover:text-red-600 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                              title={
+                                  canRemove
+                                      ? "Remove member"
+                                      : "You don't have permission to do this"
+                              }
                           >
                               <Trash2Icon size={16} />
                           </button>

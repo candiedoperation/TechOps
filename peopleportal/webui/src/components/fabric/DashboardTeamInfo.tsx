@@ -41,6 +41,8 @@ import { Button } from "../ui/button";
 import React from "react";
 import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTeamPermissions } from "@/hooks/use-team-permissions";
+import { PermissionGuard } from "../fragments/PermissionGuard";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { TabsContent } from "@radix-ui/react-tabs";
@@ -135,6 +137,7 @@ interface RootTeamSettingMap {
 export const DashboardTeamInfo = () => {
     const params = useParams();
     const navigate = useNavigate();
+    const { can } = useTeamPermissions(params.teamId);
     const [teamInfo, setTeamInfo] = React.useState<TeamInfo>();
     const [subTeams, setSubTeams] = React.useState<TeamInfo[]>([]);
     const [settingDefinitions, setSettingDefinitions] =
@@ -485,6 +488,7 @@ export const DashboardTeamInfo = () => {
                 subteams={subTeams}
                 onRefresh={refreshTeamInfo}
                 parentTeamId={teamInfo?.pk}
+                can={can}
             />
             <TeamSettingsDialog
                 open={teamSettingsOpen}
@@ -494,6 +498,7 @@ export const DashboardTeamInfo = () => {
                 isSaving={isSavingSettings}
                 onSave={saveRootTeamSettings}
                 onTeamInfoChange={handleTeamInfoChange}
+                can={can}
             />
 
             <div className="flex items-center">
@@ -507,15 +512,17 @@ export const DashboardTeamInfo = () => {
                     </h4>
                 </div>
 
-                <Button
-                    className="cursor-pointer"
-                    onClick={() => {
-                        setAddMembersOpen(true);
-                    }}
-                >
-                    <UserPlus2Icon />
-                    Add Members
-                </Button>
+                <PermissionGuard allowed={can("corp:membermgmt")}>
+                    <Button
+                        className="cursor-pointer"
+                        onClick={() => {
+                            setAddMembersOpen(true);
+                        }}
+                    >
+                        <UserPlus2Icon />
+                        Add Members
+                    </Button>
+                </PermissionGuard>
             </div>
 
             <div className="mt-3">
@@ -539,14 +546,16 @@ export const DashboardTeamInfo = () => {
                         Manage Subteams
                     </Button>
 
-                    <Button
-                        onClick={syncBindles}
-                        variant="outline"
-                        className="cursor-pointer"
-                    >
-                        <RefreshCcwIcon />
-                        Sync Shared Permissions
-                    </Button>
+                    <PermissionGuard allowed={can("corp:bindlesync")}>
+                        <Button
+                            onClick={syncBindles}
+                            variant="outline"
+                            className="cursor-pointer"
+                        >
+                            <RefreshCcwIcon />
+                            Sync Shared Permissions
+                        </Button>
+                    </PermissionGuard>
 
                     <Button
                         onClick={() => setTeamSettingsOpen(true)}
@@ -571,14 +580,16 @@ export const DashboardTeamInfo = () => {
             <div className="mt-3">
                 <h3 className="text-lg">Team Resources</h3>
                 <div className="flex gap-2 mt-2">
-                    <Button
-                        onClick={generateAWSMagicLink}
-                        variant="outline"
-                        className="cursor-pointer"
-                    >
-                        <ExternalLinkIcon />
-                        Open AWS Console
-                    </Button>
+                    <PermissionGuard allowed={can("corp:awsaccess")}>
+                        <Button
+                            onClick={generateAWSMagicLink}
+                            variant="outline"
+                            className="cursor-pointer"
+                        >
+                            <ExternalLinkIcon />
+                            Open AWS Console
+                        </Button>
+                    </PermissionGuard>
                 </div>
             </div>
 
@@ -625,6 +636,7 @@ export const DashboardTeamInfo = () => {
                         <UserInformationTable
                             users={teamInfo?.users ?? []}
                             teamPk={teamInfo?.pk}
+                            canRemove={can("corp:membermgmt")}
                             onRemove={(user) =>
                                 handleRemoveMember(
                                     user,
@@ -642,6 +654,7 @@ export const DashboardTeamInfo = () => {
                                 <UserInformationTable
                                     users={subteam.users ?? []}
                                     teamPk={subteam.pk}
+                                    canRemove={can("corp:membermgmt")}
                                     onRemove={(user) =>
                                         handleRemoveMember(
                                             user,
@@ -1086,6 +1099,7 @@ const SubteamsInfoDialog = (props: {
     subteams: TeamInfo[];
     onRefresh: () => void;
     parentTeamId?: string;
+    can: (bindle: string) => boolean;
 }) => {
     const [currentSubTeam, setCurrentSubTeam] = React.useState<TeamInfo>();
     const [bindleDefinitions, setBindleDefinitions] =
@@ -1401,51 +1415,64 @@ const SubteamsInfoDialog = (props: {
                                                     }
                                                 </span>
                                                 <div className="ml-auto">
-                                                    <Button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSubteamToDelete(
-                                                                subteam,
-                                                            );
-                                                            setRemoveSubteamOpen(
-                                                                true,
-                                                            );
-                                                        }}
-                                                        disabled={
-                                                            subteam.attributes
-                                                                .flaggedForDeletion
-                                                        }
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-6 w-6 hover:text-red-600 hover:bg-red-50"
-                                                    >
-                                                        {subteam.attributes
-                                                            .flaggedForDeletion ? (
-                                                            <BanIcon
-                                                                size={15}
-                                                            />
-                                                        ) : (
-                                                            <Trash2Icon
-                                                                size={15}
-                                                            />
+                                                    <PermissionGuard
+                                                        allowed={props.can(
+                                                            "corp:subteamaccess",
                                                         )}
-                                                    </Button>
+                                                    >
+                                                        <Button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSubteamToDelete(
+                                                                    subteam,
+                                                                );
+                                                                setRemoveSubteamOpen(
+                                                                    true,
+                                                                );
+                                                            }}
+                                                            disabled={
+                                                                subteam
+                                                                    .attributes
+                                                                    .flaggedForDeletion
+                                                            }
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 hover:text-red-600 hover:bg-red-50"
+                                                        >
+                                                            {subteam.attributes
+                                                                .flaggedForDeletion ? (
+                                                                <BanIcon
+                                                                    size={15}
+                                                                />
+                                                            ) : (
+                                                                <Trash2Icon
+                                                                    size={15}
+                                                                />
+                                                            )}
+                                                        </Button>
+                                                    </PermissionGuard>
                                                 </div>
                                             </a>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
                                 ))}
 
-                                <SidebarMenuButton
-                                    className="cursor-pointer h-8"
-                                    onClick={() => setSubteamCreateOpen(true)}
-                                    asChild
+                                <PermissionGuard
+                                    allowed={props.can("corp:subteamaccess")}
                                 >
-                                    <a>
-                                        <SquarePlusIcon />
-                                        <span>Create new Subteam</span>
-                                    </a>
-                                </SidebarMenuButton>
+                                    <SidebarMenuButton
+                                        className="cursor-pointer h-8"
+                                        onClick={() =>
+                                            setSubteamCreateOpen(true)
+                                        }
+                                        asChild
+                                    >
+                                        <a>
+                                            <SquarePlusIcon />
+                                            <span>Create new Subteam</span>
+                                        </a>
+                                    </SidebarMenuButton>
+                                </PermissionGuard>
                             </SidebarMenu>
                         </SidebarGroupContent>
                     </SidebarGroup>
@@ -1497,14 +1524,20 @@ const SubteamsInfoDialog = (props: {
                                                 .friendlyName
                                         }
                                     </h1>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 ml-[-5px] cursor-pointer"
-                                        onClick={() => setEditDetailsOpen(true)}
+                                    <PermissionGuard
+                                        allowed={props.can("corp:rootsettings")}
                                     >
-                                        <PencilIcon />
-                                    </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 ml-[-5px] cursor-pointer"
+                                            onClick={() =>
+                                                setEditDetailsOpen(true)
+                                            }
+                                        >
+                                            <PencilIcon />
+                                        </Button>
+                                    </PermissionGuard>
                                     {isLoadingBindles && (
                                         <Loader2Icon
                                             className="animate-spin text-muted-foreground"
@@ -1557,31 +1590,38 @@ const SubteamsInfoDialog = (props: {
                                                         </p>
                                                     </div>
 
-                                                    <Switch
-                                                        checked={
-                                                            enabledBindles[
-                                                                sharedResource
-                                                            ]?.[bindleEntry] ===
-                                                            true
-                                                        }
-                                                        onCheckedChange={(
-                                                            checked,
-                                                        ) => {
-                                                            setEnabledBindles(
-                                                                (prev) => ({
-                                                                    ...prev,
-                                                                    [sharedResource]:
-                                                                        {
-                                                                            ...prev[
-                                                                                sharedResource
-                                                                            ],
-                                                                            [bindleEntry]:
-                                                                                checked,
-                                                                        },
-                                                                }),
-                                                            );
-                                                        }}
-                                                    />
+                                                    <PermissionGuard
+                                                        allowed={props.can(
+                                                            "corp:permissionsmgmt",
+                                                        )}
+                                                    >
+                                                        <Switch
+                                                            checked={
+                                                                enabledBindles[
+                                                                    sharedResource
+                                                                ]?.[
+                                                                    bindleEntry
+                                                                ] === true
+                                                            }
+                                                            onCheckedChange={(
+                                                                checked,
+                                                            ) => {
+                                                                setEnabledBindles(
+                                                                    (prev) => ({
+                                                                        ...prev,
+                                                                        [sharedResource]:
+                                                                            {
+                                                                                ...prev[
+                                                                                    sharedResource
+                                                                                ],
+                                                                                [bindleEntry]:
+                                                                                    checked,
+                                                                            },
+                                                                    }),
+                                                                );
+                                                            }}
+                                                        />
+                                                    </PermissionGuard>
                                                 </div>
                                             );
                                         })}
@@ -1594,19 +1634,23 @@ const SubteamsInfoDialog = (props: {
                             <DialogClose asChild>
                                 <Button variant="outline">Cancel</Button>
                             </DialogClose>
-                            <Button
-                                disabled={isSaving}
-                                onClick={updateSubTeamBindles}
+                            <PermissionGuard
+                                allowed={props.can("corp:permissionsmgmt")}
                             >
-                                <Loader2Icon
-                                    className={cn(
-                                        "animate-spin",
-                                        !isSaving ? "hidden" : "",
-                                    )}
-                                />
-                                Save Changes for{" "}
-                                {currentSubTeam?.attributes.friendlyName}
-                            </Button>
+                                <Button
+                                    disabled={isSaving}
+                                    onClick={updateSubTeamBindles}
+                                >
+                                    <Loader2Icon
+                                        className={cn(
+                                            "animate-spin",
+                                            !isSaving ? "hidden" : "",
+                                        )}
+                                    />
+                                    Save Changes for{" "}
+                                    {currentSubTeam?.attributes.friendlyName}
+                                </Button>
+                            </PermissionGuard>
                         </DialogFooter>
                     </div>
                 </div>
@@ -1621,6 +1665,7 @@ const TeamSettingsDialog = (props: {
     teamInfo?: TeamInfo;
     settingDefinitions: RootTeamSettingMap;
     isSaving: boolean;
+    can: (bindle: string) => boolean;
     onSave: (settings: {
         [clientName: string]: { [settingKey: string]: boolean };
     }) => void;
@@ -1744,13 +1789,17 @@ const TeamSettingsDialog = (props: {
                                 </p>
                             </div>
 
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setEditDetailsOpen(true)}
+                            <PermissionGuard
+                                allowed={props.can("corp:rootsettings")}
                             >
-                                Edit Details
-                            </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setEditDetailsOpen(true)}
+                                >
+                                    Edit Details
+                                </Button>
+                            </PermissionGuard>
                         </div>
 
                         {
@@ -1796,16 +1845,22 @@ const TeamSettingsDialog = (props: {
                                                         </p>
                                                     </div>
 
-                                                    <Switch
-                                                        checked={isChecked}
-                                                        onCheckedChange={() =>
-                                                            toggleSetting(
-                                                                clientName,
-                                                                settingKey,
-                                                                isChecked,
-                                                            )
-                                                        }
-                                                    />
+                                                    <PermissionGuard
+                                                        allowed={props.can(
+                                                            "corp:rootsettings",
+                                                        )}
+                                                    >
+                                                        <Switch
+                                                            checked={isChecked}
+                                                            onCheckedChange={() =>
+                                                                toggleSetting(
+                                                                    clientName,
+                                                                    settingKey,
+                                                                    isChecked,
+                                                                )
+                                                            }
+                                                        />
+                                                    </PermissionGuard>
                                                 </div>
                                             );
                                         })}
@@ -1818,18 +1873,22 @@ const TeamSettingsDialog = (props: {
                         <DialogClose asChild>
                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
-                        <Button
-                            disabled={props.isSaving}
-                            onClick={() => props.onSave(changedSettings)}
+                        <PermissionGuard
+                            allowed={props.can("corp:rootsettings")}
                         >
-                            <Loader2Icon
-                                className={cn(
-                                    "animate-spin",
-                                    !props.isSaving ? "hidden" : "",
-                                )}
-                            />
-                            Save Changes
-                        </Button>
+                            <Button
+                                disabled={props.isSaving}
+                                onClick={() => props.onSave(changedSettings)}
+                            >
+                                <Loader2Icon
+                                    className={cn(
+                                        "animate-spin",
+                                        !props.isSaving ? "hidden" : "",
+                                    )}
+                                />
+                                Save Changes
+                            </Button>
+                        </PermissionGuard>
                     </DialogFooter>
                 </div>
             </DialogContent>
