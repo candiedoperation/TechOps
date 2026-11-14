@@ -28,11 +28,11 @@ function Location() {
 export function renderReadPage(
   path: string,
   element: ReactNode,
-  handler: (url: URL) => unknown,
+  handler: (url: URL) => unknown | Promise<unknown>,
   publicRead = false,
 ) {
   const fetcher = vi.fn<typeof fetch>(async (input) => {
-    const value = handler(new URL(String(input)))
+    const value = await handler(new URL(String(input)))
     return value === undefined ? new Response(null, { status: 404 }) : Response.json(value)
   })
   const client = createHorizonReadClient({

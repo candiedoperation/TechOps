@@ -29,7 +29,7 @@ export function DashboardPage() {
       <div className="page-intro">
         <div>
           <p className="eyebrow">WORKSPACE OVERVIEW</p>
-          <h1>Your Horizon, at a glance.</h1>
+          <h1>Your Horizon Outlook</h1>
           <p>A clearer view of your people, projects, and the evidence behind them.</p>
         </div>
         <span className="pill pill-neutral">

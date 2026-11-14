@@ -1,10 +1,9 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime, timezone
 from uuid import UUID
 
 from .errors import PublicationNotFound
 from .models import History, MemberDetail, MemberRow, RankingList, Run, metadata
-from .ports import ReadStore
 
 
 def select_run(runs: Sequence[Run], selection: str) -> Run:
@@ -58,12 +57,13 @@ def ranking_list(
 
 
 def member_detail(
-    store: ReadStore, run: Run, user_pk: str, semester_runs: Sequence[Run]
+    rows: Callable[[UUID], Sequence[MemberRow]],
+    run: Run,
+    user_pk: str,
+    semester_runs: Sequence[Run],
 ) -> MemberDetail:
     items = [
-        item
-        for item in store.rows(run.ranking_run_id)
-        if item.ranking.user_pk == user_pk
+        item for item in rows(run.ranking_run_id) if item.ranking.user_pk == user_pk
     ]
     if not items:
         raise PublicationNotFound()
@@ -73,7 +73,7 @@ def member_detail(
     ):
         if previous.status != "complete":
             continue
-        for item in store.rows(previous.ranking_run_id):
+        for item in rows(previous.ranking_run_id):
             row = item.ranking
             if row.user_pk == user_pk:
                 history.append(

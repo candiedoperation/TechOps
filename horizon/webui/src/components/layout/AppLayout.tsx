@@ -13,7 +13,6 @@ import {
   LogOut,
   LockKeyhole,
 } from 'lucide-react'
-import portalLogo from '../../../../../peopleportal/webui/src/assets/logo.svg'
 import { horizonRoutes, type HorizonRoute } from '../../app/routes'
 import { useAuth } from '../../auth/context'
 import { useAppearance } from '../../theme/context'
@@ -72,11 +71,11 @@ function SidebarBrand() {
   return (
     <Link className="portfolio-brand" to="/dashboard" aria-label="Horizon dashboard">
       <span className="portfolio-logo" aria-hidden="true">
-        <img src={portalLogo} width={32} height={32} alt="" />
+        <img src="/favicon.svg" width={32} height={32} alt="" />
       </span>
       <span className="portal-brand-label">
         <strong>App Dev Club</strong>
-        <span>Horizon</span>
+        <span>Horizon Portal</span>
       </span>
     </Link>
   )

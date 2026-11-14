@@ -271,3 +271,53 @@ def test_publication_age_boundary(postgres, project_rows):
         assert publication_meta(
             connection, Selection("FALL-2026"), AS_OF + timedelta(days=9)
         ).stale
+
+
+def test_pointer_refresh_and_document_revalidation(projects_api, postgres, monkeypatch):
+    from app import cache as cache_module
+    from app.projects import Publication
+
+    clock = [100]
+    monkeypatch.setattr(cache_module, "monotonic", lambda: clock[0])
+    first = projects_api.get(PROJECTS + SEASON)
+    assert (
+        first.headers["cache-control"]
+        == "public, max-age=30, stale-while-revalidate=300"
+    )
+    assert first.json()["meta"]["runId"] == str(CURRENT)
+
+    def no_serialization(*args, **kwargs):
+        pytest.fail("304 should not serialize the publication")
+
+    with monkeypatch.context() as patch:
+        patch.setattr(Publication, "model_dump", no_serialization)
+        response = projects_api.get(
+            PROJECTS + SEASON, headers={"If-None-Match": first.headers["etag"]}
+        )
+        assert response.status_code == 304
+
+    with psycopg.connect(postgres) as connection:
+        connection.execute(
+            "UPDATE horizon_api.publications SET run_id = %s, as_of = %s "
+            "WHERE domain = 'projects' AND season_type = 'FALL'",
+            (FIRST, AS_OF - timedelta(days=7)),
+        )
+    try:
+        assert projects_api.get(PROJECTS + SEASON).json()["meta"]["runId"] == str(
+            CURRENT
+        )
+        clock[0] += 46
+        refreshed = projects_api.get(PROJECTS + SEASON)
+        assert refreshed.json()["meta"]["runId"] == str(FIRST)
+        assert refreshed.headers["etag"] != first.headers["etag"]
+        explicit = projects_api.get(f"{PROJECTS}{SEASON}&run={FIRST}")
+        assert (
+            explicit.headers["cache-control"] == "public, max-age=31536000, immutable"
+        )
+    finally:
+        with psycopg.connect(postgres) as connection:
+            connection.execute(
+                "UPDATE horizon_api.publications SET run_id = %s, as_of = %s "
+                "WHERE domain = 'projects' AND season_type = 'FALL'",
+                (CURRENT, AS_OF),
+            )

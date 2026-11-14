@@ -4,6 +4,7 @@ import { Route, Routes } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { renderReadPage } from '../../test/render-read-page'
 import { ada, currentRun, finalRun } from '../../test/rankingFixtures'
+import { MemberPage } from './MemberPage'
 import { RankingsPage } from './RankingsPage'
 
 const rows = [
@@ -67,6 +68,40 @@ function renderRankings(path = '/rankings?season=FALL-2026') {
 }
 
 describe('published rankings', () => {
+  it('prefetches on hover, shows the row while pending and hydrates from the same request', async () => {
+    let release!: (value: unknown) => void
+    const member = new Promise((resolve) => {
+      release = resolve
+    })
+    const user = userEvent.setup()
+    const memberRequests = () =>
+      fetcher.mock.calls.filter(([input]) =>
+        new URL(String(input)).pathname.includes('/rankings/members/'),
+      )
+    const fetcher = renderReadPage(
+      '/rankings?season=FALL-2026',
+      <Routes>
+        <Route path="/rankings" element={<RankingsPage />} />
+        <Route path="/rankings/members/:userPk" element={<MemberPage />} />
+      </Routes>,
+      (url) => (url.pathname.includes('/rankings/members/') ? member : rankings(url)),
+    )
+    const link = await screen.findByRole('link', { name: 'Ada' })
+    await user.hover(link)
+    await waitFor(() => expect(memberRequests()).toHaveLength(1))
+    await user.click(link)
+    expect(await screen.findByRole('heading', { name: 'Ada' })).toBeInTheDocument()
+    expect(screen.getByText('Loading member evidence…')).toBeVisible()
+    expect(screen.getByRole('meter', { name: 'Overall score' })).toHaveAttribute('value', '80')
+    release({
+      items: [{ ranking: ada, metrics: [], explanations: [{ text: 'Published explanation' }] }],
+      history: [],
+    })
+    expect(await screen.findByText('Published explanation')).toBeVisible()
+    expect(screen.queryByText('Loading member evidence…')).not.toBeInTheDocument()
+    expect(memberRequests()).toHaveLength(1)
+  })
+
   it('groups engineers and puts unranked rows after ranked rows without showing their scores', async () => {
     renderRankings()
     const beacon = await screen.findByRole('table', { name: 'Rankings · Project Beacon' })

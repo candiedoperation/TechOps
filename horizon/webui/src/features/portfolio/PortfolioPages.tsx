@@ -130,9 +130,11 @@ export function PortfolioDashboard() {
   const companies = [...new Set(projects.map((project) => project.companyId))]
   return (
     <>
-      <Intro eyebrow="WEEKLY PORTFOLIO REVIEW" title="Your Horizon, at a glance.">
-        A shared snapshot of project health, activity, and portfolio risk.
-      </Intro>
+      <div className="outlook-hero">
+        <Intro eyebrow="Weekly portfolio review" title="Your Horizon Outlook">
+          A shared snapshot of project health, activity, and portfolio risk.
+        </Intro>
+      </div>
       {!data && (
         <p className="portfolio-unavailable">
           No rankings, project scores, or evidence have been loaded.

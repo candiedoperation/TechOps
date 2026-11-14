@@ -1,12 +1,14 @@
 import { flushSync } from 'react-dom'
 import { ListOrdered } from 'lucide-react'
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, type PointerEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../auth/context'
 import { useHorizonReadClient } from '../../api/context'
+import { usePrefetchThrottle } from '../../api/prefetch'
+import { memberPreviewKey } from '../../api/member-preview'
 import { memberOperation } from '../../api/contracts/member'
-import { loadMember } from '../../app/route-loaders'
+import { loadMember, loadedMember } from '../../app/route-loaders'
 import { rankingOperations, type RankingRow } from '../../api/contracts/rankings'
 import { horizonQueryKeys, useHorizonReadQuery } from '../../api/use-horizon-query'
 import { Card } from '../../components/ui/Card'
@@ -51,7 +53,7 @@ function columns(
   season: string,
   runId: string,
   rubricVersion: string,
-  prefetch: (row: RankingRow, run: string) => Promise<void>,
+  prefetch: (row: RankingRow, run: string, event?: PointerEvent) => void,
   open: (row: RankingRow, run: string, element: HTMLElement | null) => void,
 ): TableColumn<RankingRow>[] {
   return [
@@ -78,9 +80,9 @@ function columns(
             event.preventDefault()
             open(row, runId, event.currentTarget.closest('tr'))
           }}
-          onPointerEnter={() => void prefetch(row, runId)}
-          onPointerDown={() => void prefetch(row, runId)}
-          onFocus={() => void prefetch(row, runId)}
+          onPointerEnter={(event) => prefetch(row, runId, event)}
+          onPointerDown={(event) => prefetch(row, runId, event)}
+          onFocus={() => prefetch(row, runId)}
           data-transition-name
         >
           {row.name}
@@ -151,6 +153,7 @@ function columns(
 
 export function PublishedRankings() {
   const navigate = useNavigate()
+  const throttle = usePrefetchThrottle()
   const queries = useQueryClient()
   const client = useHorizonReadClient()
   const { state } = useAuth()
@@ -180,51 +183,62 @@ export function PublishedRankings() {
     available: Boolean(season),
   })
 
-  function prefetch(row: RankingRow, run: string) {
-    if (state.status !== 'authenticated' || !client.isAvailable()) return Promise.resolve()
+  useEffect(() => {
+    if (rankings.data?.items.length) void loadMember().catch(() => {})
+  }, [rankings.data])
+
+  function prefetch(row: RankingRow, run: string, event?: PointerEvent) {
+    if (state.status !== 'authenticated' || !client.isAvailable()) return
     const parameters = { userPk: row.userPk, season, run }
-    return Promise.all([
-      loadMember(),
-      queries.prefetchQuery({
-        queryKey: horizonQueryKeys.read(state.session.subject, 'ranking-member', parameters),
-        queryFn: ({ signal }) => client.get(memberOperation(row.userPk, { season, run }), signal),
-      }),
-    ]).then(() => {})
+    const operation = memberOperation(row.userPk, { season, run })
+    throttle(
+      operation.path,
+      () => {
+        void loadMember().catch(() => {})
+        void queries.prefetchQuery({
+          queryKey: horizonQueryKeys.read(
+            state.session.subject,
+            'ranking-member',
+            parameters,
+            operation.path,
+          ),
+          meta: { publicationPath: operation.path },
+          queryFn: ({ signal }) => client.get(operation, signal),
+        })
+      },
+      event,
+    )
   }
 
   function openMember(row: RankingRow, run: string, element: HTMLElement | null) {
+    if (state.status === 'authenticated' && state.session.isExec && client.isAvailable()) {
+      queries.setQueryData(memberPreviewKey(state.session.subject, row.userPk, season, run), row)
+    }
     const open = () => {
       void navigate(memberUrl(row, season, run))
     }
-    if (!motionAllowed() || !document.startViewTransition) {
-      open()
-      return
+    const transition = () => {
+      if (!motionAllowed() || !document.startViewTransition || !element?.isConnected) {
+        open()
+        return
+      }
+      selectTransition(element)
+      document.startViewTransition(() => flushSync(open))
     }
-    // The prefetch supplies the data and route before the new snapshot, with a
-    // short bound so navigation also works under a slow connection.
-    const location = window.location.href
-    let timer: ReturnType<typeof setTimeout>
-    const wait = new Promise<void>((resolve) => {
-      timer = setTimeout(resolve, 350)
-    })
-    void Promise.race([prefetch(row, run), wait])
-      .catch(() => {})
-      .then(() => {
-        clearTimeout(timer)
-        if (window.location.href !== location || !element?.isConnected) return
-        selectTransition(element)
-        document.startViewTransition(async () => {
-          flushSync(open)
-          // React.lazy can reveal the already fetched module on the next frame.
-          const started = performance.now()
-          while (
-            !document.querySelector('.member-transition-name') &&
-            performance.now() - started < 150
-          ) {
-            await new Promise(requestAnimationFrame)
-          }
-        })
-      })
+    if (loadedMember() || !element) {
+      transition()
+    } else {
+      // Wait for the local route chunk only. The member request starts after
+      // navigation, or earlier if a hover already prefetched it.
+      void loadMember().then(
+        () => {
+          if (element.isConnected) transition()
+        },
+        () => {
+          if (element.isConnected) open()
+        },
+      )
+    }
   }
 
   useLayoutEffect(() => {

@@ -8,6 +8,9 @@ let publicTransport: ReturnType<typeof createReadTransport> | undefined
 function options<T>(operation: ReadOperation<T>, mock: HorizonReadClient | null) {
   return queryOptions({
     queryKey: ['public-projects', mock?.scope ?? 'api', operation.path],
+    meta: { publicationPath: operation.path },
+    // Pending overrides remain live, including on historical runs.
+    staleTime: operation.path.includes('/sow-timeline?') ? 5_000 : undefined,
     queryFn: ({ signal }) => {
       if (mock) return mock.get(operation, signal)
       publicTransport ??= createReadTransport({

@@ -1,3 +1,5 @@
+import { usePrefetchThrottle } from '../../api/prefetch'
+import type { PointerEvent } from 'react'
 import { memo, startTransition } from 'react'
 import { ArrowUpRight, FolderKanban } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -37,12 +39,18 @@ const ProjectCard = memo(function ProjectCard({
 }) {
   const prefetch = useProjectPrefetch()
   const selection = { season, run }
-  const warm = () => {
-    void loadProject()
-    void prefetch(projectOperations.detail(project.projectPk, selection))
-    void prefetch(projectOperations.timeline(project.projectPk, selection))
-    void prefetch(projectOperations.history(project.projectPk, season))
-  }
+  const throttle = usePrefetchThrottle()
+  const warm = (event?: PointerEvent) =>
+    throttle(
+      project.projectPk,
+      () => {
+        void loadProject()
+        void prefetch(projectOperations.detail(project.projectPk, selection))
+        void prefetch(projectOperations.timeline(project.projectPk, selection))
+        void prefetch(projectOperations.history(project.projectPk, season))
+      },
+      event,
+    )
   return (
     <Card title={project.friendlyName} icon={FolderKanban} className="project-card">
       {project.hasSow ? (
@@ -67,7 +75,7 @@ const ProjectCard = memo(function ProjectCard({
           search: new URLSearchParams(selection).toString(),
         }}
         aria-label={`View ${project.friendlyName}`}
-        onFocus={warm}
+        onFocus={() => warm()}
         onPointerEnter={warm}
         onPointerDown={warm}
       >

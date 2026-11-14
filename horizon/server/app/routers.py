@@ -2,9 +2,10 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 
 from .auth import Principal, current_user, require_exec
+from .cache import PublicationCache, get_cache
 from .models import (
     ApiError,
     Me,
@@ -48,6 +49,36 @@ class Selection:
         self.season_type, self.season_year, self.run = season_type, season_year, run
 
 
+Cache = Annotated[PublicationCache, Depends(get_cache)]
+
+
+def published_runs(request, cache, store, season_type, season_year):
+    return cache.get(
+        ("ranking-runs", season_type, season_year),
+        lambda: tuple(store.runs(season_type, season_year)),
+        ttl=request.app.state.pointer_ttl,
+    )
+
+
+def published_rows(cache, store, run_id):
+    return cache.get(("ranking-rows", run_id), lambda: tuple(store.rows(run_id)))
+
+
+def ranking_page(cache, store, run, role, project_pk, page, page_size):
+    result = cache.get(
+        ("ranking-page", run.ranking_run_id, role, project_pk, page, page_size),
+        lambda: ranking_list(
+            published_rows(cache, store, run.ranking_run_id),
+            run,
+            role,
+            project_pk,
+            page,
+            page_size,
+        ),
+    )
+    return result.model_copy(update=metadata(run, datetime.now(timezone.utc)))
+
+
 @router.get("/me", response_model=Me)
 def me(user: User, store: Store):
     return Me(
@@ -66,6 +97,8 @@ def semesters(user: User, store: Store):
 
 @router.get("/rankings", response_model=RankingList)
 def rankings(
+    request: Request,
+    cache: Cache,
     user: Executive,
     selection: Annotated[Selection, Depends()],
     store: Store,
@@ -78,26 +111,40 @@ def rankings(
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 25,
 ):
     run = select_run(
-        store.runs(selection.season_type, selection.season_year), selection.run
+        published_runs(
+            request, cache, store, selection.season_type, selection.season_year
+        ),
+        selection.run,
     )
     audit.record_read(user, "ranking_list", run.ranking_run_id, None)
-    return ranking_list(
-        store.rows(run.ranking_run_id), run, role, project_pk, page, page_size
-    )
+    return ranking_page(cache, store, run, role, project_pk, page, page_size)
 
 
 @router.get("/rankings/members/{userPk}", response_model=MemberDetail)
 def member(
     user_pk: Annotated[str, Path(alias="userPk", min_length=1, max_length=200)],
+    request: Request,
+    cache: Cache,
     user: Executive,
     selection: Annotated[Selection, Depends()],
     store: Store,
     audit: Audit,
 ):
-    runs = store.runs(selection.season_type, selection.season_year)
+    runs = published_runs(
+        request, cache, store, selection.season_type, selection.season_year
+    )
     run = select_run(runs, selection.run)
     audit.record_read(user, "member_detail", run.ranking_run_id, user_pk)
-    return member_detail(store, run, user_pk, runs)
+    history_ids = tuple(
+        item.ranking_run_id for item in runs if item.status == "complete"
+    )
+    result = cache.get(
+        ("member", run.ranking_run_id, user_pk, history_ids),
+        lambda: member_detail(
+            lambda run_id: published_rows(cache, store, run_id), run, user_pk, runs
+        ),
+    )
+    return result.model_copy(update=metadata(run, datetime.now(timezone.utc)))
 
 
 class RankingSelection(Selection):
@@ -116,6 +163,8 @@ class RankingPublication(RankingList):
 
 @router.get("/v1/rankings/runs", response_model=list[RunMetadata])
 def ranking_runs(
+    request: Request,
+    cache: Cache,
     user: Executive,
     season: Season,
     store: Store,
@@ -125,7 +174,9 @@ def ranking_runs(
     runs = sorted(
         (
             run
-            for run in store.runs(season_type, int(season_year))
+            for run in published_runs(
+                request, cache, store, season_type, int(season_year)
+            )
             if run.status == "complete"
         ),
         key=lambda run: (run.as_of, run.ranking_run_id),
@@ -139,6 +190,8 @@ def ranking_runs(
 
 @router.get("/v1/rankings", response_model=RankingPublication)
 def published_rankings(
+    request: Request,
+    cache: Cache,
     user: Executive,
     selection: Annotated[RankingSelection, Depends()],
     store: Store,
@@ -151,12 +204,21 @@ def published_rankings(
     page_size: Annotated[int, Query(alias="pageSize", ge=1, le=100)] = 25,
 ):
     run = select_run(
-        store.runs(selection.season_type, selection.season_year), selection.run
+        published_runs(
+            request, cache, store, selection.season_type, selection.season_year
+        ),
+        selection.run,
     )
     audit.record_read(user, "ranking_list", run.ranking_run_id, None)
-    rows = store.rows(run.ranking_run_id)
-    page_result = ranking_list(
-        rows, run, role, project_pk if role == "engineer" else None, page, page_size
+    rows = published_rows(cache, store, run.ranking_run_id)
+    page_result = ranking_page(
+        cache,
+        store,
+        run,
+        role,
+        project_pk if role == "engineer" else None,
+        page,
+        page_size,
     )
     projects = (
         {
@@ -181,9 +243,11 @@ def published_rankings(
 @router.get("/v1/rankings/members/{userPk}", response_model=MemberDetail)
 def published_member(
     user_pk: Annotated[str, Path(alias="userPk", min_length=1, max_length=200)],
+    request: Request,
+    cache: Cache,
     user: Executive,
     selection: Annotated[RankingSelection, Depends()],
     store: Store,
     audit: Audit,
 ):
-    return member(user_pk, user, selection, store, audit)
+    return member(user_pk, request, cache, user, selection, store, audit)

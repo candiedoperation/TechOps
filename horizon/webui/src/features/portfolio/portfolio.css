@@ -537,3 +537,31 @@
     min-height: 44px;
   }
 }
+
+.outlook-hero {
+  margin-bottom: 1.15rem;
+  padding: clamp(1.25rem, 3.2vw, 2.75rem);
+  border: 1px solid var(--border);
+  border-radius: 0.875rem;
+  background:
+    radial-gradient(
+      ellipse at 90% 115%,
+      color-mix(in oklch, var(--accent-text) 25%, transparent),
+      transparent 58%
+    ),
+    linear-gradient(115deg, var(--card), color-mix(in oklch, var(--card) 84%, var(--chart-1)));
+}
+.outlook-hero .portfolio-intro {
+  margin: 0;
+}
+.outlook-hero .eyebrow {
+  color: var(--accent-text);
+}
+.portal-shell .outlook-hero h1 {
+  font-size: clamp(1.85rem, 3.3vw, 3.1rem);
+  letter-spacing: -0.045em;
+}
+.outlook-hero .portfolio-intro p:last-child {
+  color: var(--foreground);
+  opacity: 0.82;
+}

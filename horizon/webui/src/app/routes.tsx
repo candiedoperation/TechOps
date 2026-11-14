@@ -1,3 +1,4 @@
+import { MemberRoute } from './MemberRoute'
 import { lazy, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { ChartNoAxesCombined, LayoutDashboard, Settings2, UsersRound } from 'lucide-react'
@@ -11,7 +12,6 @@ import { SettingsPage } from '../features/settings/SettingsPage'
 import { loadMember, loadProject, loadProjects, loadRankings } from './route-loaders'
 
 const RankingsPage = lazy(() => loadRankings().then((module) => ({ default: module.RankingsPage })))
-const MemberPage = lazy(() => loadMember().then((module) => ({ default: module.MemberPage })))
 const ProjectPage = lazy(() => loadProject().then((module) => ({ default: module.ProjectPage })))
 const ProjectsPage = lazy(() => loadProjects().then((module) => ({ default: module.ProjectsPage })))
 
@@ -67,7 +67,7 @@ export const horizonRoutes: readonly HorizonRoute[] = [
     title: 'Member profile',
     protected: true,
     executiveOnly: true,
-    element: <MemberPage />,
+    element: <MemberRoute />,
   },
   {
     path: '/projects/:projectPk',

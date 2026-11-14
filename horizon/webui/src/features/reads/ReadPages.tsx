@@ -516,7 +516,7 @@ export function ReadDashboardPage({ registry }: RegistryProps) {
   return (
     <>
       <Heading
-        title="Your Horizon, at a glance."
+        title="Your Horizon Outlook"
         description="Explore the same query, transport, and state components used by feature pages."
       />
       <div className="dashboard-grid">

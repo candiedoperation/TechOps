@@ -17,9 +17,7 @@ describe('Horizon workspace', () => {
     const fetcher = vi.fn()
     vi.stubGlobal('fetch', fetcher)
     renderApp()
-    expect(
-      await screen.findByRole('heading', { name: 'Your Horizon, at a glance.' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your Horizon Outlook' })).toBeInTheDocument()
     expect(
       screen.getByText('No rankings, project scores, or evidence have been loaded.', {
         exact: false,
@@ -41,9 +39,7 @@ describe('Horizon workspace', () => {
     ).toBeInTheDocument()
     expect(await screen.findByText('No project publication')).toBeInTheDocument()
     await user.click(within(nav).getByRole('link', { name: 'Dashboard' }))
-    expect(
-      await screen.findByRole('heading', { name: 'Your Horizon, at a glance.' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your Horizon Outlook' })).toBeInTheDocument()
     expect(fetcher).toHaveBeenCalledTimes(1)
     expect(fetcher).toHaveBeenCalledWith(
       expect.objectContaining({ pathname: '/api/v1/projects' }),

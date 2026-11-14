@@ -224,3 +224,58 @@
     align-content: center;
   }
 }
+
+.ranking-group table {
+  table-layout: fixed;
+  min-width: 56rem;
+}
+.ranking-group th:nth-child(1) {
+  width: 6%;
+}
+.ranking-group th:nth-child(2) {
+  width: 16%;
+}
+.ranking-group th:nth-child(3) {
+  width: 14%;
+}
+.ranking-group th:nth-child(4) {
+  width: 10%;
+}
+.ranking-group th:nth-child(5) {
+  width: 12%;
+}
+.ranking-group th:nth-child(6) {
+  width: 10%;
+}
+.ranking-group th:nth-child(7) {
+  width: 15%;
+}
+.ranking-group th:nth-child(8) {
+  width: 17%;
+}
+
+.ranking-group :is(th, td) {
+  padding-inline: clamp(0.6rem, 1.3vw, 1.25rem);
+  vertical-align: middle;
+}
+.ranking-group td {
+  height: 3.25rem;
+  overflow-wrap: anywhere;
+}
+.ranking-group .score-bar {
+  width: min(100%, 7rem);
+}
+.ranking-group .bucket-bars {
+  gap: 0.25rem;
+  min-width: 0;
+}
+.ranking-group .bucket-bars meter {
+  width: 1.15rem;
+}
+.ranking-group .ranking-badge {
+  white-space: normal;
+}
+.member-pending {
+  color: var(--muted-foreground);
+  min-height: 2rem;
+}

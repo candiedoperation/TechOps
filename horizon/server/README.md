@@ -97,3 +97,17 @@ with a read-only role. Put `initdb` and `pg_ctl` on PATH to run those tests.
 Configure the deployed role with SELECT on the four referenced `horizon_api`
 tables and only the override columns shown in the fixture grant. The API
 projects only status, reason and timestamp from pending overrides.
+
+### Publication caching
+
+Each API process keeps up to 256 entries for 24 hours by default. The current
+publication pointers and the ranking run catalog refresh after 45 seconds.
+Concurrent misses for the same key share a read. Missing documents and failed
+reads are eligible for a new attempt on the next request.
+
+Public project list and detail requests for the current run can be reused for
+30 seconds. Explicit immutable snapshots can be reused for one year after their
+freshness label is stable. Project timelines revalidate because pending task
+corrections are queried live. Ranking reads still authenticate and audit every
+request, including in-process cache hits, and keep private HTTP responses
+`no-store`.

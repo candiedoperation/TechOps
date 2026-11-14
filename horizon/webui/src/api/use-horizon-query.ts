@@ -5,8 +5,19 @@ import { useHorizonReadClient } from './context'
 
 export const horizonQueryKeys = {
   all: ['horizon'] as const,
-  read: (subject: string | null, feature: string, parameters: Readonly<Record<string, string>>) =>
-    ['horizon', subject, feature, parameters] as const,
+  read: (
+    subject: string | null,
+    feature: string,
+    parameters: Readonly<Record<string, string>>,
+    path?: string,
+  ) =>
+    [
+      'horizon',
+      subject,
+      feature,
+      parameters,
+      ...(path?.startsWith('/api/v1/') ? [path] : []),
+    ] as const,
 }
 
 /** No default URL or fabricated domain response types. Register an agreed read contract first. */
@@ -36,7 +47,8 @@ export function useHorizonReadQuery<T>({
     (state.status === 'authenticated' ||
       (import.meta.env.DEV && __HORIZON_DEMO_BUILD_ALLOWED__ && client.accessMode === 'demo'))
   const result = useQuery({
-    queryKey: horizonQueryKeys.read(subject, feature, parameters),
+    queryKey: horizonQueryKeys.read(subject, feature, parameters, operation?.path),
+    meta: { publicationPath: operation?.path },
     queryFn: ({ signal }) => {
       if (!permitted || !operation)
         throw new ReadApiError(

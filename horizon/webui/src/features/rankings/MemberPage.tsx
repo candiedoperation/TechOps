@@ -1,3 +1,6 @@
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '../../auth/context'
+import { memberPreviewKey, type MemberPreview } from '../../api/member-preview'
 import { Award, ArrowLeft, BookOpen, ChartNoAxesCombined, CircleGauge } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
@@ -10,10 +13,11 @@ import { useHorizonReadQuery } from '../../api/use-horizon-query'
 import { Card } from '../../components/ui/Card'
 import { QueryState } from '../../components/ui/QueryState'
 import { ScoreBar } from '../../components/ui/ScoreBar'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { explainMissing } from '../../copy/missingReasons'
 import { percent } from '../../format'
 import { rankingStatus } from './display'
+import { rubricV1 } from '../../rubric'
 import { formatMetric } from './formatMetric'
 import './rankings.css'
 
@@ -48,7 +52,17 @@ function EvidenceLink({
   )
 }
 
-function MemberProfile({ document, season }: { document: MemberDocument; season: string }) {
+function MemberProfile({
+  document,
+  season,
+  loading = false,
+  projectSwitcher,
+}: {
+  document: MemberDocument
+  season: string
+  loading?: boolean
+  projectSwitcher?: ReactNode
+}) {
   const { member, overall, explanation, buckets, history } = document
   const engineer = member.role === 'engineer'
   const ranked = overall.status === 'ranked'
@@ -84,6 +98,12 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
         </span>
         {!ranked && <p>{rankingStatus[overall.status].reason}</p>}
       </Card>
+      {projectSwitcher}
+      {loading && (
+        <div className="member-pending" role="status">
+          Loading member evidence…
+        </div>
+      )}
       {explanation && (
         <Card
           icon={BookOpen}
@@ -146,28 +166,30 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
           </dl>
         </Card>
       ))}
-      <Card title="Semester trend" icon={ChartNoAxesCombined} tone="green">
-        <Suspense fallback={<div className="chart-placeholder" aria-hidden="true" />}>
-          <TrendChart
-            title="Score by run"
-            maximum={100}
-            points={history.map((point) => ({
-              id: point.runId,
-              at: point.asOf,
-              value: point.score,
-            }))}
-          />
-          <TrendChart
-            title="Rank by run"
-            rank
-            points={history.map((point) => ({
-              id: point.runId,
-              at: point.asOf,
-              value: point.rank,
-            }))}
-          />
-        </Suspense>
-      </Card>
+      {!loading && (
+        <Card title="Semester trend" icon={ChartNoAxesCombined} tone="green">
+          <Suspense fallback={<div className="chart-placeholder" aria-hidden="true" />}>
+            <TrendChart
+              title="Score by run"
+              maximum={100}
+              points={history.map((point) => ({
+                id: point.runId,
+                at: point.asOf,
+                value: point.score,
+              }))}
+            />
+            <TrendChart
+              title="Rank by run"
+              rank
+              points={history.map((point) => ({
+                id: point.runId,
+                at: point.asOf,
+                value: point.rank,
+              }))}
+            />
+          </Suspense>
+        </Card>
+      )}
       <button type="button" className="button button-secondary" disabled>
         Flag for calibration
       </button>
@@ -175,7 +197,33 @@ function MemberProfile({ document, season }: { document: MemberDocument; season:
   )
 }
 
+function previewDocument(row: MemberPreview): MemberDocument {
+  return {
+    member: row,
+    overall: {
+      score: row.overallScore,
+      rank: row.rankInGroup,
+      rankedInGroup: row.rankedInGroup,
+      comparisonGroupLabel: row.comparisonGroupLabel ?? row.projectName,
+      coverage: row.coverage,
+      status: row.status,
+    },
+    explanation: null,
+    history: [],
+    buckets: row.buckets.map((bucket) => ({
+      label:
+        bucket.label ?? rubricV1[row.role][bucket.key]?.label ?? bucket.key.replaceAll('_', ' '),
+      score: bucket.score,
+      weight: bucket.weight,
+      note: null,
+      metrics: [],
+    })),
+  }
+}
+
 export function MemberPage() {
+  const queries = useQueryClient()
+  const { state } = useAuth()
   const { userPk = '' } = useParams()
   const [search, setSearch] = useSearchParams()
   const season = search.get('season') ?? ''
@@ -187,6 +235,18 @@ export function MemberPage() {
     operation: memberOperation(userPk, { season, run }),
     available: Boolean(season && userPk),
   })
+  const preview =
+    details.available &&
+    details.isPending &&
+    !details.error &&
+    state.status === 'authenticated' &&
+    state.session.isExec &&
+    projectPk
+      ? queries.getQueryData<MemberPreview>(
+          memberPreviewKey(state.session.subject, userPk, season, run),
+        )
+      : undefined
+  const seeded = preview && preview.projectPk === projectPk ? previewDocument(preview) : undefined
   const list = new URLSearchParams({ ...(season ? { season } : {}), run })
   return (
     <>
@@ -196,7 +256,7 @@ export function MemberPage() {
       {season ? (
         <QueryState
           available={details.available}
-          data={details.data}
+          data={details.data ?? (seeded ? [seeded] : undefined)}
           error={details.error}
           pending={details.isPending}
           onRefresh={() => void details.refetch()}
@@ -206,30 +266,34 @@ export function MemberPage() {
             const selected =
               documents.find((doc) => doc.member.projectPk === projectPk) ?? documents[0]!
             return (
-              <>
-                {documents.length > 1 && (
-                  <label className="select-label member-project">
-                    Project
-                    <select
-                      value={selected.member.projectPk}
-                      onChange={(event) =>
-                        setSearch({
-                          season,
-                          run,
-                          projectPk: event.target.value,
-                        })
-                      }
-                    >
-                      {documents.map(({ member }) => (
-                        <option key={member.projectPk} value={member.projectPk}>
-                          {member.projectName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-                <MemberProfile document={selected} season={season} />
-              </>
+              <MemberProfile
+                document={selected}
+                loading={Boolean(seeded)}
+                season={season}
+                projectSwitcher={
+                  documents.length > 1 && (
+                    <label className="select-label member-project">
+                      Project
+                      <select
+                        value={selected.member.projectPk}
+                        onChange={(event) =>
+                          setSearch({
+                            season,
+                            run,
+                            projectPk: event.target.value,
+                          })
+                        }
+                      >
+                        {documents.map(({ member }) => (
+                          <option key={member.projectPk} value={member.projectPk}>
+                            {member.projectName}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )
+                }
+              />
             )
           }}
         </QueryState>

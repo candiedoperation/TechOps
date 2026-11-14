@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from psycopg_pool import PoolTimeout
 
 from .auth import JwtVerifier
+from .cache import PublicationCache
 from .config import Settings
 from .db import ReadDatabase
 from .errors import PublicationNotFound, ReadUnavailable
@@ -34,6 +35,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 database.close()
 
     application = FastAPI(title="Horizon read API", version="0.1.0", lifespan=lifespan)
+    application.state.publication_cache = PublicationCache(
+        settings.cache_max_size, settings.cache_ttl_seconds
+    )
+    application.state.pointer_ttl = settings.cache_pointer_ttl_seconds
     application.state.verifier = JwtVerifier(settings)
 
     @application.middleware("http")
