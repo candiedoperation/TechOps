@@ -15,3 +15,11 @@ peopleportal/server/scripts/.env
 peopleportal/server/scripts/.gitea-app-token
 peopleportal/server/scripts/.gitea-admin-pass
 peopleportal/server/.env.development*
+
+
+.vscode/
+peopleportal/Gitea/
+peopleportal/authentik/
+peopleportal/dev-stack/
+peopleportal/server/scripts/.oidc-gitea
+pyrightconfig.json
