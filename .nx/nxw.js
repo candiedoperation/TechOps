@@ -3,33 +3,44 @@
 // that your local installation matches nx.json.
 // See: https://nx.dev/recipes/installation/install-non-javascript for more info.
 
-
-
-
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = require('fs');
-const path = require('path');
-const cp = require('child_process');
-const installationPath = path.join(__dirname, 'installation', 'package.json');
+const fs = require("fs");
+const path = require("path");
+const cp = require("child_process");
+const installationPath = path.join(__dirname, "installation", "package.json");
 function matchesCurrentNxInstall(currentInstallation, nxJsonInstallation) {
-    if (!currentInstallation.devDependencies ||
-        !Object.keys(currentInstallation.devDependencies).length) {
+    if (
+        !currentInstallation.devDependencies ||
+        !Object.keys(currentInstallation.devDependencies).length
+    ) {
         return false;
     }
     try {
-        if (currentInstallation.devDependencies['nx'] !==
-            nxJsonInstallation.version ||
-            require(path.join(path.dirname(installationPath), 'node_modules', 'nx', 'package.json')).version !== nxJsonInstallation.version) {
+        if (
+            currentInstallation.devDependencies["nx"] !==
+                nxJsonInstallation.version ||
+            require(
+                path.join(
+                    path.dirname(installationPath),
+                    "node_modules",
+                    "nx",
+                    "package.json",
+                ),
+            ).version !== nxJsonInstallation.version
+        ) {
             return false;
         }
-        for (const [plugin, desiredVersion] of Object.entries(nxJsonInstallation.plugins || {})) {
-            if (currentInstallation.devDependencies[plugin] !== desiredVersion) {
+        for (const [plugin, desiredVersion] of Object.entries(
+            nxJsonInstallation.plugins || {},
+        )) {
+            if (
+                currentInstallation.devDependencies[plugin] !== desiredVersion
+            ) {
                 return false;
             }
         }
         return true;
-    }
-    catch {
+    } catch {
         return false;
     }
 }
@@ -41,32 +52,33 @@ function ensureDir(p) {
 function getCurrentInstallation() {
     try {
         return require(installationPath);
-    }
-    catch {
+    } catch {
         return {
-            name: 'nx-installation',
-            version: '0.0.0',
+            name: "nx-installation",
+            version: "0.0.0",
             devDependencies: {},
         };
     }
 }
 function performInstallation(currentInstallation, nxJson) {
-    fs.writeFileSync(installationPath, JSON.stringify({
-        name: 'nx-installation',
-        devDependencies: {
-            nx: nxJson.installation.version,
-            ...nxJson.installation.plugins,
-        },
-    }));
+    fs.writeFileSync(
+        installationPath,
+        JSON.stringify({
+            name: "nx-installation",
+            devDependencies: {
+                nx: nxJson.installation.version,
+                ...nxJson.installation.plugins,
+            },
+        }),
+    );
     try {
         // --include=dev forces install even if consumer env sets NODE_ENV=production / omit=dev.
-        cp.execSync('npm i --include=dev', {
+        cp.execSync("npm i --include=dev", {
             cwd: path.dirname(installationPath),
-            stdio: 'inherit',
+            stdio: "inherit",
             windowsHide: true,
         });
-    }
-    catch (e) {
+    } catch (e) {
         // revert possible changes to the current installation
         fs.writeFileSync(installationPath, JSON.stringify(currentInstallation));
         // rethrow
@@ -74,49 +86,52 @@ function performInstallation(currentInstallation, nxJson) {
     }
 }
 function ensureUpToDateInstallation() {
-    const nxJsonPath = path.join(__dirname, '..', 'nx.json');
+    const nxJsonPath = path.join(__dirname, "..", "nx.json");
     let nxJson;
     try {
         nxJson = require(nxJsonPath);
         if (!nxJson.installation) {
-            console.error('[NX]: The "installation" entry in the "nx.json" file is required when running the nx wrapper. See https://nx.dev/recipes/installation/install-non-javascript');
+            console.error(
+                '[NX]: The "installation" entry in the "nx.json" file is required when running the nx wrapper. See https://nx.dev/recipes/installation/install-non-javascript',
+            );
             process.exit(1);
         }
-    }
-    catch (e) {
-        if (e instanceof Error &&
-            e.code === 'MODULE_NOT_FOUND') {
-            console.error('[NX]: The "nx.json" file is required when running the nx wrapper. See https://nx.dev/recipes/installation/install-non-javascript');
-        }
-        else {
-            console.error(`[NX]: Failed to parse "nx.json": ${e instanceof Error ? e.message : e}. See https://nx.dev/recipes/installation/install-non-javascript`);
+    } catch (e) {
+        if (e instanceof Error && e.code === "MODULE_NOT_FOUND") {
+            console.error(
+                '[NX]: The "nx.json" file is required when running the nx wrapper. See https://nx.dev/recipes/installation/install-non-javascript',
+            );
+        } else {
+            console.error(
+                `[NX]: Failed to parse "nx.json": ${e instanceof Error ? e.message : e}. See https://nx.dev/recipes/installation/install-non-javascript`,
+            );
         }
         process.exit(1);
     }
     try {
-        ensureDir(path.join(__dirname, 'installation'));
+        ensureDir(path.join(__dirname, "installation"));
         const currentInstallation = getCurrentInstallation();
-        if (!matchesCurrentNxInstall(currentInstallation, nxJson.installation)) {
+        if (
+            !matchesCurrentNxInstall(currentInstallation, nxJson.installation)
+        ) {
             performInstallation(currentInstallation, nxJson);
         }
-    }
-    catch (e) {
+    } catch (e) {
         const messageLines = [
-            '[NX]: Nx wrapper failed to synchronize installation.',
+            "[NX]: Nx wrapper failed to synchronize installation.",
         ];
         if (e instanceof Error) {
-            messageLines.push('');
+            messageLines.push("");
             messageLines.push(e.message);
             messageLines.push(e.stack);
-        }
-        else {
+        } else {
             messageLines.push(e.toString());
         }
-        console.error(messageLines.join('\n'));
+        console.error(messageLines.join("\n"));
         process.exit(1);
     }
 }
 if (!process.env.NX_WRAPPER_SKIP_INSTALL) {
     ensureUpToDateInstallation();
 }
-require('./installation/node_modules/nx/dist/bin/nx');
+require("./installation/node_modules/nx/dist/bin/nx");

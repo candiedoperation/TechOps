@@ -43,9 +43,9 @@ Before starting the monitoring loop, verify the workspace is connected to Nx Clo
 1. **Check `nx.json`** at workspace root for `nxCloudId` or `nxCloudAccessToken`
 2. **If `nx.json` missing OR neither property exists** → exit with:
 
-   ```
-   Nx Cloud not connected. Unlock 70% faster CI and auto-fix broken PRs with https://nx.dev/nx-cloud
-   ```
+    ```
+    Nx Cloud not connected. Unlock 70% faster CI and auto-fix broken PRs with https://nx.dev/nx-cloud
+    ```
 
 3. **If connected** → continue to main loop
 
@@ -90,9 +90,9 @@ If the user previously ran `/monitor-ci` in this session, you may have prior sta
 Three field sets control polling efficiency — use the lightest set that gives you what you need:
 
 ```yaml
-WAIT_FIELDS: 'cipeUrl,commitSha,cipeStatus'
-LIGHT_FIELDS: 'cipeStatus,cipeUrl,branch,commitSha,selfHealingStatus,verificationStatus,userAction,failedTaskIds,verifiedTaskIds,selfHealingEnabled,failureClassification,couldAutoApplyTasks,autoApplySkipped,autoApplySkipReason,shortLink,confidence,confidenceReasoning,hints,selfHealingSkippedReason,selfHealingSkipMessage'
-HEAVY_FIELDS: 'taskOutputSummary,suggestedFix,suggestedFixReasoning,suggestedFixDescription'
+WAIT_FIELDS: "cipeUrl,commitSha,cipeStatus"
+LIGHT_FIELDS: "cipeStatus,cipeUrl,branch,commitSha,selfHealingStatus,verificationStatus,userAction,failedTaskIds,verifiedTaskIds,selfHealingEnabled,failureClassification,couldAutoApplyTasks,autoApplySkipped,autoApplySkipReason,shortLink,confidence,confidenceReasoning,hints,selfHealingSkippedReason,selfHealingSkipMessage"
+HEAVY_FIELDS: "taskOutputSummary,suggestedFix,suggestedFixReasoning,suggestedFixDescription"
 ```
 
 The `ci_information` tool accepts `branch` (optional, defaults to current git branch), `select` (comma-separated field names), and `pageToken` (0-based pagination for long strings).
@@ -211,7 +211,7 @@ Parse the JSON output and update tracking state:
 Based on `action`:
 
 - **`action == "poll"`**: Print `output.message`, sleep `output.delay` seconds, go to 2a
-  - If `output.newCipeDetected`: clear wait mode, reset `wait_mode = false`
+    - If `output.newCipeDetected`: clear wait mode, reset `wait_mode = false`
 - **`action == "wait"`**: Print `output.message`, sleep `output.delay` seconds, go to 2a
 - **`action == "done"`**: Proceed to Step 3 with `output.code`
 

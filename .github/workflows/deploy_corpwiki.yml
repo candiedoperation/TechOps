@@ -1,48 +1,48 @@
 name: Deploy Corp Wiki to Cloudflare Pages
 
 on:
-  push:
-    branches: ["master"]
-    paths:
-      - "corpwiki/**"
-  workflow_dispatch:
+    push:
+        branches: ["master"]
+        paths:
+            - "corpwiki/**"
+    workflow_dispatch:
 
 concurrency:
-  group: "pages-appdevclub-wiki"
-  cancel-in-progress: false
+    group: "pages-appdevclub-wiki"
+    cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    environment: production
-    defaults:
-      run:
-        working-directory: corpwiki
+    build-and-deploy:
+        runs-on: ubuntu-latest
+        environment: production
+        defaults:
+            run:
+                working-directory: corpwiki
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "npm"
-          cache-dependency-path: corpwiki/package-lock.json
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: "npm"
+                  cache-dependency-path: corpwiki/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
+            - name: Install dependencies
+              run: npm ci
 
-      - name: Build website
-        run: npm run build
-        env:
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
+            - name: Build website
+              run: npm run build
+              env:
+                  ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+                  ALGOLIA_API_KEY: ${{ secrets.ALGOLIA_API_KEY }}
 
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy build --project-name=appdevclub-wiki --branch=master
-          workingDirectory: corpwiki
+            - name: Deploy to Cloudflare Pages
+              uses: cloudflare/wrangler-action@v3
+              with:
+                  apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+                  accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+                  command: pages deploy build --project-name=appdevclub-wiki --branch=master
+                  workingDirectory: corpwiki

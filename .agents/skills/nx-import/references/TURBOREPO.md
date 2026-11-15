@@ -29,9 +29,9 @@ The config package contains a hierarchy of tsconfig files. Each project extends 
 1. **Read the config package** — trace the full inheritance chain (e.g., `nextjs.json` extends `base.json`).
 2. **Update root `tsconfig.base.json`** — absorb `compilerOptions` from the base config. Add Nx `paths` for cross-project imports (Turborepo doesn't use path aliases, Nx relies on them).
 3. **Update each project's `tsconfig.json`**:
-   - Change `"extends"` from `"@repo/typescript-config/<variant>.json"` to the relative path to root `tsconfig.base.json`.
-   - Inline variant-specific overrides from the intermediate config (e.g., Next.js: `"module": "ESNext"`, `"moduleResolution": "Bundler"`, `"jsx": "preserve"`, `"noEmit": true`; React library: `"jsx": "react-jsx"`).
-   - Preserve project-specific settings (`outDir`, `include`, `exclude`, etc.).
+    - Change `"extends"` from `"@repo/typescript-config/<variant>.json"` to the relative path to root `tsconfig.base.json`.
+    - Inline variant-specific overrides from the intermediate config (e.g., Next.js: `"module": "ESNext"`, `"moduleResolution": "Bundler"`, `"jsx": "preserve"`, `"noEmit": true`; React library: `"jsx": "react-jsx"`).
+    - Preserve project-specific settings (`outDir`, `include`, `exclude`, etc.).
 4. **Delete the config package** and remove it from all `devDependencies`.
 
 ## Merging ESLint Config (Only When Root eslint.config Exists)

@@ -11,14 +11,17 @@ const { ValidateError } = require("tsoa");
 const { RegisterRoutes } = require("../../dist/routes.js");
 const giteaModule = require("../../dist/clients/GiteaClient/index.js");
 const authentikModule = require("../../dist/clients/AuthentikClient/index.js");
-const { HooksController } = require("../../dist/controllers/HooksController.js");
+const {
+    HooksController,
+} = require("../../dist/controllers/HooksController.js");
 
 function buildApp() {
     const app = express();
     app.use(express.json());
     RegisterRoutes(app);
     app.use((err, _req, res, _next) => {
-        if (err instanceof ValidateError) return res.status(422).json(err.fields);
+        if (err instanceof ValidateError)
+            return res.status(422).json(err.fields);
         return res.status(500).end();
     });
     return app;
@@ -29,7 +32,12 @@ function buildApp() {
 async function withFakeGitea({ isOrganization, apiRepository }, run) {
     const RealGiteaClient = giteaModule.GiteaClient;
     const RealAuthentikClient = authentikModule.AuthentikClient;
-    const calls = { organizations: [], fetched: [], deleted: [], provisioned: [] };
+    const calls = {
+        organizations: [],
+        fetched: [],
+        deleted: [],
+        provisioned: [],
+    };
     giteaModule.GiteaClient = class {
         async isOrganization(name) {
             calls.organizations.push(name);
@@ -201,7 +209,10 @@ test("an organization repository is provisioned and never deleted", () => {
 
 test("no delete when the API repository id differs from the event", () =>
     withFakeGitea(
-        { isOrganization: false, apiRepository: repository("ianc", { id: 99 }) },
+        {
+            isOrganization: false,
+            apiRepository: repository("ianc", { id: 99 }),
+        },
         async (calls) => {
             const response = await post(createdEvent());
             assert.equal(response.status, 200);
@@ -231,7 +242,10 @@ test("no delete for a repository created before the deletion window", () => {
         Date.now() - HooksController.PERSONAL_REPO_DELETE_WINDOW_MS - 60_000,
     ).toISOString();
     return withFakeGitea(
-        { isOrganization: false, apiRepository: repository("ianc", { created_at }) },
+        {
+            isOrganization: false,
+            apiRepository: repository("ianc", { created_at }),
+        },
         async (calls) => {
             const response = await post(createdEvent());
             assert.equal(response.status, 200);

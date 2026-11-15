@@ -68,8 +68,50 @@ const RESUME_PDF_PATH =
     "/Users/aditswami/.cursor/projects/Users-aditswami-projects-app-dev-TechOps/attachments/d079c193-3405-4c52-9b09-c75b3a127580/Testudo_-_Unofficial_Transcript.pdf";
 
 /* Just for varied, readable fixture names -- not meant to be exhaustive. */
-const FIRST_NAMES = ["Ada", "Grace", "Alan", "Katherine", "Barbara", "Margaret", "Tim", "Linus", "Donald", "Edsger", "Radia", "Vint", "Dennis", "Ken", "Brian", "Steve", "Bill", "Lynn", "Frances", "Hedy"];
-const LAST_NAMES = ["Lovelace", "Hopper", "Turing", "Johnson", "Liskov", "Hamilton", "Berners-Lee", "Torvalds", "Knuth", "Dijkstra", "Perlman", "Cerf", "Ritchie", "Thompson", "Kernighan", "Wozniak", "Gates", "Conway", "Allen", "Lamarr"];
+const FIRST_NAMES = [
+    "Ada",
+    "Grace",
+    "Alan",
+    "Katherine",
+    "Barbara",
+    "Margaret",
+    "Tim",
+    "Linus",
+    "Donald",
+    "Edsger",
+    "Radia",
+    "Vint",
+    "Dennis",
+    "Ken",
+    "Brian",
+    "Steve",
+    "Bill",
+    "Lynn",
+    "Frances",
+    "Hedy",
+];
+const LAST_NAMES = [
+    "Lovelace",
+    "Hopper",
+    "Turing",
+    "Johnson",
+    "Liskov",
+    "Hamilton",
+    "Berners-Lee",
+    "Torvalds",
+    "Knuth",
+    "Dijkstra",
+    "Perlman",
+    "Cerf",
+    "Ritchie",
+    "Thompson",
+    "Kernighan",
+    "Wozniak",
+    "Gates",
+    "Conway",
+    "Allen",
+    "Lamarr",
+];
 
 function nth<T>(arr: T[], i: number): T {
     return arr[i % arr.length];
@@ -85,10 +127,15 @@ async function main(): Promise<void> {
     await mongoose.connect(mongoUrl);
 
     const bucket = process.env.S3_BUCKET_NAME;
-    if (!bucket) throw new Error("S3_BUCKET_NAME is not set -- resumes can't upload without it.");
+    if (!bucket)
+        throw new Error(
+            "S3_BUCKET_NAME is not set -- resumes can't upload without it.",
+        );
 
     if (!fs.existsSync(RESUME_PDF_PATH)) {
-        throw new Error(`Resume PDF not found at ${RESUME_PDF_PATH}. Set SEED_RESUME_PDF to override.`);
+        throw new Error(
+            `Resume PDF not found at ${RESUME_PDF_PATH}. Set SEED_RESUME_PDF to override.`,
+        );
     }
     const resumeBytes = fs.readFileSync(RESUME_PDF_PATH);
 
@@ -101,11 +148,13 @@ async function main(): Promise<void> {
     });
 
     /* Find whatever's actually recruiting right now -- never hardcode a pk. */
-    const teamStatus = await TeamRecruitingStatus.findOne({ isRecruiting: true }).lean();
+    const teamStatus = await TeamRecruitingStatus.findOne({
+        isRecruiting: true,
+    }).lean();
     if (!teamStatus) {
         throw new Error(
             "No team has isRecruiting=true. Enable recruiting on a team's subteam " +
-            "via /org/teams/:teamId/recruitment first."
+                "via /org/teams/:teamId/recruitment first.",
         );
     }
 
@@ -124,14 +173,16 @@ async function main(): Promise<void> {
     if (rolePool.length === 0) {
         throw new Error(
             `Team ${teamStatus.teamPk} is recruiting but none of its recruiting subteams ` +
-            `have roles configured yet. Add roles in the recruitment config UI first.`
+                `have roles configured yet. Add roles in the recruitment config UI first.`,
         );
     }
 
     console.log(`team        : ${teamStatus.teamPk}`);
     console.log(`subteams    : ${configs.map((c) => c.subteamPk).join(", ")}`);
     console.log(`roles found : ${rolePool.map((r) => r.role).join(", ")}`);
-    console.log(`resume      : ${RESUME_PDF_PATH} (${resumeBytes.length} bytes)`);
+    console.log(
+        `resume      : ${RESUME_PDF_PATH} (${resumeBytes.length} bytes)`,
+    );
     console.log(`bucket      : ${bucket} (${process.env.AWS_REGION})\n`);
 
     let createdCount = 0;
@@ -145,7 +196,10 @@ async function main(): Promise<void> {
 
         const existing = await Applicant.findOne({ email });
         if (existing) {
-            const dupeApp = await Application.findOne({ applicantId: existing._id, teamPk: teamStatus.teamPk });
+            const dupeApp = await Application.findOne({
+                applicantId: existing._id,
+                teamPk: teamStatus.teamPk,
+            });
             if (dupeApp) {
                 skippedCount++;
                 console.log(`  exists   ${fullName.padEnd(20)} ${email}`);
@@ -155,25 +209,38 @@ async function main(): Promise<void> {
 
         const applicantId = existing?._id ?? new mongoose.Types.ObjectId();
         const resumeKey = `resumes/${applicantId}.pdf`;
-        const profile = new Map(Object.entries({
-            resumeUrl: resumeKey,
-            whyAppDev: "Seeded for local ATS end-to-end testing.",
-            instagramFollow: "yes",
-        }));
+        const profile = new Map(
+            Object.entries({
+                resumeUrl: resumeKey,
+                whyAppDev: "Seeded for local ATS end-to-end testing.",
+                instagramFollow: "yes",
+            }),
+        );
 
         const applicant = existing
-            ? await Applicant.findByIdAndUpdate(existing._id, { $set: { profile } }, { new: true })
-            : await Applicant.create({ _id: applicantId, email, fullName, profile });
+            ? await Applicant.findByIdAndUpdate(
+                  existing._id,
+                  { $set: { profile } },
+                  { new: true },
+              )
+            : await Applicant.create({
+                  _id: applicantId,
+                  email,
+                  fullName,
+                  profile,
+              });
 
         /* Upload the same resume PDF for every seeded applicant, keyed exactly
            how ATSController expects it, so the recruiter's real "download
            resume" button works against seeded data instead of 404ing. */
-        await s3.send(new PutObjectCommand({
-            Bucket: bucket,
-            Key: resumeKey,
-            Body: resumeBytes,
-            ContentType: "application/pdf",
-        }));
+        await s3.send(
+            new PutObjectCommand({
+                Bucket: bucket,
+                Key: resumeKey,
+                Body: resumeBytes,
+                ContentType: "application/pdf",
+            }),
+        );
 
         /* Spread across every open role/subteam instead of piling everyone
            onto the first one, so every column/role has something in it. */
@@ -185,25 +252,38 @@ async function main(): Promise<void> {
             rolePreferences: [pick],
             stage: ApplicationStage.APPLIED,
             responses: {
-                "Why are you interested in this team?": "Seeded response for local ATS testing.",
+                "Why are you interested in this team?":
+                    "Seeded response for local ATS testing.",
             },
             appliedAt: new Date(),
-            stageHistory: [{ stage: ApplicationStage.APPLIED, changedAt: new Date() }],
+            stageHistory: [
+                { stage: ApplicationStage.APPLIED, changedAt: new Date() },
+            ],
         });
 
-        await Applicant.findByIdAndUpdate(applicant!._id, { $push: { applicationIds: application._id } });
+        await Applicant.findByIdAndUpdate(applicant!._id, {
+            $push: { applicationIds: application._id },
+        });
 
         createdCount++;
-        console.log(`  created  ${fullName.padEnd(20)} ${email.padEnd(45)} role=${pick.role}`);
+        console.log(
+            `  created  ${fullName.padEnd(20)} ${email.padEnd(45)} role=${pick.role}`,
+        );
     }
 
-    console.log(`\n${createdCount} created, ${skippedCount} skipped (already applied).`);
-    console.log(`Open /org/teams/${teamStatus.teamPk}/recruitment in the webui to see them on the board.`);
+    console.log(
+        `\n${createdCount} created, ${skippedCount} skipped (already applied).`,
+    );
+    console.log(
+        `Open /org/teams/${teamStatus.teamPk}/recruitment in the webui to see them on the board.`,
+    );
 
     await mongoose.disconnect();
 }
 
 main().catch((e: unknown) => {
-    console.error(`\nSeed failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(
+        `\nSeed failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
     process.exitCode = 1;
 });

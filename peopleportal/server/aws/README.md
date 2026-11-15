@@ -8,12 +8,12 @@ applied automatically; these are the documents you paste into IAM and
 Organizations. `AWSClient` reads only the resulting ids and ARNs, through the
 environment variables named below.
 
-| File | What it is | Where it attaches | Feeds |
-|---|---|---|---|
-| `deny-all-scp.json` | Service control policy denying every action | The **Suspended OU**, and per-account by the budget action | `AWS_DENY_ALL_SCP_ID` |
-| `app-iam-policy.json` | Permissions for the server's own IAM user | That user | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` |
-| `budget-enforcement-trust-policy.json` | Lets AWS Budgets assume the enforcement role | `BudgetEnforcementRole`, as its trust policy | `AWS_BUDGET_ACTION_ROLE_ARN` |
-| `budget-enforcement-permissions.json` | Lets that role attach the DenyAll SCP | `BudgetEnforcementRole`, as a permissions policy | same |
+| File                                   | What it is                                   | Where it attaches                                          | Feeds                                         |
+| -------------------------------------- | -------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------- |
+| `deny-all-scp.json`                    | Service control policy denying every action  | The **Suspended OU**, and per-account by the budget action | `AWS_DENY_ALL_SCP_ID`                         |
+| `app-iam-policy.json`                  | Permissions for the server's own IAM user    | That user                                                  | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` |
+| `budget-enforcement-trust-policy.json` | Lets AWS Budgets assume the enforcement role | `BudgetEnforcementRole`, as its trust policy               | `AWS_BUDGET_ACTION_ROLE_ARN`                  |
+| `budget-enforcement-permissions.json`  | Lets that role attach the DenyAll SCP        | `BudgetEnforcementRole`, as a permissions policy           | same                                          |
 
 ## The two identities, and why there are two
 
@@ -66,7 +66,7 @@ the Policies page offers "Enable service control policies", do that first.
 
 `AWS_ORG_ROOT_ID`, `AWS_NONPROD_OU_ID`, `AWS_SUSPENDED_OU_ID` and
 `AWS_MANAGEMENT_ACCOUNT_ID` are ids read straight from the console, not policies.
-`AWS_ADMIN_ROLE_NAME` names the admin role created *inside* each member account by
+`AWS_ADMIN_ROLE_NAME` names the admin role created _inside_ each member account by
 `CreateAccount`, which the app later assumes for console links. It is unrelated to
 `BudgetEnforcementRole`, and changing it breaks console links for accounts created
 under the old name.
@@ -74,4 +74,4 @@ under the old name.
 Missing `AWS_DENY_ALL_SCP_ID` or `AWS_BUDGET_ACTION_ROLE_ARN` is not fatal:
 `createBudgetEnforcementAction` logs a warning and skips, so provisioning still
 succeeds and alerts still fire, without the automatic cutoff. Missing
-`AWS_SUSPENDED_OU_ID` *is* fatal to archiving, which throws rather than degrading.
+`AWS_SUSPENDED_OU_ID` _is_ fatal to archiving, which throws rather than degrading.

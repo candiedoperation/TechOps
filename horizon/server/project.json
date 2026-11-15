@@ -2,9 +2,7 @@
     "name": "horizonserver",
     "projectType": "application",
     "sourceRoot": "horizon/server",
-    "implicitDependencies": [
-        "pplsdk-py"
-    ],
+    "implicitDependencies": ["pplsdk-py"],
     "targets": {
         "install-deps": {
             "executor": "nx:run-commands",
@@ -15,10 +13,7 @@
         },
         "serve": {
             "executor": "nx:run-commands",
-            "dependsOn": [
-                "install-deps",
-                "^generate"
-            ],
+            "dependsOn": ["install-deps", "^generate"],
             "options": {
                 "command": ". .venv/bin/activate && uvicorn main:app --reload --port 8000",
                 "cwd": "{projectRoot}"

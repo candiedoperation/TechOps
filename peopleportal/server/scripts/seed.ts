@@ -45,14 +45,22 @@
 
 import mongoose from "mongoose";
 
-import { ENVIRONMENT, isProduction, loadEnvironmentFiles } from "../src/config/environment";
+import {
+    ENVIRONMENT,
+    isProduction,
+    loadEnvironmentFiles,
+} from "../src/config/environment";
 
 loadEnvironmentFiles();
 
-const BASE_URL = (process.env.PEOPLEPORTAL_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+const BASE_URL = (
+    process.env.PEOPLEPORTAL_BASE_URL ?? "http://localhost:3000"
+).replace(/\/$/, "");
 const COOKIE =
     process.env.PEOPLEPORTAL_SEED_COOKIE ??
-    process.argv.find((a) => a.startsWith("--cookie="))?.slice("--cookie=".length);
+    process.argv
+        .find((a) => a.startsWith("--cookie="))
+        ?.slice("--cookie=".length);
 
 const currentYear = new Date().getFullYear();
 const iso = (daysFromNow: number, hour: number) => {
@@ -62,10 +70,17 @@ const iso = (daysFromNow: number, hour: number) => {
     return d.toISOString();
 };
 
-interface SeedSubteam { friendlyName: string; description: string }
+interface SeedSubteam {
+    friendlyName: string;
+    description: string;
+}
 interface SeedMeeting {
-    name: string; description: string; startInDays: number; hour: number;
-    recurring?: boolean; visibleToAll?: boolean;
+    name: string;
+    description: string;
+    startInDays: number;
+    hour: number;
+    recurring?: boolean;
+    visibleToAll?: boolean;
 }
 interface SeedTeam {
     friendlyName: string;
@@ -80,30 +95,69 @@ interface SeedTeam {
 
 const TEAMS: SeedTeam[] = [
     {
-        friendlyName: "Web Dev", teamType: "PROJECT", seasonType: "FALL", seasonYear: currentYear,
+        friendlyName: "Web Dev",
+        teamType: "PROJECT",
+        seasonType: "FALL",
+        seasonYear: currentYear,
         description: "Full-stack project team building internal tools.",
         requestorRole: "Tech Lead",
         subteams: [
-            { friendlyName: "Frontend", description: "React and design system work." },
-            { friendlyName: "Backend", description: "API, data model and integrations." },
+            {
+                friendlyName: "Frontend",
+                description: "React and design system work.",
+            },
+            {
+                friendlyName: "Backend",
+                description: "API, data model and integrations.",
+            },
         ],
         meetings: [
-            { name: "Web Dev Standup", description: "Weekly standup.", startInDays: 3, hour: 18, recurring: true, visibleToAll: true },
-            { name: "Leads Retro", description: "Leads only.", startInDays: 5, hour: 19, visibleToAll: false },
+            {
+                name: "Web Dev Standup",
+                description: "Weekly standup.",
+                startInDays: 3,
+                hour: 18,
+                recurring: true,
+                visibleToAll: true,
+            },
+            {
+                name: "Leads Retro",
+                description: "Leads only.",
+                startInDays: 5,
+                hour: 19,
+                visibleToAll: false,
+            },
         ],
     },
     {
-        friendlyName: "ML Bootcamp", teamType: "BOOTCAMP", seasonType: "FALL", seasonYear: currentYear,
+        friendlyName: "ML Bootcamp",
+        teamType: "BOOTCAMP",
+        seasonType: "FALL",
+        seasonYear: currentYear,
         description: "Semester-long applied machine learning bootcamp.",
         requestorRole: "Bootcamp Director",
-        subteams: [{ friendlyName: "Core", description: "Curriculum and instruction." }],
+        subteams: [
+            {
+                friendlyName: "Core",
+                description: "Curriculum and instruction.",
+            },
+        ],
         meetings: [
-            { name: "Bootcamp Session 1", description: "Kickoff and environment setup.", startInDays: 2, hour: 19, visibleToAll: true },
+            {
+                name: "Bootcamp Session 1",
+                description: "Kickoff and environment setup.",
+                startInDays: 2,
+                hour: 19,
+                visibleToAll: true,
+            },
         ],
     },
     {
         /* Last season, so it lands in Archive Teams > Expired. */
-        friendlyName: "Infrastructure", teamType: "PROJECT", seasonType: "SPRING", seasonYear: currentYear,
+        friendlyName: "Infrastructure",
+        teamType: "PROJECT",
+        seasonType: "SPRING",
+        seasonYear: currentYear,
         description: "Platform and deployment work from the previous cycle.",
         requestorRole: "Tech Lead",
         subteams: [],
@@ -130,31 +184,68 @@ interface SeedMember {
    (PEOPLEPORTAL_SMTP_HOST=localhost:1025 with nothing listening). */
 const MEMBERS: Record<string, SeedMember[]> = {
     "Web Dev": [
-        { name: "Ada Lovelace", email: "seed-ada-lovelace@terpmail.umd.edu", roleTitle: "Software Engineer", subteam: "Frontend" },
-        { name: "Grace Hopper", email: "seed-grace-hopper@terpmail.umd.edu", roleTitle: "Software Engineer", subteam: "Backend" },
-        { name: "Alan Turing", email: "seed-alan-turing@terpmail.umd.edu", roleTitle: "Tech Lead", subteam: "Backend" },
+        {
+            name: "Ada Lovelace",
+            email: "seed-ada-lovelace@terpmail.umd.edu",
+            roleTitle: "Software Engineer",
+            subteam: "Frontend",
+        },
+        {
+            name: "Grace Hopper",
+            email: "seed-grace-hopper@terpmail.umd.edu",
+            roleTitle: "Software Engineer",
+            subteam: "Backend",
+        },
+        {
+            name: "Alan Turing",
+            email: "seed-alan-turing@terpmail.umd.edu",
+            roleTitle: "Tech Lead",
+            subteam: "Backend",
+        },
     ],
     "ML Bootcamp": [
-        { name: "Katherine Johnson", email: "seed-katherine-johnson@terpmail.umd.edu", roleTitle: "Learner", subteam: "Core" },
-        { name: "Barbara Liskov", email: "seed-barbara-liskov@terpmail.umd.edu", roleTitle: "Educator", subteam: "Core" },
+        {
+            name: "Katherine Johnson",
+            email: "seed-katherine-johnson@terpmail.umd.edu",
+            roleTitle: "Learner",
+            subteam: "Core",
+        },
+        {
+            name: "Barbara Liskov",
+            email: "seed-barbara-liskov@terpmail.umd.edu",
+            roleTitle: "Educator",
+            subteam: "Core",
+        },
     ],
 };
 
 const EVENTS = [
     {
-        title: "Fall Symposium", description: "End-of-semester project showcase.",
-        startTime: iso(12, 18), endTime: iso(12, 20), location: "Iribe Antonov Auditorium",
-        scope: "public", marketingChannels: [] as string[],
+        title: "Fall Symposium",
+        description: "End-of-semester project showcase.",
+        startTime: iso(12, 18),
+        endTime: iso(12, 20),
+        location: "Iribe Antonov Auditorium",
+        scope: "public",
+        marketingChannels: [] as string[],
     },
     {
-        title: "Exec Sync", description: "Weekly executive board sync.",
-        startTime: iso(4, 17), endTime: iso(4, 18), location: "Iribe 4105",
-        scope: "exec", marketingChannels: [] as string[],
+        title: "Exec Sync",
+        description: "Weekly executive board sync.",
+        startTime: iso(4, 17),
+        endTime: iso(4, 18),
+        location: "Iribe 4105",
+        scope: "exec",
+        marketingChannels: [] as string[],
     },
     {
-        title: "Member Social", description: "Open to all active members.",
-        startTime: iso(7, 19), endTime: iso(7, 21), location: "Stamp Student Union",
-        scope: "internal", marketingChannels: [] as string[],
+        title: "Member Social",
+        description: "Open to all active members.",
+        startTime: iso(7, 19),
+        endTime: iso(7, 21),
+        location: "Stamp Student Union",
+        scope: "internal",
+        marketingChannels: [] as string[],
     },
 ];
 
@@ -183,10 +274,16 @@ function seedPassword(seed: string): string {
 async function ensureDirectoryUser(member: SeedMember): Promise<number | null> {
     const base = process.env.PEOPLEPORTAL_AUTHENTIK_ENDPOINT!;
     const token = process.env.PEOPLEPORTAL_AUTHENTIK_TOKEN!;
-    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+    };
     const username = member.email.replace("@terpmail.umd.edu", "");
 
-    const found = await fetch(`${base}/api/v3/core/users/?username=${encodeURIComponent(username)}`, { headers })
+    const found = await fetch(
+        `${base}/api/v3/core/users/?username=${encodeURIComponent(username)}`,
+        { headers },
+    )
         .then((r) => r.json() as Promise<any>)
         .catch(() => null);
     if (found?.results?.length) return found.results[0].pk as number;
@@ -225,7 +322,7 @@ async function onboardMember(
     teamPk: string,
     member: SeedMember,
     subteamPk: string,
-    lookupInviteId: (email: string) => Promise<string | null>
+    lookupInviteId: (email: string) => Promise<string | null>,
 ): Promise<"created" | "placed" | "exists" | "failed"> {
     try {
         await api("POST", `/api/org/teams/${teamPk}/externalinvite`, {
@@ -265,7 +362,11 @@ async function onboardMember(
     }
 }
 
-async function api(method: string, route: string, body?: unknown): Promise<any> {
+async function api(
+    method: string,
+    route: string,
+    body?: unknown,
+): Promise<any> {
     const response = await fetch(`${BASE_URL}${route}`, {
         method,
         headers: {
@@ -277,11 +378,17 @@ async function api(method: string, route: string, body?: unknown): Promise<any> 
 
     const text = await response.text();
     let parsed: any = undefined;
-    try { parsed = text ? JSON.parse(text) : undefined; } catch { /* not JSON */ }
+    try {
+        parsed = text ? JSON.parse(text) : undefined;
+    } catch {
+        /* not JSON */
+    }
 
     if (!response.ok) {
         const detail = parsed?.message ?? parsed?.error ?? text.slice(0, 200);
-        const error = new Error(`${method} ${route} -> ${response.status}: ${detail}`);
+        const error = new Error(
+            `${method} ${route} -> ${response.status}: ${detail}`,
+        );
         (error as any).status = response.status;
         throw error;
     }
@@ -295,13 +402,13 @@ async function main(): Promise<void> {
     if (!/localhost|127\.0\.0\.1|host\.docker\.internal/.test(BASE_URL)) {
         throw new Error(
             `PEOPLEPORTAL_BASE_URL (${BASE_URL}) is not local. This creates real teams, ` +
-            `Authentik groups and Slack channels; it will not run against a shared server.`
+                `Authentik groups and Slack channels; it will not run against a shared server.`,
         );
     }
     if (!COOKIE) {
         throw new Error(
             "No session cookie. Sign in to the UI as a superuser, copy the session cookie, then:\n" +
-            "  PEOPLEPORTAL_SEED_COOKIE=\"connect.sid=s%3A...\" npm run seed"
+                '  PEOPLEPORTAL_SEED_COOKIE="connect.sid=s%3A..." npm run seed',
         );
     }
 
@@ -312,16 +419,20 @@ async function main(): Promise<void> {
     } catch (e) {
         throw new Error(
             `The session cookie was not accepted (${e instanceof Error ? e.message : String(e)}). ` +
-            `Sign in again and copy a fresh one.`
+                `Sign in again and copy a fresh one.`,
         );
     }
 
     console.log(`environment : ${ENVIRONMENT}`);
     console.log(`server      : ${BASE_URL}`);
-    console.log(`acting as   : ${me.name ?? me.username} (${me.isExecutive ? "executive" : "member"})\n`);
+    console.log(
+        `acting as   : ${me.name ?? me.username} (${me.isExecutive ? "executive" : "member"})\n`,
+    );
 
     if (!me.isExecutive) {
-        console.warn("  This account is not an executive; team and event creation will likely be refused.\n");
+        console.warn(
+            "  This account is not an executive; team and event creation will likely be refused.\n",
+        );
     }
 
     /* The one direct database read: POST /externalinvite returns void, so the
@@ -335,7 +446,7 @@ async function main(): Promise<void> {
         inviteLookup = async (email: string) => {
             const doc = await invites.findOne(
                 { inviteEmail: email },
-                { sort: { createdAt: -1 } }
+                { sort: { createdAt: -1 } },
             );
             return doc ? String(doc._id) : null;
         };
@@ -343,9 +454,14 @@ async function main(): Promise<void> {
     const lookupInviteId = async (email: string): Promise<string | null> =>
         inviteLookup ? inviteLookup(email) : null;
 
-    const existing: any[] = (await api("GET", "/api/org/teams?limit=200").catch(() => ({ teams: [] }))).teams ?? [];
+    const existing: any[] =
+        (
+            await api("GET", "/api/org/teams?limit=200").catch(() => ({
+                teams: [],
+            }))
+        ).teams ?? [];
     const byFriendlyName = new Map<string, any>(
-        existing.map((t: any) => [t.friendlyName ?? t.name, t])
+        existing.map((t: any) => [t.friendlyName ?? t.name, t]),
     );
 
     for (const team of TEAMS) {
@@ -368,19 +484,30 @@ async function main(): Promise<void> {
             });
             teamPk = result?.pk ?? result?.team?.pk ?? result?.teamPk;
             created++;
-            console.log(`  created  team      ${team.friendlyName.padEnd(20)} ${teamPk ?? "(pk not returned)"}`);
+            console.log(
+                `  created  team      ${team.friendlyName.padEnd(20)} ${teamPk ?? "(pk not returned)"}`,
+            );
         }
 
         if (!teamPk) {
-            console.warn(`           skipping children of ${team.friendlyName}: no pk available`);
+            console.warn(
+                `           skipping children of ${team.friendlyName}: no pk available`,
+            );
             continue;
         }
 
         /* Existing subteams, so a re-run reports "exists" rather than relaying
            the server's generic "Failed to Create Team", which reads like a
            real failure when it only means the name is taken. */
-        const existingSubteams: string[] = await api("GET", `/api/org/teams/${teamPk}`)
-            .then((r: any) => (r?.subteams ?? []).map((st: any) => st.attributes?.friendlyName ?? st.friendlyName))
+        const existingSubteams: string[] = await api(
+            "GET",
+            `/api/org/teams/${teamPk}`,
+        )
+            .then((r: any) =>
+                (r?.subteams ?? []).map(
+                    (st: any) => st.attributes?.friendlyName ?? st.friendlyName,
+                ),
+            )
             .catch(() => []);
         const subteamNames = new Set(existingSubteams.filter(Boolean));
 
@@ -396,19 +523,28 @@ async function main(): Promise<void> {
                 console.log(`  created  subteam   ${subteam.friendlyName}`);
             } catch (e: any) {
                 skipped++;
-                console.log(`  skipped  subteam   ${subteam.friendlyName} (${e.message.split(": ").pop()})`);
+                console.log(
+                    `  skipped  subteam   ${subteam.friendlyName} (${e.message.split(": ").pop()})`,
+                );
             }
         }
 
         /* Members, through the real invite-and-accept flow. */
         const members = MEMBERS[team.friendlyName] ?? [];
         if (members.length > 0) {
-            const detail = await api("GET", `/api/org/teams/${teamPk}`).catch(() => null);
+            const detail = await api("GET", `/api/org/teams/${teamPk}`).catch(
+                () => null,
+            );
             const subteamPkByName = new Map<string, string>(
-                (detail?.subteams ?? []).map((st: any) => [st.attributes?.friendlyName ?? st.friendlyName, st.pk])
+                (detail?.subteams ?? []).map((st: any) => [
+                    st.attributes?.friendlyName ?? st.friendlyName,
+                    st.pk,
+                ]),
             );
             const existingEmails = new Set<string>(
-                (detail?.users ?? []).map((u: any) => (u.email ?? "").toLowerCase())
+                (detail?.users ?? []).map((u: any) =>
+                    (u.email ?? "").toLowerCase(),
+                ),
             );
 
             for (const member of members) {
@@ -420,22 +556,36 @@ async function main(): Promise<void> {
 
                 const subteamPk = subteamPkByName.get(member.subteam) ?? teamPk;
                 try {
-                    const outcome = await onboardMember(teamPk, member, subteamPk, lookupInviteId);
+                    const outcome = await onboardMember(
+                        teamPk,
+                        member,
+                        subteamPk,
+                        lookupInviteId,
+                    );
                     if (outcome === "created" || outcome === "placed") {
                         created++;
                         if (outcome === "placed") placedDirectly++;
-                        const how = outcome === "placed" ? " (placed directly; Slack unavailable)" : "";
-                        console.log(`  created  member    ${member.name.padEnd(20)} ${member.roleTitle} / ${member.subteam}${how}`);
+                        const how =
+                            outcome === "placed"
+                                ? " (placed directly; Slack unavailable)"
+                                : "";
+                        console.log(
+                            `  created  member    ${member.name.padEnd(20)} ${member.roleTitle} / ${member.subteam}${how}`,
+                        );
                     } else if (outcome === "exists") {
                         skipped++;
                         console.log(`  exists   member    ${member.name}`);
                     } else {
                         skipped++;
-                        console.log(`  skipped  member    ${member.name} (invite created but its id could not be read back)`);
+                        console.log(
+                            `  skipped  member    ${member.name} (invite created but its id could not be read back)`,
+                        );
                     }
                 } catch (e: any) {
                     skipped++;
-                    console.log(`  skipped  member    ${member.name} (${e.message.split(": ").pop()})`);
+                    console.log(
+                        `  skipped  member    ${member.name} (${e.message.split(": ").pop()})`,
+                    );
                 }
             }
         }
@@ -443,8 +593,11 @@ async function main(): Promise<void> {
         /* Existing meetings for this team, so a re-run does not duplicate them.
            A recurring meeting expands into a whole series server-side, so
            creating one twice is not a small mistake. */
-        const existingMeetings: any[] = await api("GET", `/api/org/teams/${teamPk}/meetings`)
-            .then((r: any) => (Array.isArray(r) ? r : r?.meetings ?? []))
+        const existingMeetings: any[] = await api(
+            "GET",
+            `/api/org/teams/${teamPk}/meetings`,
+        )
+            .then((r: any) => (Array.isArray(r) ? r : (r?.meetings ?? [])))
             .catch(() => []);
         const meetingNames = new Set(existingMeetings.map((m: any) => m.name));
 
@@ -467,7 +620,9 @@ async function main(): Promise<void> {
                 console.log(`  created  meeting   ${meeting.name}`);
             } catch (e: any) {
                 skipped++;
-                console.log(`  skipped  meeting   ${meeting.name} (${e.message.split(": ").pop()})`);
+                console.log(
+                    `  skipped  meeting   ${meeting.name} (${e.message.split(": ").pop()})`,
+                );
             }
         }
     }
@@ -496,7 +651,9 @@ async function main(): Promise<void> {
             console.log(`  created  event     ${event.title}`);
         } catch (e: any) {
             skipped++;
-            console.log(`  skipped  event     ${event.title} (${e.message.split(": ").pop()})`);
+            console.log(
+                `  skipped  event     ${event.title} (${e.message.split(": ").pop()})`,
+            );
         }
     }
 
@@ -504,16 +661,20 @@ async function main(): Promise<void> {
     if (placedDirectly > 0) {
         console.log(
             `\n${placedDirectly} member(s) were placed directly because acceptInvite requires the\n` +
-            `invitee to already be in the Slack workspace and throws when Slack is\n` +
-            `unavailable. They have no password and cannot sign in; they exist to populate\n` +
-            `rosters. Point PEOPLEPORTAL_SLACK_BOT_TOKEN at a real workspace to exercise the\n` +
-            `full invite-and-accept path instead.`
+                `invitee to already be in the Slack workspace and throws when Slack is\n` +
+                `unavailable. They have no password and cannot sign in; they exist to populate\n` +
+                `rosters. Point PEOPLEPORTAL_SLACK_BOT_TOKEN at a real workspace to exercise the\n` +
+                `full invite-and-accept path instead.`,
         );
     }
-    await mongoose.disconnect().catch(() => { /* never connected */ });
+    await mongoose.disconnect().catch(() => {
+        /* never connected */
+    });
 }
 
 main().catch((e: unknown) => {
-    console.error(`\nSeed failed: ${e instanceof Error ? e.message : String(e)}`);
+    console.error(
+        `\nSeed failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
     process.exitCode = 1;
 });

@@ -1,4 +1,4 @@
-import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
+import ExecutionEnvironment from "@docusaurus/ExecutionEnvironment";
 
 // This runs on every page load before React hydrates
 if (ExecutionEnvironment.canUseDOM) {
@@ -6,17 +6,20 @@ if (ExecutionEnvironment.canUseDOM) {
     function syncTheme() {
         const root = document.documentElement;
         // Check data-theme first, then localStorage, then default to light
-        const theme = root.getAttribute('data-theme') || localStorage.getItem('theme') || 'light';
+        const theme =
+            root.getAttribute("data-theme") ||
+            localStorage.getItem("theme") ||
+            "light";
 
         // Remove both classes first
-        root.classList.remove('light', 'dark');
+        root.classList.remove("light", "dark");
 
         // Add the current theme class
         root.classList.add(theme);
 
         // Ensure data-theme is also set if missing (e.g. initial load from localStorage)
-        if (!root.getAttribute('data-theme') && theme) {
-            root.setAttribute('data-theme', theme);
+        if (!root.getAttribute("data-theme") && theme) {
+            root.setAttribute("data-theme", theme);
         }
     }
 
@@ -30,7 +33,10 @@ if (ExecutionEnvironment.canUseDOM) {
     // Watch for theme changes via MutationObserver
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
+            if (
+                mutation.type === "attributes" &&
+                mutation.attributeName === "data-theme"
+            ) {
                 syncTheme();
             }
         });
@@ -38,19 +44,25 @@ if (ExecutionEnvironment.canUseDOM) {
 
     observer.observe(document.documentElement, {
         attributes: true,
-        attributeFilter: ['data-theme']
+        attributeFilter: ["data-theme"],
     });
 }
 
 // Export onRouteDidUpdate to force sync on navigation
 export function onRouteDidUpdate({ location, previousLocation }) {
-    if (ExecutionEnvironment.canUseDOM && location.pathname !== previousLocation?.pathname) {
+    if (
+        ExecutionEnvironment.canUseDOM &&
+        location.pathname !== previousLocation?.pathname
+    ) {
         // Apply immediately and then again after a small delay to handle Docusaurus re-renders
-        const currentTheme = document.documentElement.getAttribute('data-theme') || localStorage.getItem('theme') || 'light';
+        const currentTheme =
+            document.documentElement.getAttribute("data-theme") ||
+            localStorage.getItem("theme") ||
+            "light";
 
         // Helper to apply
         const apply = () => {
-            document.documentElement.classList.remove('light', 'dark');
+            document.documentElement.classList.remove("light", "dark");
             document.documentElement.classList.add(currentTheme);
         };
 

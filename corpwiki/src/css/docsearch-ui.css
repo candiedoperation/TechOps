@@ -3,7 +3,8 @@
     /* Modal + overlay */
     --docsearch-modal-background: var(--popover);
     /* Match Popover bg */
-    --docsearch-modal-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --docsearch-modal-shadow:
+        0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     /* shadow-md */
 
     /* Text colors */
@@ -55,7 +56,9 @@
     /* Animations */
     animation: docsearch-zoom-in 0.2s ease-out;
     /* Animate height directly for smoother interaction */
-    transition: height 0.3s cubic-bezier(0.2, 0, 0.2, 1), background-color 0.2s;
+    transition:
+        height 0.3s cubic-bezier(0.2, 0, 0.2, 1),
+        background-color 0.2s;
     transform-origin: center top;
     box-shadow: none !important;
 
@@ -381,7 +384,6 @@
 /* Hide the "commands" icon in the action button if user prefers simple arrow, 
    but standard DocSearch puts the enter key or arrow there. */
 
-
 /* ------------ Footer ------------ */
 
 /* Footer: branding + shortcuts */
@@ -419,7 +421,8 @@
     color: var(--foreground);
     padding: 0.1rem 0.3rem;
     font-size: 0.7rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
         "Liberation Mono", "Courier New", monospace;
 }
 

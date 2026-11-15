@@ -65,7 +65,11 @@ const buildNavMain = (isExecutive: boolean) => {
                 },
                 { icon: UsersRoundIcon, title: "Teams", url: "/org/teams" },
                 { icon: NetworkIcon, title: "Org Chart", url: "/org/orgchart" },
-                { icon: BookOpen, title: "Recruitment", url: "/org/recruitment" },
+                {
+                    icon: BookOpen,
+                    title: "Recruitment",
+                    url: "/org/recruitment",
+                },
             ],
         },
         {

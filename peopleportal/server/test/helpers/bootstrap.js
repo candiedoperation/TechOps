@@ -7,9 +7,9 @@
  * plain `require("../../dist/...")` work at all.
  */
 require("dotenv").config({
-  path: require("node:path").resolve(__dirname, "..", "..", ".env.test"),
-  override: false,
-  quiet: true,
+    path: require("node:path").resolve(__dirname, "..", "..", ".env.test"),
+    override: false,
+    quiet: true,
 });
 
 process.env.NODE_ENV = "test";

@@ -1,13 +1,13 @@
 /* src/css/fonts.css */
 
-
-
 /* Expose them as variables */
 :root {
-    --font-geist-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
+    --font-geist-sans:
+        ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
 
-    --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    --font-geist-mono:
+        "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
         "Liberation Mono", "Courier New", monospace;
 
     /* Base text weight (body, doc content) */

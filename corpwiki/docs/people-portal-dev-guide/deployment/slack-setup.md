@@ -35,13 +35,13 @@ a catch-all domain or plus-addressing on one mailbox.
 
 Derived from the nine Web API methods in `clients/SlackClient/index.ts`:
 
-| Method | Scope |
-|---|---|
-| `auth.test` | none |
-| `chat.postMessage` | `chat:write` |
+| Method                                                 | Scope                                                       |
+| ------------------------------------------------------ | ----------------------------------------------------------- |
+| `auth.test`                                            | none                                                        |
+| `chat.postMessage`                                     | `chat:write`                                                |
 | `conversations.create`, `.archive`, `.invite`, `.kick` | `channels:manage`, plus `groups:write` for private channels |
-| `conversations.list`, `.members` | `channels:read`, plus `groups:read` for private channels |
-| `users.lookupByEmail` | `users:read`, `users:read.email` |
+| `conversations.list`, `.members`                       | `channels:read`, plus `groups:read` for private channels    |
+| `users.lookupByEmail`                                  | `users:read`, `users:read.email`                            |
 
 :::warning `users:read.email` is requested separately
 It is a distinct entry from `users:read` and easy to miss in the picker. Without
@@ -68,10 +68,10 @@ rather than hoping.
 
 ## Variables
 
-| Variable | Notes |
-|---|---|
-| `PEOPLEPORTAL_SLACK_BOT_TOKEN` | The `xoxb-` token. `SlackClient` throws at construction if unset |
-| `PEOPLEPORTAL_SLACK_INVITE_URL` | Workspace invite link surfaced to new members |
+| Variable                        | Notes                                                            |
+| ------------------------------- | ---------------------------------------------------------------- |
+| `PEOPLEPORTAL_SLACK_BOT_TOKEN`  | The `xoxb-` token. `SlackClient` throws at construction if unset |
+| `PEOPLEPORTAL_SLACK_INVITE_URL` | Workspace invite link surfaced to new members                    |
 
 `SLACK_ACCESSTOKEN` appears in some deployment environments but is read nowhere in
 the server source. Only `PEOPLEPORTAL_SLACK_BOT_TOKEN` matters.

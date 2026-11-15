@@ -53,17 +53,25 @@ loadEnvironmentFiles();
 import { Applicant } from "../src/models/Applicant";
 import { Application, ApplicationStage } from "../src/models/Application";
 
-const BASE_URL = (process.env.PEOPLEPORTAL_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+const BASE_URL = (
+    process.env.PEOPLEPORTAL_BASE_URL ?? "http://localhost:3000"
+).replace(/\/$/, "");
 const COOKIE =
     process.env.PEOPLEPORTAL_SEED_COOKIE ??
-    process.argv.find((a) => a.startsWith("--cookie="))?.slice("--cookie=".length);
+    process.argv
+        .find((a) => a.startsWith("--cookie="))
+        ?.slice("--cookie=".length);
 
 interface ApiResult {
     status: number;
     body: any;
 }
 
-async function api(method: string, route: string, body?: unknown): Promise<ApiResult> {
+async function api(
+    method: string,
+    route: string,
+    body?: unknown,
+): Promise<ApiResult> {
     const res = await fetch(`${BASE_URL}${route}`, {
         method,
         headers: {
@@ -74,12 +82,17 @@ async function api(method: string, route: string, body?: unknown): Promise<ApiRe
     });
     const text = await res.text();
     let parsed: any;
-    try { parsed = text ? JSON.parse(text) : undefined; } catch { parsed = text; }
+    try {
+        parsed = text ? JSON.parse(text) : undefined;
+    } catch {
+        parsed = text;
+    }
     return { status: res.status, body: parsed };
 }
 
 function fmt(r: PromiseSettledResult<ApiResult>): string {
-    if (r.status === "fulfilled") return `HTTP ${r.value.status} -> ${JSON.stringify(r.value.body)}`;
+    if (r.status === "fulfilled")
+        return `HTTP ${r.value.status} -> ${JSON.stringify(r.value.body)}`;
     return `THREW -> ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`;
 }
 
@@ -95,13 +108,15 @@ async function main(): Promise<void> {
         throw new Error("Refusing to run against NODE_ENV=production.");
     }
     if (!/localhost|127\.0\.0\.1|host\.docker\.internal/.test(BASE_URL)) {
-        throw new Error(`PEOPLEPORTAL_BASE_URL (${BASE_URL}) is not local; refusing to run.`);
+        throw new Error(
+            `PEOPLEPORTAL_BASE_URL (${BASE_URL}) is not local; refusing to run.`,
+        );
     }
     if (!COOKIE) {
         throw new Error(
             "No session cookie. Sign in to the webui as someone with hiring access on the " +
-            "recruiting team, copy the session cookie, then:\n" +
-            '  PEOPLEPORTAL_SEED_COOKIE="peopleportal_sid=s%3A..." npx tsx scripts/test-ats-stage-concurrency.ts'
+                "recruiting team, copy the session cookie, then:\n" +
+                '  PEOPLEPORTAL_SEED_COOKIE="peopleportal_sid=s%3A..." npx tsx scripts/test-ats-stage-concurrency.ts',
         );
     }
 
@@ -110,10 +125,15 @@ async function main(): Promise<void> {
     await mongoose.connect(mongoUrl);
 
     /* Only ever touch fixtures seed-ats-applicants.ts created. */
-    const seededApplicants = await Applicant.find({ email: /^seed-applicant-/ }).lean();
+    const seededApplicants = await Applicant.find({
+        email: /^seed-applicant-/,
+    }).lean();
     const seededIds = seededApplicants.map((a) => a._id);
-    const byEmail = new Map(seededApplicants.map((a) => [String(a._id), a.email]));
-    const nameOf = (app: any) => byEmail.get(String(app.applicantId)) ?? String(app.applicantId);
+    const byEmail = new Map(
+        seededApplicants.map((a) => [String(a._id), a.email]),
+    );
+    const nameOf = (app: any) =>
+        byEmail.get(String(app.applicantId)) ?? String(app.applicantId);
 
     const applications = await Application.find({
         applicantId: { $in: seededIds },
@@ -123,8 +143,8 @@ async function main(): Promise<void> {
     if (applications.length < 6) {
         throw new Error(
             `Only found ${applications.length} seeded applications still in 'Applied'. Need at ` +
-            `least 6 fresh ones -- run seed-ats-applicants.ts again (it tops up, skipping anyone ` +
-            `who already has an application for this team).`
+                `least 6 fresh ones -- run seed-ats-applicants.ts again (it tops up, skipping anyone ` +
+                `who already has an application for this team).`,
         );
     }
 
@@ -140,30 +160,51 @@ async function main(): Promise<void> {
      * ------------------------------------------------------------------- */
     console.log("PHASE 1: concurrent moves across different candidates\n");
 
-    const [toInterview, toRejected, toPotentialHire, toHired] = applications.slice(0, 4);
+    const [toInterview, toRejected, toPotentialHire, toHired] =
+        applications.slice(0, 4);
 
     const phase1 = await Promise.allSettled([
-        api("PUT", `/api/ats/applications/${teamId}/${toInterview._id}/stage`, INTERVIEW_BODY(1)),
+        api(
+            "PUT",
+            `/api/ats/applications/${teamId}/${toInterview._id}/stage`,
+            INTERVIEW_BODY(1),
+        ),
 
         api("PUT", `/api/ats/applications/${teamId}/${toRejected._id}/stage`, {
             stage: ApplicationStage.REJECTED,
         }),
 
         (async () => {
-            await api("PUT", `/api/ats/applications/${teamId}/${toPotentialHire._id}/stage`, INTERVIEW_BODY(2));
-            return api("PUT", `/api/ats/applications/${teamId}/${toPotentialHire._id}/stage`, {
-                stage: ApplicationStage.POTENTIAL_HIRE,
-            });
+            await api(
+                "PUT",
+                `/api/ats/applications/${teamId}/${toPotentialHire._id}/stage`,
+                INTERVIEW_BODY(2),
+            );
+            return api(
+                "PUT",
+                `/api/ats/applications/${teamId}/${toPotentialHire._id}/stage`,
+                {
+                    stage: ApplicationStage.POTENTIAL_HIRE,
+                },
+            );
         })(),
 
         (async () => {
-            await api("PUT", `/api/ats/applications/${teamId}/${toHired._id}/stage`, INTERVIEW_BODY(3));
+            await api(
+                "PUT",
+                `/api/ats/applications/${teamId}/${toHired._id}/stage`,
+                INTERVIEW_BODY(3),
+            );
             const pref = toHired.rolePreferences[0];
-            return api("PUT", `/api/ats/applications/${teamId}/${toHired._id}/stage`, {
-                stage: ApplicationStage.HIRED,
-                hiredRole: pref.role,
-                hiredSubteamPk: pref.subteamPk,
-            });
+            return api(
+                "PUT",
+                `/api/ats/applications/${teamId}/${toHired._id}/stage`,
+                {
+                    stage: ApplicationStage.HIRED,
+                    hiredRole: pref.role,
+                    hiredSubteamPk: pref.subteamPk,
+                },
+            );
         })(),
     ]);
 
@@ -173,22 +214,32 @@ async function main(): Promise<void> {
         `${nameOf(toPotentialHire)} -> Interview -> Potential Hire`,
         `${nameOf(toHired)} -> Interview -> Hired`,
     ];
-    phase1.forEach((r, i) => console.log(`  ${phase1Labels[i].padEnd(45)} ${fmt(r)}`));
+    phase1.forEach((r, i) =>
+        console.log(`  ${phase1Labels[i].padEnd(45)} ${fmt(r)}`),
+    );
 
     /* ---------------------------------------------------------------------
      * PHASE 2: the actual question -- two requests racing on the SAME
      * application, targeting two DIFFERENT destination stages at once.
      * ------------------------------------------------------------------- */
-    console.log("\nPHASE 2: two requests racing on the SAME application (Rejected vs Hired)\n");
+    console.log(
+        "\nPHASE 2: two requests racing on the SAME application (Rejected vs Hired)\n",
+    );
 
     const raceTarget = applications[4];
     /* Put it in Interview first, sequentially, so both Rejected and Hired
        are simultaneously valid destinations when the race starts. */
-    await api("PUT", `/api/ats/applications/${teamId}/${raceTarget._id}/stage`, INTERVIEW_BODY(4));
+    await api(
+        "PUT",
+        `/api/ats/applications/${teamId}/${raceTarget._id}/stage`,
+        INTERVIEW_BODY(4),
+    );
 
     const racePref = raceTarget.rolePreferences[0];
     const [raceA, raceB] = await Promise.allSettled([
-        api("PUT", `/api/ats/applications/${teamId}/${raceTarget._id}/stage`, { stage: ApplicationStage.REJECTED }),
+        api("PUT", `/api/ats/applications/${teamId}/${raceTarget._id}/stage`, {
+            stage: ApplicationStage.REJECTED,
+        }),
         api("PUT", `/api/ats/applications/${teamId}/${raceTarget._id}/stage`, {
             stage: ApplicationStage.HIRED,
             hiredRole: racePref.role,
@@ -202,19 +253,29 @@ async function main(): Promise<void> {
 
     const afterRace = await Application.findById(raceTarget._id).lean();
     console.log(`    final persisted stage  : ${afterRace?.stage}`);
-    console.log(`    stageHistory entries   : ${afterRace?.stageHistory.map((h) => h.stage).join(" -> ")}`);
-    console.log(`    (check the server's console for how many of these actually sent an email)`);
+    console.log(
+        `    stageHistory entries   : ${afterRace?.stageHistory.map((h) => h.stage).join(" -> ")}`,
+    );
+    console.log(
+        `    (check the server's console for how many of these actually sent an email)`,
+    );
 
     /* ---------------------------------------------------------------------
      * PHASE 3: two requests racing on the SAME application, targeting the
      * SAME destination stage -- does the applicant get double-emailed?
      * ------------------------------------------------------------------- */
-    console.log("\nPHASE 3: two requests racing on the SAME application, SAME target (both -> Rejected)\n");
+    console.log(
+        "\nPHASE 3: two requests racing on the SAME application, SAME target (both -> Rejected)\n",
+    );
 
     const dupeTarget = applications[5];
     const [dupeA, dupeB] = await Promise.allSettled([
-        api("PUT", `/api/ats/applications/${teamId}/${dupeTarget._id}/stage`, { stage: ApplicationStage.REJECTED }),
-        api("PUT", `/api/ats/applications/${teamId}/${dupeTarget._id}/stage`, { stage: ApplicationStage.REJECTED }),
+        api("PUT", `/api/ats/applications/${teamId}/${dupeTarget._id}/stage`, {
+            stage: ApplicationStage.REJECTED,
+        }),
+        api("PUT", `/api/ats/applications/${teamId}/${dupeTarget._id}/stage`, {
+            stage: ApplicationStage.REJECTED,
+        }),
     ]);
 
     console.log(`  candidate: ${nameOf(dupeTarget)} (${dupeTarget._id})`);
@@ -223,8 +284,12 @@ async function main(): Promise<void> {
 
     const afterDupe = await Application.findById(dupeTarget._id).lean();
     console.log(`    final persisted stage  : ${afterDupe?.stage}`);
-    console.log(`    stageHistory entries   : ${afterDupe?.stageHistory.map((h) => h.stage).join(" -> ")}`);
-    console.log(`    (two 'Rejected' entries here would mean the rejection email almost certainly went out twice)`);
+    console.log(
+        `    stageHistory entries   : ${afterDupe?.stageHistory.map((h) => h.stage).join(" -> ")}`,
+    );
+    console.log(
+        `    (two 'Rejected' entries here would mean the rejection email almost certainly went out twice)`,
+    );
 
     await mongoose.disconnect();
 }

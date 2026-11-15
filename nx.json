@@ -1,15 +1,15 @@
 {
-  "installation": {
-    "version": "23.2.1",
-    "plugins": {
-      "@nx/docker": "23.2.1",
-      "@nx/vite": "23.2.1",
-      "@nx/next": "23.2.1",
-      "@nx/eslint": "23.2.1"
-    }
-  },
-  "$schema": "./node_modules/nx/schemas/nx-schema.json",
-  "defaultBase": "master",
-  "analytics": false,
-  "neverConnectToCloud": true
+    "installation": {
+        "version": "23.2.1",
+        "plugins": {
+            "@nx/docker": "23.2.1",
+            "@nx/vite": "23.2.1",
+            "@nx/next": "23.2.1",
+            "@nx/eslint": "23.2.1"
+        }
+    },
+    "$schema": "./node_modules/nx/schemas/nx-schema.json",
+    "defaultBase": "master",
+    "analytics": false,
+    "neverConnectToCloud": true
 }

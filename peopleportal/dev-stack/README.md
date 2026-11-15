@@ -40,17 +40,17 @@ server env files may shadow new settings: process environment wins, then `.env`,
 
 ## Ports and overrides
 
-| Service | Default port | Variable in dev-stack/.env |
-| --- | ---: | --- |
-| Portal backend | 3000 | `PORTAL_PORT` |
-| Vite UI | 5173 | `WEBUI_PORT` |
-| MongoDB | 27017 | `MONGO_PORT` |
-| Redis | 6379 | `REDIS_PORT` |
-| Authentik | 9000 | `AUTHENTIK_PORT` |
-| Gitea | 3001 | `GITEA_PORT` |
-| Gitea SSH | 2222 | `GITEA_SSH_PORT` |
-| Mailpit inbox | 8025 | `MAILPIT_PORT` |
-| SMTP | 1025 | `SMTP_PORT` |
+| Service        | Default port | Variable in dev-stack/.env |
+| -------------- | -----------: | -------------------------- |
+| Portal backend |         3000 | `PORTAL_PORT`              |
+| Vite UI        |         5173 | `WEBUI_PORT`               |
+| MongoDB        |        27017 | `MONGO_PORT`               |
+| Redis          |         6379 | `REDIS_PORT`               |
+| Authentik      |         9000 | `AUTHENTIK_PORT`           |
+| Gitea          |         3001 | `GITEA_PORT`               |
+| Gitea SSH      |         2222 | `GITEA_SSH_PORT`           |
+| Mailpit inbox  |         8025 | `MAILPIT_PORT`             |
+| SMTP           |         1025 | `SMTP_PORT`                |
 
 Postgres is internal only. All published Docker ports bind to `127.0.0.1`;
 `BIND_ADDRESS` must remain `127.0.0.1`. Vite keeps its normal localhost binding.

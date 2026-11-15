@@ -1,5 +1,5 @@
-import React, { useLayoutEffect } from 'react';
-import { useColorMode } from '@docusaurus/theme-common';
+import React, { useLayoutEffect } from "react";
+import { useColorMode } from "@docusaurus/theme-common";
 
 /**
  * Component that syncs Docusaurus's colorMode with Shadcn's dark class
@@ -14,7 +14,7 @@ export function ThemeSync({ children }: { children: React.ReactNode }) {
         const root = window.document.documentElement;
 
         // Remove both classes first
-        root.classList.remove('light', 'dark');
+        root.classList.remove("light", "dark");
 
         // Add the current theme class
         root.classList.add(colorMode);

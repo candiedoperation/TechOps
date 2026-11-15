@@ -10,134 +10,132 @@
 
 html,
 body {
-  font-family: var(--font-geist-sans);
-  background-color: var(--sidebar);
-  color: var(--foreground);
+    font-family: var(--font-geist-sans);
+    background-color: var(--sidebar);
+    color: var(--foreground);
 }
 
 /* Fix for Firefox rendering docs footer as black block */
 .theme-doc-footer,
 .pagination-nav {
-  background-color: transparent !important;
-  box-shadow: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
 }
 
 /* Shadcn-like Typography Overrides for Markdown Content */
 .markdown h1 {
-  @apply scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mb-4;
+    @apply scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl mb-4;
 }
 
 .markdown h2 {
-  @apply scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 mt-8 mb-3;
+    @apply scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight first:mt-0 mt-8 mb-3;
 }
 
 .markdown h3 {
-  @apply scroll-m-20 text-2xl font-semibold tracking-tight mt-6 mb-2;
+    @apply scroll-m-20 text-2xl font-semibold tracking-tight mt-6 mb-2;
 }
 
 .markdown p {
-  @apply leading-7 [&:not(:first-child)]:mt-4 mb-3;
+    @apply leading-7 [&:not(:first-child)]:mt-4 mb-3;
 }
 
 .markdown ul,
 .markdown ol {
-  @apply my-4 ml-6 list-disc [&>li]:mt-1;
+    @apply my-4 ml-6 list-disc [&>li]:mt-1;
 }
 
 /* Inline Code */
 .markdown code {
-  @apply relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold text-foreground;
+    @apply relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold text-foreground;
 }
 
-
 .markdown a {
-  @apply font-medium text-primary underline underline-offset-4 decoration-primary/30 hover:decoration-primary;
+    @apply font-medium text-primary underline underline-offset-4 decoration-primary/30 hover:decoration-primary;
 }
 
 .markdown pre code {
-  @apply bg-transparent p-0 text-inherit font-normal;
+    @apply bg-transparent p-0 text-inherit font-normal;
 }
 
 .markdown blockquote {
-  @apply mt-4 border-l-2 pl-6 italic text-muted-foreground;
+    @apply mt-4 border-l-2 pl-6 italic text-muted-foreground;
 }
 
 /* Images */
 .markdown img {
-  @apply rounded-md border border-border shadow-sm my-8 block mx-auto max-w-[700px] w-full;
+    @apply rounded-md border border-border shadow-sm my-8 block mx-auto max-w-[700px] w-full;
 }
 
 /* Docs Enhancements */
 .theme-doc-breadcrumbs {
-  display: none !important;
+    display: none !important;
 }
 
 /* TOC Styling Overrides */
 /* Hide the default border-left from Docusaurus if present/interfering */
 /* And customize link styling */
 .theme-doc-toc-desktop ul {
-  list-style: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .theme-doc-toc-desktop li {
-  margin: 0 !important;
-  padding-bottom: 0.5rem;
+    margin: 0 !important;
+    padding-bottom: 0.5rem;
 }
 
 /* Nested indentation for h3, h4, etc. */
 .theme-doc-toc-desktop ul ul {
-  padding-left: 0.75rem !important;
-  margin-top: 0.5rem !important;
+    padding-left: 0.75rem !important;
+    margin-top: 0.5rem !important;
 }
 
 .theme-doc-toc-desktop a {
-  @apply text-muted-foreground no-underline transition-colors hover:text-foreground block font-normal;
-  font-size: 0.875rem;
-  /* text-sm */
+    @apply text-muted-foreground no-underline transition-colors hover:text-foreground block font-normal;
+    font-size: 0.875rem;
+    /* text-sm */
 }
 
 /* Active State - handled by Docusaurus adding .table-of-contents__link--active */
 .table-of-contents__link--active,
 .theme-doc-toc-desktop a.table-of-contents__link--active {
-  @apply text-foreground;
-  font-weight: 600 !important;
-  color: hsl(var(--foreground)) !important;
-  border-left: 2px solid hsl(var(--primary));
-  padding-left: 0.75rem;
-  margin-left: -0.75rem;
+    @apply text-foreground;
+    font-weight: 600 !important;
+    color: hsl(var(--foreground)) !important;
+    border-left: 2px solid hsl(var(--primary));
+    padding-left: 0.75rem;
+    margin-left: -0.75rem;
 }
 
 /* Fix DocItem container alignment if needed in future */
 
-
 /* Heading Anchors */
 .hash-link {
-  @apply text-muted-foreground pl-2 no-underline hover:no-underline;
+    @apply text-muted-foreground pl-2 no-underline hover:no-underline;
 }
 
 /* Shadcn-like Table Overrides for Markdown Content */
 .markdown table {
-  @apply table w-full caption-bottom text-sm border-separate border-spacing-0 my-6 rounded-md border border-border overflow-hidden;
+    @apply table w-full caption-bottom text-sm border-separate border-spacing-0 my-6 rounded-md border border-border overflow-hidden;
 }
 
 .markdown table tr {
-  @apply bg-transparent transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted;
+    @apply bg-transparent transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted;
 }
 
 .markdown table th {
-  @apply h-10 px-4 text-left align-middle font-medium text-muted-foreground border-b border-border bg-transparent [&:has([role=checkbox])]:pr-0;
+    @apply h-10 px-4 text-left align-middle font-medium text-muted-foreground border-b border-border bg-transparent [&:has([role=checkbox])]:pr-0;
 }
 
 .markdown table td {
-  @apply p-2 align-middle border-b border-border [&:has([role=checkbox])]:pr-0;
+    @apply p-2 align-middle border-b border-border [&:has([role=checkbox])]:pr-0;
 }
 
 .markdown table tr:last-child td {
-  @apply border-b-0;
+    @apply border-b-0;
 }
 
 .markdown table caption {
-  @apply mt-4 text-sm text-muted-foreground;
+    @apply mt-4 text-sm text-muted-foreground;
 }

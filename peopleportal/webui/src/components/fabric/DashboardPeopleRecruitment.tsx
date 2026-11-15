@@ -841,1160 +841,1123 @@ export const DashboardPeopleRecruitment = () => {
                         className="flex gap-0 items-start w-full min-h-0 flex-1"
                     >
                         <div className="min-w-0 flex-1 pr-2">
-                                <div className="overflow-x-auto rounded-md border">
-                                    <Table>
-                                        <TableHeader>
-                                            {table
-                                                .getHeaderGroups()
-                                                .map((headerGroup) => (
-                                                    <TableRow
-                                                        key={headerGroup.id}
-                                                    >
-                                                        {headerGroup.headers.map(
-                                                            (header) => (
-                                                                <TableHead
-                                                                    key={
-                                                                        header.id
-                                                                    }
-                                                                >
-                                                                    {header.isPlaceholder
-                                                                        ? null
-                                                                        : flexRender(
-                                                                              header
-                                                                                  .column
-                                                                                  .columnDef
-                                                                                  .header,
-                                                                              header.getContext(),
-                                                                          )}
-                                                                </TableHead>
-                                                            ),
-                                                        )}
-                                                    </TableRow>
-                                                ))}
-                                        </TableHeader>
-                                        <TableBody>
-                                            {pageRows.length ? (
-                                                pageRows.map((row) => (
-                                                    <TableRow
-                                                        key={row.id}
-                                                        data-state={
-                                                            row.original
-                                                                .applicantId ===
-                                                                selectedApplicantId &&
-                                                            "selected"
-                                                        }
-                                                    >
-                                                        {row
-                                                            .getVisibleCells()
-                                                            .map((cell) => (
-                                                                <TableCell
-                                                                    key={
-                                                                        cell.id
-                                                                    }
-                                                                >
-                                                                    {flexRender(
-                                                                        cell
-                                                                            .column
-                                                                            .columnDef
-                                                                            .cell,
-                                                                        cell.getContext(),
-                                                                    )}
-                                                                </TableCell>
-                                                            ))}
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow>
-                                                    <TableCell
-                                                        colSpan={columns.length}
-                                                        className="h-24 text-center text-muted-foreground"
-                                                    >
-                                                        {isLoading ? (
-                                                            <Loader2Icon className="animate-spin h-6 w-6 mx-auto" />
-                                                        ) : (
-                                                            "No applicants match these filters."
-                                                        )}
-                                                    </TableCell>
+                            <div className="overflow-x-auto rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        {table
+                                            .getHeaderGroups()
+                                            .map((headerGroup) => (
+                                                <TableRow key={headerGroup.id}>
+                                                    {headerGroup.headers.map(
+                                                        (header) => (
+                                                            <TableHead
+                                                                key={header.id}
+                                                            >
+                                                                {header.isPlaceholder
+                                                                    ? null
+                                                                    : flexRender(
+                                                                          header
+                                                                              .column
+                                                                              .columnDef
+                                                                              .header,
+                                                                          header.getContext(),
+                                                                      )}
+                                                            </TableHead>
+                                                        ),
+                                                    )}
                                                 </TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-
-                                <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
-                                    <div className="whitespace-nowrap">
-                                        {filteredApplicants.length > 0 &&
-                                            `Showing ${pageStart + 1}–${Math.min(
-                                                pageStart + PAGE_SIZE,
-                                                filteredApplicants.length,
-                                            )} of ${filteredApplicants.length}`}
-                                    </div>
-                                    <Pagination className="mx-0 w-auto">
-                                        <PaginationContent>
-                                            <PaginationItem>
-                                                <PaginationPrevious
-                                                    className={cn(
-                                                        "cursor-pointer",
-                                                        !table.getCanPreviousPage() &&
-                                                            "pointer-events-none opacity-40",
-                                                    )}
-                                                    onClick={() =>
-                                                        table.previousPage()
-                                                    }
-                                                />
-                                            </PaginationItem>
-                                            {getPageNumbers(
-                                                pagination.pageIndex,
-                                                pageCount,
-                                            ).map((page, i) => (
-                                                <PaginationItem
-                                                    key={`${page}-${i}`}
-                                                >
-                                                    {page === "ellipsis" ? (
-                                                        <PaginationEllipsis />
-                                                    ) : (
-                                                        <PaginationLink
-                                                            className="cursor-pointer"
-                                                            isActive={
-                                                                page ===
-                                                                pagination.pageIndex
-                                                            }
-                                                            onClick={() =>
-                                                                table.setPageIndex(
-                                                                    page,
-                                                                )
-                                                            }
-                                                        >
-                                                            {page + 1}
-                                                        </PaginationLink>
-                                                    )}
-                                                </PaginationItem>
                                             ))}
-                                            <PaginationItem>
-                                                <PaginationNext
-                                                    className={cn(
-                                                        "cursor-pointer",
-                                                        !table.getCanNextPage() &&
-                                                            "pointer-events-none opacity-40",
-                                                    )}
-                                                    onClick={() =>
-                                                        table.nextPage()
+                                    </TableHeader>
+                                    <TableBody>
+                                        {pageRows.length ? (
+                                            pageRows.map((row) => (
+                                                <TableRow
+                                                    key={row.id}
+                                                    data-state={
+                                                        row.original
+                                                            .applicantId ===
+                                                            selectedApplicantId &&
+                                                        "selected"
                                                     }
-                                                />
-                                            </PaginationItem>
-                                        </PaginationContent>
-                                    </Pagination>
-                                </div>
+                                                >
+                                                    {row
+                                                        .getVisibleCells()
+                                                        .map((cell) => (
+                                                            <TableCell
+                                                                key={cell.id}
+                                                            >
+                                                                {flexRender(
+                                                                    cell.column
+                                                                        .columnDef
+                                                                        .cell,
+                                                                    cell.getContext(),
+                                                                )}
+                                                            </TableCell>
+                                                        ))}
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={columns.length}
+                                                    className="h-24 text-center text-muted-foreground"
+                                                >
+                                                    {isLoading ? (
+                                                        <Loader2Icon className="animate-spin h-6 w-6 mx-auto" />
+                                                    ) : (
+                                                        "No applicants match these filters."
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
 
-                            {selectedApplicant && activeApp && (
-                                <>
-                                    {/* Resize Handle */}
-                                    <div
-                                        className="w-3 shrink-0 cursor-col-resize group relative self-stretch"
-                                        role="separator"
-                                        aria-orientation="vertical"
-                                        aria-label="Resize applicant detail panel"
-                                        tabIndex={0}
-                                        onPointerDown={(e) => {
-                                            e.currentTarget.setPointerCapture(
-                                                e.pointerId,
-                                            );
-                                            setIsResizing(true);
-                                        }}
-                                        onPointerMove={handleResizeMove}
-                                        onPointerUp={() => setIsResizing(false)}
-                                        onPointerCancel={() =>
-                                            setIsResizing(false)
-                                        }
-                                        onKeyDown={handleResizeKey}
-                                    >
-                                        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border group-hover:bg-muted-foreground" />
-                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-12 w-1 rounded-full bg-border group-hover:bg-muted-foreground" />
-                                    </div>
+                            <div className="flex items-center justify-between mt-4 text-sm text-muted-foreground">
+                                <div className="whitespace-nowrap">
+                                    {filteredApplicants.length > 0 &&
+                                        `Showing ${pageStart + 1}–${Math.min(
+                                            pageStart + PAGE_SIZE,
+                                            filteredApplicants.length,
+                                        )} of ${filteredApplicants.length}`}
+                                </div>
+                                <Pagination className="mx-0 w-auto">
+                                    <PaginationContent>
+                                        <PaginationItem>
+                                            <PaginationPrevious
+                                                className={cn(
+                                                    "cursor-pointer",
+                                                    !table.getCanPreviousPage() &&
+                                                        "pointer-events-none opacity-40",
+                                                )}
+                                                onClick={() =>
+                                                    table.previousPage()
+                                                }
+                                            />
+                                        </PaginationItem>
+                                        {getPageNumbers(
+                                            pagination.pageIndex,
+                                            pageCount,
+                                        ).map((page, i) => (
+                                            <PaginationItem
+                                                key={`${page}-${i}`}
+                                            >
+                                                {page === "ellipsis" ? (
+                                                    <PaginationEllipsis />
+                                                ) : (
+                                                    <PaginationLink
+                                                        className="cursor-pointer"
+                                                        isActive={
+                                                            page ===
+                                                            pagination.pageIndex
+                                                        }
+                                                        onClick={() =>
+                                                            table.setPageIndex(
+                                                                page,
+                                                            )
+                                                        }
+                                                    >
+                                                        {page + 1}
+                                                    </PaginationLink>
+                                                )}
+                                            </PaginationItem>
+                                        ))}
+                                        <PaginationItem>
+                                            <PaginationNext
+                                                className={cn(
+                                                    "cursor-pointer",
+                                                    !table.getCanNextPage() &&
+                                                        "pointer-events-none opacity-40",
+                                                )}
+                                                onClick={() => table.nextPage()}
+                                            />
+                                        </PaginationItem>
+                                    </PaginationContent>
+                                </Pagination>
+                            </div>
+                        </div>
 
-                                    {/* Applicant Detail Panel */}
-                                    <Card
-                                        className="gap-0 py-0 shrink-0 self-stretch flex flex-col max-h-[calc(100vh-9rem)] min-h-[28rem] [&>*:first-child]:pt-0 [&>*:last-child]:pb-0"
-                                        style={{
-                                            width: panelWidth,
-                                            minWidth: MIN_PANEL_WIDTH,
-                                            maxWidth: MAX_PANEL_WIDTH,
-                                        }}
+                        {selectedApplicant && activeApp && (
+                            <>
+                                {/* Resize Handle */}
+                                <div
+                                    className="w-3 shrink-0 cursor-col-resize group relative self-stretch"
+                                    role="separator"
+                                    aria-orientation="vertical"
+                                    aria-label="Resize applicant detail panel"
+                                    tabIndex={0}
+                                    onPointerDown={(e) => {
+                                        e.currentTarget.setPointerCapture(
+                                            e.pointerId,
+                                        );
+                                        setIsResizing(true);
+                                    }}
+                                    onPointerMove={handleResizeMove}
+                                    onPointerUp={() => setIsResizing(false)}
+                                    onPointerCancel={() => setIsResizing(false)}
+                                    onKeyDown={handleResizeKey}
+                                >
+                                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-border group-hover:bg-muted-foreground" />
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-12 w-1 rounded-full bg-border group-hover:bg-muted-foreground" />
+                                </div>
+
+                                {/* Applicant Detail Panel */}
+                                <Card
+                                    className="gap-0 py-0 shrink-0 self-stretch flex flex-col max-h-[calc(100vh-9rem)] min-h-[28rem] [&>*:first-child]:pt-0 [&>*:last-child]:pb-0"
+                                    style={{
+                                        width: panelWidth,
+                                        minWidth: MIN_PANEL_WIDTH,
+                                        maxWidth: MAX_PANEL_WIDTH,
+                                    }}
+                                >
+                                    <Tabs
+                                        value={detailTab}
+                                        onValueChange={setDetailTab}
+                                        className="flex min-h-0 flex-1 flex-col gap-0"
                                     >
-                                        <Tabs
-                                            value={detailTab}
-                                            onValueChange={setDetailTab}
-                                            className="flex min-h-0 flex-1 flex-col gap-0"
-                                        >
-                                            <div className="shrink-0 border-b px-4 pb-4 pt-4">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="flex gap-3 min-w-0">
-                                                        <Avatar className="h-10 w-10 shrink-0 border">
-                                                            <AvatarFallback className="text-sm font-bold">
-                                                                {getInitials(
-                                                                    selectedApplicant.name,
-                                                                )}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="min-w-0">
-                                                            <div className="text-lg font-semibold leading-tight truncate">
-                                                                {
-                                                                    selectedApplicant.name
-                                                                }
-                                                            </div>
-                                                            <div className="text-sm text-muted-foreground mt-1 truncate">
-                                                                {activeEmail ||
-                                                                    "Loading email..."}
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground mt-1">
-                                                                Applied{" "}
-                                                                {formatLongDate(
-                                                                    activeApp.appliedAt,
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {renderStageBadge(
-                                                            activeApp.stage,
-                                                        )}
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger
-                                                                asChild
-                                                            >
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="icon"
-                                                                    className="h-8 w-8"
-                                                                >
-                                                                    <MoreVerticalIcon />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem
-                                                                    disabled={
-                                                                        !activeEmail
-                                                                    }
-                                                                    onClick={async () => {
-                                                                        try {
-                                                                            await navigator.clipboard.writeText(
-                                                                                activeEmail,
-                                                                            );
-                                                                            toast.info(
-                                                                                "Email copied to clipboard.",
-                                                                            );
-                                                                        } catch {
-                                                                            toast.error(
-                                                                                "Failed to copy email",
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    Copy Email
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    disabled={
-                                                                        !resumeUrls[
-                                                                            activeApp
-                                                                                .id
-                                                                        ]
-                                                                    }
-                                                                    onClick={() =>
-                                                                        window.open(
-                                                                            resumeUrls[
-                                                                                activeApp
-                                                                                    .id
-                                                                            ],
-                                                                            "_blank",
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Open Resume
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="icon"
-                                                            className="h-8 w-8"
-                                                            title="Close applicant panel"
-                                                            onClick={
-                                                                closeApplicant
+                                        <div className="shrink-0 border-b px-4 pb-4 pt-4">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="flex gap-3 min-w-0">
+                                                    <Avatar className="h-10 w-10 shrink-0 border">
+                                                        <AvatarFallback className="text-sm font-bold">
+                                                            {getInitials(
+                                                                selectedApplicant.name,
+                                                            )}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="min-w-0">
+                                                        <div className="text-lg font-semibold leading-tight truncate">
+                                                            {
+                                                                selectedApplicant.name
                                                             }
-                                                        >
-                                                            <XIcon />
-                                                        </Button>
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground mt-1 truncate">
+                                                            {activeEmail ||
+                                                                "Loading email..."}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground mt-1">
+                                                            Applied{" "}
+                                                            {formatLongDate(
+                                                                activeApp.appliedAt,
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-
-                                                <TabsList className="mt-4 w-full">
-                                                    <TabsTrigger value="overview">
-                                                        Overview
-                                                    </TabsTrigger>
-                                                    <TabsTrigger value="applications">
-                                                        Applications
-                                                    </TabsTrigger>
-                                                    <TabsTrigger value="notes">
-                                                        My Notes
-                                                    </TabsTrigger>
-                                                    <TabsTrigger value="history">
-                                                        History
-                                                    </TabsTrigger>
-                                                </TabsList>
-                                            </div>
-
-                                            <ScrollArea className="min-h-0 flex-1">
-                                                <div className="p-4 pb-6">
-                                                    {/* Overview */}
-                                                    <TabsContent
-                                                        value="overview"
-                                                        className="mt-0 space-y-5 data-[state=inactive]:hidden"
-                                                    >
-                                                        <Card
-                                                            className={
-                                                                SECTION_CARD
-                                                            }
+                                                <div className="flex items-center gap-2">
+                                                    {renderStageBadge(
+                                                        activeApp.stage,
+                                                    )}
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
                                                         >
-                                                            <CardHeader className="px-4">
-                                                                <CardTitle className="text-base">
-                                                                    About
-                                                                </CardTitle>
-                                                            </CardHeader>
-                                                            <CardContent className="px-4">
-                                                                {/* TODO(endpoint): The mock also shows School,
-                                                                    Graduation and Major, but applicant profiles
-                                                                    don't store them yet. LinkedIn and GitHub are
-                                                                    shown in their place. */}
-                                                                <div className="grid grid-cols-[105px_1fr] gap-y-2 text-sm">
-                                                                    <div className="text-muted-foreground">
-                                                                        Name
-                                                                    </div>
-                                                                    <div>
-                                                                        {
-                                                                            selectedApplicant.name
-                                                                        }
-                                                                    </div>
-                                                                    <div className="text-muted-foreground">
-                                                                        Email
-                                                                    </div>
-                                                                    <div className="break-all">
-                                                                        {activeEmail ||
-                                                                            "—"}
-                                                                    </div>
-                                                                    <div className="text-muted-foreground">
-                                                                        LinkedIn
-                                                                    </div>
-                                                                    <div className="break-all">
-                                                                        {activeDetails
-                                                                            ?.profile
-                                                                            ?.linkedinUrl ? (
-                                                                            <a
-                                                                                href={
-                                                                                    activeDetails
-                                                                                        .profile
-                                                                                        .linkedinUrl
-                                                                                }
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="text-blue-500 hover:underline"
-                                                                            >
-                                                                                Profile
-                                                                                ↗
-                                                                            </a>
-                                                                        ) : (
-                                                                            "—"
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="text-muted-foreground">
-                                                                        GitHub
-                                                                    </div>
-                                                                    <div className="break-all">
-                                                                        {activeDetails
-                                                                            ?.profile
-                                                                            ?.githubUrl ? (
-                                                                            <a
-                                                                                href={
-                                                                                    activeDetails
-                                                                                        .profile
-                                                                                        .githubUrl
-                                                                                }
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="text-blue-500 hover:underline"
-                                                                            >
-                                                                                Profile
-                                                                                ↗
-                                                                            </a>
-                                                                        ) : (
-                                                                            "—"
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="text-muted-foreground">
-                                                                        Resume
-                                                                    </div>
-                                                                    <div>
-                                                                        {resumeUrls[
-                                                                            activeApp
-                                                                                .id
-                                                                        ] ? (
-                                                                            <a
-                                                                                href={
-                                                                                    resumeUrls[
-                                                                                        activeApp
-                                                                                            .id
-                                                                                    ]
-                                                                                }
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="text-blue-500 hover:underline"
-                                                                            >
-                                                                                {
-                                                                                    selectedApplicant.name.split(
-                                                                                        " ",
-                                                                                    )[0]
-                                                                                }
-                                                                                's
-                                                                                Resume
-                                                                                ↗
-                                                                            </a>
-                                                                        ) : (
-                                                                            "—"
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-
-                                                        <Card
-                                                            className={
-                                                                SECTION_CARD
-                                                            }
-                                                        >
-                                                            <CardHeader className="px-4">
-                                                                <CardTitle className="text-base">
-                                                                    Application
-                                                                    Overview
-                                                                </CardTitle>
-                                                            </CardHeader>
-                                                            <CardContent className="px-4">
-                                                                <div className="grid grid-cols-2 gap-3">
-                                                                    {[
-                                                                        {
-                                                                            label: "Role Applied",
-                                                                            value: (
-                                                                                <span className="text-sm font-semibold">
-                                                                                    {activeApp.rolePreferences
-                                                                                        .map(
-                                                                                            (
-                                                                                                p,
-                                                                                            ) =>
-                                                                                                p.role,
-                                                                                        )
-                                                                                        .join(
-                                                                                            ", ",
-                                                                                        )}
-                                                                                </span>
-                                                                            ),
-                                                                        },
-                                                                        {
-                                                                            label: "Team / Org",
-                                                                            value: (
-                                                                                <span className="text-sm font-semibold">
-                                                                                    {
-                                                                                        activeApp.teamName
-                                                                                    }
-                                                                                </span>
-                                                                            ),
-                                                                        },
-                                                                        {
-                                                                            label: "Applied Date",
-                                                                            value: (
-                                                                                <span className="text-sm font-semibold">
-                                                                                    {formatLongDate(
-                                                                                        activeApp.appliedAt,
-                                                                                    )}
-                                                                                </span>
-                                                                            ),
-                                                                        },
-                                                                        {
-                                                                            label: "Status",
-                                                                            value: renderStageBadge(
-                                                                                activeApp.stage,
-                                                                            ),
-                                                                        },
-                                                                    ].map(
-                                                                        (
-                                                                            item,
-                                                                        ) => (
-                                                                            <div
-                                                                                key={
-                                                                                    item.label
-                                                                                }
-                                                                                className="border rounded-md p-3"
-                                                                            >
-                                                                                <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
-                                                                                    {
-                                                                                        item.label
-                                                                                    }
-                                                                                </div>
-                                                                                {
-                                                                                    item.value
-                                                                                }
-                                                                            </div>
-                                                                        ),
-                                                                    )}
-                                                                </div>
-                                                            </CardContent>
-                                                        </Card>
-
-                                                        <Card
-                                                            className={
-                                                                SECTION_CARD
-                                                            }
-                                                        >
-                                                            <CardHeader className="px-4">
-                                                                <CardTitle className="text-base">
-                                                                    Application
-                                                                    Responses
-                                                                </CardTitle>
-                                                            </CardHeader>
-                                                            <CardContent className="px-4">
-                                                                {activeDetails ? (
-                                                                    <Accordion
-                                                                        type="single"
-                                                                        collapsible
-                                                                    >
-                                                                        {[
-                                                                            [
-                                                                                "Why are you interested in joining App Dev?",
-                                                                                activeDetails
-                                                                                    .profile
-                                                                                    ?.whyAppDev,
-                                                                            ],
-                                                                            [
-                                                                                "Do you follow App Dev on Instagram?",
-                                                                                activeDetails
-                                                                                    .profile
-                                                                                    ?.instagramFollow,
-                                                                            ],
-                                                                            [
-                                                                                "Is there something else you'd like to tell us?",
-                                                                                activeDetails
-                                                                                    .profile
-                                                                                    ?.additionalInfo,
-                                                                            ],
-                                                                            ...Object.entries(
-                                                                                activeDetails.responses ??
-                                                                                    {},
-                                                                            ),
-                                                                        ]
-                                                                            .filter(
-                                                                                ([
-                                                                                    ,
-                                                                                    answer,
-                                                                                ]) =>
-                                                                                    !!answer,
-                                                                            )
-                                                                            .map(
-                                                                                (
-                                                                                    [
-                                                                                        question,
-                                                                                        answer,
-                                                                                    ],
-                                                                                    i,
-                                                                                ) => (
-                                                                                    <AccordionItem
-                                                                                        key={
-                                                                                            question
-                                                                                        }
-                                                                                        value={`response-${i}`}
-                                                                                    >
-                                                                                        <AccordionTrigger className="text-sm">
-                                                                                            {
-                                                                                                question
-                                                                                            }
-                                                                                        </AccordionTrigger>
-                                                                                        <AccordionContent className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                                                            {
-                                                                                                answer
-                                                                                            }
-                                                                                        </AccordionContent>
-                                                                                    </AccordionItem>
-                                                                                ),
-                                                                            )}
-                                                                    </Accordion>
-                                                                ) : detailsFailed[
-                                                                      activeApp
-                                                                          .id
-                                                                  ] ? (
-                                                                    <p className="text-sm text-muted-foreground">
-                                                                        Failed
-                                                                        to load
-                                                                        details.
-                                                                    </p>
-                                                                ) : (
-                                                                    <Loader2Icon className="animate-spin h-6 w-6 mx-auto text-muted-foreground" />
-                                                                )}
-                                                            </CardContent>
-                                                        </Card>
-
-                                                        <Card
-                                                            className={
-                                                                SECTION_CARD
-                                                            }
-                                                        >
-                                                            <CardHeader className="px-4">
-                                                                <CardTitle className="text-base">
-                                                                    Applications
-                                                                </CardTitle>
-                                                                <CardAction>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        onClick={() =>
-                                                                            setDetailTab(
-                                                                                "applications",
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        View All
-                                                                    </Button>
-                                                                </CardAction>
-                                                            </CardHeader>
-                                                            <CardContent className="px-4 space-y-2">
-                                                                {selectedApplicant.apps.map(
-                                                                    (app) => (
-                                                                        <div
-                                                                            key={
-                                                                                app.id
-                                                                            }
-                                                                            className="border rounded-md p-3 bg-background flex items-center justify-between gap-3"
-                                                                        >
-                                                                            <div className="min-w-0">
-                                                                                <div className="font-semibold text-sm">
-                                                                                    {
-                                                                                        app.teamName
-                                                                                    }
-                                                                                </div>
-                                                                                <div className="text-xs text-muted-foreground mt-1">
-                                                                                    {app.rolePreferences
-                                                                                        .map(
-                                                                                            (
-                                                                                                p,
-                                                                                            ) => {
-                                                                                                const title =
-                                                                                                    formatRolePreferenceLabel(
-                                                                                                        p,
-                                                                                                    );
-                                                                                                const sub =
-                                                                                                    p.subteamName?.trim();
-                                                                                                if (
-                                                                                                    sub &&
-                                                                                                    title !==
-                                                                                                        sub
-                                                                                                ) {
-                                                                                                    return `${title} (${sub})`;
-                                                                                                }
-                                                                                                return title;
-                                                                                            },
-                                                                                        )
-                                                                                        .join(
-                                                                                            " · ",
-                                                                                        )}
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="text-[11px] text-muted-foreground">
-                                                                                    {
-                                                                                        app
-                                                                                            .rolePreferences
-                                                                                            .length
-                                                                                    }{" "}
-                                                                                    role
-                                                                                    {app
-                                                                                        .rolePreferences
-                                                                                        .length ===
-                                                                                    1
-                                                                                        ? ""
-                                                                                        : "s"}
-                                                                                </span>
-                                                                                {renderStageBadge(
-                                                                                    app.stage,
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    ),
-                                                                )}
-                                                            </CardContent>
-                                                        </Card>
-                                                    </TabsContent>
-
-                                                    {/* Applications */}
-                                                    <TabsContent
-                                                        value="applications"
-                                                        className="mt-0 space-y-4 data-[state=inactive]:hidden"
-                                                    >
-                                                        <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                                                            Applied
-                                                            Organizations
-                                                        </div>
-                                                        {selectedApplicant.apps.map(
-                                                            (app) => {
-                                                                const isActive =
-                                                                    app.id ===
-                                                                    activeApp.id;
-                                                                const activeRoleKey =
-                                                                    activeRoles[
-                                                                        app.id
-                                                                    ] ??
-                                                                    app
-                                                                        .rolePreferences[0]
-                                                                        ?.role;
-                                                                const activePref =
-                                                                    app.rolePreferences.find(
-                                                                        (p) =>
-                                                                            p.role ===
-                                                                            activeRoleKey,
-                                                                    ) ??
-                                                                    app
-                                                                        .rolePreferences[0];
-                                                                const activeRoleLabel =
-                                                                    activePref
-                                                                        ? formatRolePreferenceLabel(
-                                                                              activePref,
-                                                                          )
-                                                                        : "—";
-                                                                const subteamLabel =
-                                                                    activePref?.subteamName?.trim() ||
-                                                                    openTeams
-                                                                        .find(
-                                                                            (
-                                                                                t,
-                                                                            ) =>
-                                                                                t.teamPk ===
-                                                                                app.teamPk,
-                                                                        )
-                                                                        ?.subteamInfo?.[
-                                                                        activePref?.subteamPk ??
-                                                                            ""
-                                                                    ]
-                                                                        ?.friendlyName ||
-                                                                    "—";
-                                                                const roleDescription =
-                                                                    openTeams.find(
-                                                                        (t) =>
-                                                                            t.teamPk ===
-                                                                            app.teamPk,
-                                                                    )
-                                                                        ?.subteamInfo?.[
-                                                                        activePref?.subteamPk ??
-                                                                            ""
-                                                                    ]
-                                                                        ?.description ||
-                                                                    activePref?.subteamName
-                                                                        ? `${activeRoleLabel} on the ${activePref.subteamName} subteam. Open the team recruitment view for full responses and materials.`
-                                                                        : "Open the team recruitment view for this applicant's responses and materials.";
-
-                                                                return (
-                                                                    <Card
-                                                                        key={
-                                                                            app.id
-                                                                        }
-                                                                        className={cn(
-                                                                            "gap-0 py-0 shadow-none",
-                                                                            isActive
-                                                                                ? "border-primary/60 bg-muted/50"
-                                                                                : "bg-muted/20",
-                                                                        )}
-                                                                    >
-                                                                        <div className="px-4 py-3">
-                                                                            <div className="flex items-center justify-between gap-3">
-                                                                                <button
-                                                                                    type="button"
-                                                                                    className="min-w-0 text-left text-sm font-semibold leading-snug"
-                                                                                    onClick={() =>
-                                                                                        setActiveAppId(
-                                                                                            app.id,
-                                                                                        )
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        app.teamName
-                                                                                    }
-                                                                                </button>
-                                                                                <Badge variant="outline">
-                                                                                    {
-                                                                                        app
-                                                                                            .rolePreferences
-                                                                                            .length
-                                                                                    }{" "}
-                                                                                    role
-                                                                                    {app
-                                                                                        .rolePreferences
-                                                                                        .length ===
-                                                                                    1
-                                                                                        ? ""
-                                                                                        : "s"}
-                                                                                </Badge>
-                                                                            </div>
-                                                                            {app
-                                                                                .rolePreferences
-                                                                                .length >
-                                                                                0 && (
-                                                                                <div className="mt-3 flex flex-wrap gap-2">
-                                                                                    {app.rolePreferences.map(
-                                                                                        (
-                                                                                            pref,
-                                                                                        ) => {
-                                                                                            const isSelectedRole =
-                                                                                                isActive &&
-                                                                                                pref.role ===
-                                                                                                    activeRoleKey;
-                                                                                            return (
-                                                                                                <Button
-                                                                                                    key={`${app.id}-${pref.subteamPk}-${pref.role}`}
-                                                                                                    size="sm"
-                                                                                                    className="h-auto min-h-7 max-w-full whitespace-normal px-2.5 py-1 text-xs text-left"
-                                                                                                    variant={
-                                                                                                        isSelectedRole
-                                                                                                            ? "secondary"
-                                                                                                            : "outline"
-                                                                                                    }
-                                                                                                    onClick={() => {
-                                                                                                        setActiveAppId(
-                                                                                                            app.id,
-                                                                                                        );
-                                                                                                        setActiveRoles(
-                                                                                                            (
-                                                                                                                prev,
-                                                                                                            ) => ({
-                                                                                                                ...prev,
-                                                                                                                [app.id]:
-                                                                                                                    pref.role,
-                                                                                                            }),
-                                                                                                        );
-                                                                                                    }}
-                                                                                                >
-                                                                                                    <span className="font-medium">
-                                                                                                        {formatRolePreferenceLabel(
-                                                                                                            pref,
-                                                                                                        )}
-                                                                                                    </span>
-                                                                                                    {pref.subteamName &&
-                                                                                                    formatRolePreferenceLabel(
-                                                                                                        pref,
-                                                                                                    ) !==
-                                                                                                        pref.subteamName.trim() ? (
-                                                                                                        <span className="ml-1 font-normal text-muted-foreground">
-                                                                                                            (
-                                                                                                            {
-                                                                                                                pref.subteamName
-                                                                                                            }
-                                                                                                            )
-                                                                                                        </span>
-                                                                                                    ) : null}
-                                                                                                </Button>
-                                                                                            );
-                                                                                        },
-                                                                                    )}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-
-                                                                        {isActive && (
-                                                                            <div className="space-y-4 border-t bg-muted/30 px-4 py-4">
-                                                                                <div className="flex items-start justify-between gap-3">
-                                                                                    <div className="min-w-0">
-                                                                                        <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                                                                                            Selected
-                                                                                            role
-                                                                                        </div>
-                                                                                        <div className="text-sm font-semibold leading-snug">
-                                                                                            {
-                                                                                                activeRoleLabel
-                                                                                            }
-                                                                                        </div>
-                                                                                        <div className="mt-1 text-xs text-muted-foreground">
-                                                                                            Subteam:{" "}
-                                                                                            {
-                                                                                                subteamLabel
-                                                                                            }
-                                                                                        </div>
-                                                                                    </div>
-                                                                                    <Button
-                                                                                        variant="outline"
-                                                                                        size="sm"
-                                                                                        className="shrink-0"
-                                                                                        onClick={() =>
-                                                                                            navigate(
-                                                                                                `/org/teams/${app.teamPk}/recruitment`,
-                                                                                            )
-                                                                                        }
-                                                                                    >
-                                                                                        View
-                                                                                        Application
-                                                                                    </Button>
-                                                                                </div>
-                                                                                <p className="text-sm leading-6 text-muted-foreground">
-                                                                                    {
-                                                                                        roleDescription
-                                                                                    }
-                                                                                </p>
-                                                                                <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t pt-3 text-sm">
-                                                                                    <div className="text-muted-foreground">
-                                                                                        Applied
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        {formatLongDate(
-                                                                                            app.appliedAt,
-                                                                                        )}
-                                                                                    </div>
-                                                                                    <div className="text-muted-foreground">
-                                                                                        Status
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        {renderStageBadge(
-                                                                                            app.stage,
-                                                                                        )}
-                                                                                    </div>
-                                                                                    {app.hiredRole ? (
-                                                                                        <>
-                                                                                            <div className="text-muted-foreground">
-                                                                                                Hired
-                                                                                                role
-                                                                                            </div>
-                                                                                            <div>
-                                                                                                {
-                                                                                                    app.hiredRole
-                                                                                                }
-                                                                                            </div>
-                                                                                        </>
-                                                                                    ) : null}
-                                                                                    <div className="text-muted-foreground">
-                                                                                        Rating
-                                                                                    </div>
-                                                                                    <div className="flex items-center gap-1">
-                                                                                        <Ratings
-                                                                                            variant="yellow"
-                                                                                            totalStars={
-                                                                                                5
-                                                                                            }
-                                                                                            value={
-                                                                                                app.stars ??
-                                                                                                0
-                                                                                            }
-                                                                                            size={
-                                                                                                14
-                                                                                            }
-                                                                                        />
-                                                                                        {app.stars ===
-                                                                                        0 ? (
-                                                                                            <span className="text-xs text-muted-foreground">
-                                                                                                Not
-                                                                                                rated
-                                                                                                (see
-                                                                                                team
-                                                                                                board)
-                                                                                            </span>
-                                                                                        ) : null}
-                                                                                    </div>
-                                                                                </div>
-                                                                                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                                                                                    Question
-                                                                                    responses,
-                                                                                    resume,
-                                                                                    notes,
-                                                                                    and
-                                                                                    stage
-                                                                                    history
-                                                                                    for
-                                                                                    this
-                                                                                    application
-                                                                                    are
-                                                                                    on
-                                                                                    Overview,
-                                                                                    My
-                                                                                    Notes,
-                                                                                    and
-                                                                                    History
-                                                                                    tabs,
-                                                                                    or
-                                                                                    in
-                                                                                    the
-                                                                                    team
-                                                                                    recruitment
-                                                                                    view.
-                                                                                </p>
-                                                                            </div>
-                                                                        )}
-                                                                    </Card>
-                                                                );
-                                                            },
-                                                        )}
-                                                    </TabsContent>
-
-                                                    {/* My Notes */}
-                                                    <TabsContent
-                                                        value="notes"
-                                                        className="mt-0 space-y-4 data-[state=inactive]:hidden"
-                                                    >
-                                                        <div className="flex items-center justify-between">
-                                                            <div>
-                                                                <div className="font-semibold">
-                                                                    My Private
-                                                                    Notes
-                                                                </div>
-                                                                <div className="text-xs text-muted-foreground mt-1">
-                                                                    Only visible
-                                                                    to you
-                                                                </div>
-                                                            </div>
-                                                            <div className="text-xs text-muted-foreground">
-                                                                Reviewer
-                                                                workspace
-                                                            </div>
-                                                        </div>
-                                                        <Textarea
-                                                            rows={10}
-                                                            placeholder="Write your notes about this applicant..."
-                                                            value={notesText}
-                                                            onChange={(e) =>
-                                                                setNotesText(
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                        />
-                                                        <div className="flex justify-end gap-2">
                                                             <Button
                                                                 variant="outline"
-                                                                onClick={() =>
-                                                                    setNotesText(
-                                                                        savedNotesText,
-                                                                    )
-                                                                }
+                                                                size="icon"
+                                                                className="h-8 w-8"
                                                             >
-                                                                Cancel
+                                                                <MoreVerticalIcon />
                                                             </Button>
-                                                            <Button
-                                                                onClick={
-                                                                    saveNotes
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                disabled={
+                                                                    !activeEmail
                                                                 }
+                                                                onClick={async () => {
+                                                                    try {
+                                                                        await navigator.clipboard.writeText(
+                                                                            activeEmail,
+                                                                        );
+                                                                        toast.info(
+                                                                            "Email copied to clipboard.",
+                                                                        );
+                                                                    } catch {
+                                                                        toast.error(
+                                                                            "Failed to copy email",
+                                                                        );
+                                                                    }
+                                                                }}
                                                             >
-                                                                Save Notes
-                                                            </Button>
-                                                        </div>
-                                                        <div className="text-[11px] text-muted-foreground text-right">
-                                                            {notesState}
-                                                        </div>
-                                                    </TabsContent>
-
-                                                    {/* History */}
-                                                    <TabsContent
-                                                        value="history"
-                                                        className="mt-0 space-y-4 data-[state=inactive]:hidden"
-                                                    >
-                                                        <div className="font-semibold">
-                                                            Application Timeline
-                                                        </div>
-                                                        <Card
-                                                            className={
-                                                                SECTION_CARD
-                                                            }
-                                                        >
-                                                            <CardContent className="px-4">
-                                                                {activeDetails ? (
-                                                                    <Timeline size="sm">
-                                                                        {activeDetails.stageHistory
-                                                                            ?.slice()
-                                                                            .map(
-                                                                                (
-                                                                                    history,
-                                                                                    index,
-                                                                                ) => (
-                                                                                    <TimelineItem
-                                                                                        key={
-                                                                                            index
-                                                                                        }
-                                                                                        date={new Date(
-                                                                                            history.changedAt,
-                                                                                        ).toLocaleString()}
-                                                                                        title={
-                                                                                            history.stage
-                                                                                        }
-                                                                                        icon={getTimelineStageIcon(
-                                                                                            history.stage,
-                                                                                        )}
-                                                                                        iconColor={
-                                                                                            STAGE_STYLES[
-                                                                                                history
-                                                                                                    .stage
-                                                                                            ]
-                                                                                        }
-                                                                                        description={`Changed by ${history.changedBy || "System"}`}
-                                                                                    />
-                                                                                ),
-                                                                            )}
-                                                                    </Timeline>
-                                                                ) : detailsFailed[
-                                                                      activeApp
-                                                                          .id
-                                                                  ] ? (
-                                                                    <p className="text-sm text-muted-foreground">
-                                                                        Failed
-                                                                        to load
-                                                                        history.
-                                                                    </p>
-                                                                ) : (
-                                                                    <Loader2Icon className="animate-spin h-6 w-6 mx-auto text-muted-foreground" />
-                                                                )}
-                                                            </CardContent>
-                                                        </Card>
-
-                                                        <div className="font-semibold">
-                                                            Quick Actions
-                                                        </div>
-                                                        <div className="grid grid-cols-1 gap-2">
-                                                            <Button
-                                                                variant="outline"
+                                                                Copy Email
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                disabled={
+                                                                    !resumeUrls[
+                                                                        activeApp
+                                                                            .id
+                                                                    ]
+                                                                }
                                                                 onClick={() =>
                                                                     window.open(
-                                                                        `/org/teams/${activeApp.teamPk}/recruitment`,
+                                                                        resumeUrls[
+                                                                            activeApp
+                                                                                .id
+                                                                        ],
                                                                         "_blank",
                                                                     )
                                                                 }
                                                             >
-                                                                Open in New Tab
-                                                                <ExternalLinkIcon />
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                onClick={() =>
-                                                                    navigate(
-                                                                        `/org/teams/${activeApp.teamPk}/recruitment`,
-                                                                    )
-                                                                }
-                                                            >
-                                                                View Application
-                                                            </Button>
-                                                            <Button
-                                                                onClick={() =>
-                                                                    setDetailTab(
-                                                                        "notes",
-                                                                    )
-                                                                }
-                                                            >
-                                                                My Notes
-                                                            </Button>
-                                                        </div>
-                                                    </TabsContent>
+                                                                Open Resume
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        title="Close applicant panel"
+                                                        onClick={closeApplicant}
+                                                    >
+                                                        <XIcon />
+                                                    </Button>
                                                 </div>
-                                            </ScrollArea>
-                                        </Tabs>
-                                    </Card>
-                                </>
-                            )}
+                                            </div>
+
+                                            <TabsList className="mt-4 w-full">
+                                                <TabsTrigger value="overview">
+                                                    Overview
+                                                </TabsTrigger>
+                                                <TabsTrigger value="applications">
+                                                    Applications
+                                                </TabsTrigger>
+                                                <TabsTrigger value="notes">
+                                                    My Notes
+                                                </TabsTrigger>
+                                                <TabsTrigger value="history">
+                                                    History
+                                                </TabsTrigger>
+                                            </TabsList>
+                                        </div>
+
+                                        <ScrollArea className="min-h-0 flex-1">
+                                            <div className="p-4 pb-6">
+                                                {/* Overview */}
+                                                <TabsContent
+                                                    value="overview"
+                                                    className="mt-0 space-y-5 data-[state=inactive]:hidden"
+                                                >
+                                                    <Card
+                                                        className={SECTION_CARD}
+                                                    >
+                                                        <CardHeader className="px-4">
+                                                            <CardTitle className="text-base">
+                                                                About
+                                                            </CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent className="px-4">
+                                                            {/* TODO(endpoint): The mock also shows School,
+                                                                    Graduation and Major, but applicant profiles
+                                                                    don't store them yet. LinkedIn and GitHub are
+                                                                    shown in their place. */}
+                                                            <div className="grid grid-cols-[105px_1fr] gap-y-2 text-sm">
+                                                                <div className="text-muted-foreground">
+                                                                    Name
+                                                                </div>
+                                                                <div>
+                                                                    {
+                                                                        selectedApplicant.name
+                                                                    }
+                                                                </div>
+                                                                <div className="text-muted-foreground">
+                                                                    Email
+                                                                </div>
+                                                                <div className="break-all">
+                                                                    {activeEmail ||
+                                                                        "—"}
+                                                                </div>
+                                                                <div className="text-muted-foreground">
+                                                                    LinkedIn
+                                                                </div>
+                                                                <div className="break-all">
+                                                                    {activeDetails
+                                                                        ?.profile
+                                                                        ?.linkedinUrl ? (
+                                                                        <a
+                                                                            href={
+                                                                                activeDetails
+                                                                                    .profile
+                                                                                    .linkedinUrl
+                                                                            }
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-blue-500 hover:underline"
+                                                                        >
+                                                                            Profile
+                                                                            ↗
+                                                                        </a>
+                                                                    ) : (
+                                                                        "—"
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-muted-foreground">
+                                                                    GitHub
+                                                                </div>
+                                                                <div className="break-all">
+                                                                    {activeDetails
+                                                                        ?.profile
+                                                                        ?.githubUrl ? (
+                                                                        <a
+                                                                            href={
+                                                                                activeDetails
+                                                                                    .profile
+                                                                                    .githubUrl
+                                                                            }
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-blue-500 hover:underline"
+                                                                        >
+                                                                            Profile
+                                                                            ↗
+                                                                        </a>
+                                                                    ) : (
+                                                                        "—"
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-muted-foreground">
+                                                                    Resume
+                                                                </div>
+                                                                <div>
+                                                                    {resumeUrls[
+                                                                        activeApp
+                                                                            .id
+                                                                    ] ? (
+                                                                        <a
+                                                                            href={
+                                                                                resumeUrls[
+                                                                                    activeApp
+                                                                                        .id
+                                                                                ]
+                                                                            }
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="text-blue-500 hover:underline"
+                                                                        >
+                                                                            {
+                                                                                selectedApplicant.name.split(
+                                                                                    " ",
+                                                                                )[0]
+                                                                            }
+                                                                            's
+                                                                            Resume
+                                                                            ↗
+                                                                        </a>
+                                                                    ) : (
+                                                                        "—"
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+
+                                                    <Card
+                                                        className={SECTION_CARD}
+                                                    >
+                                                        <CardHeader className="px-4">
+                                                            <CardTitle className="text-base">
+                                                                Application
+                                                                Overview
+                                                            </CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent className="px-4">
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                {[
+                                                                    {
+                                                                        label: "Role Applied",
+                                                                        value: (
+                                                                            <span className="text-sm font-semibold">
+                                                                                {activeApp.rolePreferences
+                                                                                    .map(
+                                                                                        (
+                                                                                            p,
+                                                                                        ) =>
+                                                                                            p.role,
+                                                                                    )
+                                                                                    .join(
+                                                                                        ", ",
+                                                                                    )}
+                                                                            </span>
+                                                                        ),
+                                                                    },
+                                                                    {
+                                                                        label: "Team / Org",
+                                                                        value: (
+                                                                            <span className="text-sm font-semibold">
+                                                                                {
+                                                                                    activeApp.teamName
+                                                                                }
+                                                                            </span>
+                                                                        ),
+                                                                    },
+                                                                    {
+                                                                        label: "Applied Date",
+                                                                        value: (
+                                                                            <span className="text-sm font-semibold">
+                                                                                {formatLongDate(
+                                                                                    activeApp.appliedAt,
+                                                                                )}
+                                                                            </span>
+                                                                        ),
+                                                                    },
+                                                                    {
+                                                                        label: "Status",
+                                                                        value: renderStageBadge(
+                                                                            activeApp.stage,
+                                                                        ),
+                                                                    },
+                                                                ].map(
+                                                                    (item) => (
+                                                                        <div
+                                                                            key={
+                                                                                item.label
+                                                                            }
+                                                                            className="border rounded-md p-3"
+                                                                        >
+                                                                            <div className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">
+                                                                                {
+                                                                                    item.label
+                                                                                }
+                                                                            </div>
+                                                                            {
+                                                                                item.value
+                                                                            }
+                                                                        </div>
+                                                                    ),
+                                                                )}
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+
+                                                    <Card
+                                                        className={SECTION_CARD}
+                                                    >
+                                                        <CardHeader className="px-4">
+                                                            <CardTitle className="text-base">
+                                                                Application
+                                                                Responses
+                                                            </CardTitle>
+                                                        </CardHeader>
+                                                        <CardContent className="px-4">
+                                                            {activeDetails ? (
+                                                                <Accordion
+                                                                    type="single"
+                                                                    collapsible
+                                                                >
+                                                                    {[
+                                                                        [
+                                                                            "Why are you interested in joining App Dev?",
+                                                                            activeDetails
+                                                                                .profile
+                                                                                ?.whyAppDev,
+                                                                        ],
+                                                                        [
+                                                                            "Do you follow App Dev on Instagram?",
+                                                                            activeDetails
+                                                                                .profile
+                                                                                ?.instagramFollow,
+                                                                        ],
+                                                                        [
+                                                                            "Is there something else you'd like to tell us?",
+                                                                            activeDetails
+                                                                                .profile
+                                                                                ?.additionalInfo,
+                                                                        ],
+                                                                        ...Object.entries(
+                                                                            activeDetails.responses ??
+                                                                                {},
+                                                                        ),
+                                                                    ]
+                                                                        .filter(
+                                                                            ([
+                                                                                ,
+                                                                                answer,
+                                                                            ]) =>
+                                                                                !!answer,
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                [
+                                                                                    question,
+                                                                                    answer,
+                                                                                ],
+                                                                                i,
+                                                                            ) => (
+                                                                                <AccordionItem
+                                                                                    key={
+                                                                                        question
+                                                                                    }
+                                                                                    value={`response-${i}`}
+                                                                                >
+                                                                                    <AccordionTrigger className="text-sm">
+                                                                                        {
+                                                                                            question
+                                                                                        }
+                                                                                    </AccordionTrigger>
+                                                                                    <AccordionContent className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                                                        {
+                                                                                            answer
+                                                                                        }
+                                                                                    </AccordionContent>
+                                                                                </AccordionItem>
+                                                                            ),
+                                                                        )}
+                                                                </Accordion>
+                                                            ) : detailsFailed[
+                                                                  activeApp.id
+                                                              ] ? (
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    Failed to
+                                                                    load
+                                                                    details.
+                                                                </p>
+                                                            ) : (
+                                                                <Loader2Icon className="animate-spin h-6 w-6 mx-auto text-muted-foreground" />
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+
+                                                    <Card
+                                                        className={SECTION_CARD}
+                                                    >
+                                                        <CardHeader className="px-4">
+                                                            <CardTitle className="text-base">
+                                                                Applications
+                                                            </CardTitle>
+                                                            <CardAction>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() =>
+                                                                        setDetailTab(
+                                                                            "applications",
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    View All
+                                                                </Button>
+                                                            </CardAction>
+                                                        </CardHeader>
+                                                        <CardContent className="px-4 space-y-2">
+                                                            {selectedApplicant.apps.map(
+                                                                (app) => (
+                                                                    <div
+                                                                        key={
+                                                                            app.id
+                                                                        }
+                                                                        className="border rounded-md p-3 bg-background flex items-center justify-between gap-3"
+                                                                    >
+                                                                        <div className="min-w-0">
+                                                                            <div className="font-semibold text-sm">
+                                                                                {
+                                                                                    app.teamName
+                                                                                }
+                                                                            </div>
+                                                                            <div className="text-xs text-muted-foreground mt-1">
+                                                                                {app.rolePreferences
+                                                                                    .map(
+                                                                                        (
+                                                                                            p,
+                                                                                        ) => {
+                                                                                            const title =
+                                                                                                formatRolePreferenceLabel(
+                                                                                                    p,
+                                                                                                );
+                                                                                            const sub =
+                                                                                                p.subteamName?.trim();
+                                                                                            if (
+                                                                                                sub &&
+                                                                                                title !==
+                                                                                                    sub
+                                                                                            ) {
+                                                                                                return `${title} (${sub})`;
+                                                                                            }
+                                                                                            return title;
+                                                                                        },
+                                                                                    )
+                                                                                    .join(
+                                                                                        " · ",
+                                                                                    )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[11px] text-muted-foreground">
+                                                                                {
+                                                                                    app
+                                                                                        .rolePreferences
+                                                                                        .length
+                                                                                }{" "}
+                                                                                role
+                                                                                {app
+                                                                                    .rolePreferences
+                                                                                    .length ===
+                                                                                1
+                                                                                    ? ""
+                                                                                    : "s"}
+                                                                            </span>
+                                                                            {renderStageBadge(
+                                                                                app.stage,
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ),
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+                                                </TabsContent>
+
+                                                {/* Applications */}
+                                                <TabsContent
+                                                    value="applications"
+                                                    className="mt-0 space-y-4 data-[state=inactive]:hidden"
+                                                >
+                                                    <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                                                        Applied Organizations
+                                                    </div>
+                                                    {selectedApplicant.apps.map(
+                                                        (app) => {
+                                                            const isActive =
+                                                                app.id ===
+                                                                activeApp.id;
+                                                            const activeRoleKey =
+                                                                activeRoles[
+                                                                    app.id
+                                                                ] ??
+                                                                app
+                                                                    .rolePreferences[0]
+                                                                    ?.role;
+                                                            const activePref =
+                                                                app.rolePreferences.find(
+                                                                    (p) =>
+                                                                        p.role ===
+                                                                        activeRoleKey,
+                                                                ) ??
+                                                                app
+                                                                    .rolePreferences[0];
+                                                            const activeRoleLabel =
+                                                                activePref
+                                                                    ? formatRolePreferenceLabel(
+                                                                          activePref,
+                                                                      )
+                                                                    : "—";
+                                                            const subteamLabel =
+                                                                activePref?.subteamName?.trim() ||
+                                                                openTeams.find(
+                                                                    (t) =>
+                                                                        t.teamPk ===
+                                                                        app.teamPk,
+                                                                )
+                                                                    ?.subteamInfo?.[
+                                                                    activePref?.subteamPk ??
+                                                                        ""
+                                                                ]
+                                                                    ?.friendlyName ||
+                                                                "—";
+                                                            const roleDescription =
+                                                                openTeams.find(
+                                                                    (t) =>
+                                                                        t.teamPk ===
+                                                                        app.teamPk,
+                                                                )
+                                                                    ?.subteamInfo?.[
+                                                                    activePref?.subteamPk ??
+                                                                        ""
+                                                                ]
+                                                                    ?.description ||
+                                                                activePref?.subteamName
+                                                                    ? `${activeRoleLabel} on the ${activePref.subteamName} subteam. Open the team recruitment view for full responses and materials.`
+                                                                    : "Open the team recruitment view for this applicant's responses and materials.";
+
+                                                            return (
+                                                                <Card
+                                                                    key={app.id}
+                                                                    className={cn(
+                                                                        "gap-0 py-0 shadow-none",
+                                                                        isActive
+                                                                            ? "border-primary/60 bg-muted/50"
+                                                                            : "bg-muted/20",
+                                                                    )}
+                                                                >
+                                                                    <div className="px-4 py-3">
+                                                                        <div className="flex items-center justify-between gap-3">
+                                                                            <button
+                                                                                type="button"
+                                                                                className="min-w-0 text-left text-sm font-semibold leading-snug"
+                                                                                onClick={() =>
+                                                                                    setActiveAppId(
+                                                                                        app.id,
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    app.teamName
+                                                                                }
+                                                                            </button>
+                                                                            <Badge variant="outline">
+                                                                                {
+                                                                                    app
+                                                                                        .rolePreferences
+                                                                                        .length
+                                                                                }{" "}
+                                                                                role
+                                                                                {app
+                                                                                    .rolePreferences
+                                                                                    .length ===
+                                                                                1
+                                                                                    ? ""
+                                                                                    : "s"}
+                                                                            </Badge>
+                                                                        </div>
+                                                                        {app
+                                                                            .rolePreferences
+                                                                            .length >
+                                                                            0 && (
+                                                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                                                {app.rolePreferences.map(
+                                                                                    (
+                                                                                        pref,
+                                                                                    ) => {
+                                                                                        const isSelectedRole =
+                                                                                            isActive &&
+                                                                                            pref.role ===
+                                                                                                activeRoleKey;
+                                                                                        return (
+                                                                                            <Button
+                                                                                                key={`${app.id}-${pref.subteamPk}-${pref.role}`}
+                                                                                                size="sm"
+                                                                                                className="h-auto min-h-7 max-w-full whitespace-normal px-2.5 py-1 text-xs text-left"
+                                                                                                variant={
+                                                                                                    isSelectedRole
+                                                                                                        ? "secondary"
+                                                                                                        : "outline"
+                                                                                                }
+                                                                                                onClick={() => {
+                                                                                                    setActiveAppId(
+                                                                                                        app.id,
+                                                                                                    );
+                                                                                                    setActiveRoles(
+                                                                                                        (
+                                                                                                            prev,
+                                                                                                        ) => ({
+                                                                                                            ...prev,
+                                                                                                            [app.id]:
+                                                                                                                pref.role,
+                                                                                                        }),
+                                                                                                    );
+                                                                                                }}
+                                                                                            >
+                                                                                                <span className="font-medium">
+                                                                                                    {formatRolePreferenceLabel(
+                                                                                                        pref,
+                                                                                                    )}
+                                                                                                </span>
+                                                                                                {pref.subteamName &&
+                                                                                                formatRolePreferenceLabel(
+                                                                                                    pref,
+                                                                                                ) !==
+                                                                                                    pref.subteamName.trim() ? (
+                                                                                                    <span className="ml-1 font-normal text-muted-foreground">
+                                                                                                        (
+                                                                                                        {
+                                                                                                            pref.subteamName
+                                                                                                        }
+
+                                                                                                        )
+                                                                                                    </span>
+                                                                                                ) : null}
+                                                                                            </Button>
+                                                                                        );
+                                                                                    },
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {isActive && (
+                                                                        <div className="space-y-4 border-t bg-muted/30 px-4 py-4">
+                                                                            <div className="flex items-start justify-between gap-3">
+                                                                                <div className="min-w-0">
+                                                                                    <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                                                                                        Selected
+                                                                                        role
+                                                                                    </div>
+                                                                                    <div className="text-sm font-semibold leading-snug">
+                                                                                        {
+                                                                                            activeRoleLabel
+                                                                                        }
+                                                                                    </div>
+                                                                                    <div className="mt-1 text-xs text-muted-foreground">
+                                                                                        Subteam:{" "}
+                                                                                        {
+                                                                                            subteamLabel
+                                                                                        }
+                                                                                    </div>
+                                                                                </div>
+                                                                                <Button
+                                                                                    variant="outline"
+                                                                                    size="sm"
+                                                                                    className="shrink-0"
+                                                                                    onClick={() =>
+                                                                                        navigate(
+                                                                                            `/org/teams/${app.teamPk}/recruitment`,
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    View
+                                                                                    Application
+                                                                                </Button>
+                                                                            </div>
+                                                                            <p className="text-sm leading-6 text-muted-foreground">
+                                                                                {
+                                                                                    roleDescription
+                                                                                }
+                                                                            </p>
+                                                                            <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 border-t pt-3 text-sm">
+                                                                                <div className="text-muted-foreground">
+                                                                                    Applied
+                                                                                </div>
+                                                                                <div>
+                                                                                    {formatLongDate(
+                                                                                        app.appliedAt,
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="text-muted-foreground">
+                                                                                    Status
+                                                                                </div>
+                                                                                <div>
+                                                                                    {renderStageBadge(
+                                                                                        app.stage,
+                                                                                    )}
+                                                                                </div>
+                                                                                {app.hiredRole ? (
+                                                                                    <>
+                                                                                        <div className="text-muted-foreground">
+                                                                                            Hired
+                                                                                            role
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            {
+                                                                                                app.hiredRole
+                                                                                            }
+                                                                                        </div>
+                                                                                    </>
+                                                                                ) : null}
+                                                                                <div className="text-muted-foreground">
+                                                                                    Rating
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <Ratings
+                                                                                        variant="yellow"
+                                                                                        totalStars={
+                                                                                            5
+                                                                                        }
+                                                                                        value={
+                                                                                            app.stars ??
+                                                                                            0
+                                                                                        }
+                                                                                        size={
+                                                                                            14
+                                                                                        }
+                                                                                    />
+                                                                                    {app.stars ===
+                                                                                    0 ? (
+                                                                                        <span className="text-xs text-muted-foreground">
+                                                                                            Not
+                                                                                            rated
+                                                                                            (see
+                                                                                            team
+                                                                                            board)
+                                                                                        </span>
+                                                                                    ) : null}
+                                                                                </div>
+                                                                            </div>
+                                                                            <p className="text-[11px] leading-relaxed text-muted-foreground">
+                                                                                Question
+                                                                                responses,
+                                                                                resume,
+                                                                                notes,
+                                                                                and
+                                                                                stage
+                                                                                history
+                                                                                for
+                                                                                this
+                                                                                application
+                                                                                are
+                                                                                on
+                                                                                Overview,
+                                                                                My
+                                                                                Notes,
+                                                                                and
+                                                                                History
+                                                                                tabs,
+                                                                                or
+                                                                                in
+                                                                                the
+                                                                                team
+                                                                                recruitment
+                                                                                view.
+                                                                            </p>
+                                                                        </div>
+                                                                    )}
+                                                                </Card>
+                                                            );
+                                                        },
+                                                    )}
+                                                </TabsContent>
+
+                                                {/* My Notes */}
+                                                <TabsContent
+                                                    value="notes"
+                                                    className="mt-0 space-y-4 data-[state=inactive]:hidden"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <div className="font-semibold">
+                                                                My Private Notes
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground mt-1">
+                                                                Only visible to
+                                                                you
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            Reviewer workspace
+                                                        </div>
+                                                    </div>
+                                                    <Textarea
+                                                        rows={10}
+                                                        placeholder="Write your notes about this applicant..."
+                                                        value={notesText}
+                                                        onChange={(e) =>
+                                                            setNotesText(
+                                                                e.target.value,
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                setNotesText(
+                                                                    savedNotesText,
+                                                                )
+                                                            }
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                        <Button
+                                                            onClick={saveNotes}
+                                                        >
+                                                            Save Notes
+                                                        </Button>
+                                                    </div>
+                                                    <div className="text-[11px] text-muted-foreground text-right">
+                                                        {notesState}
+                                                    </div>
+                                                </TabsContent>
+
+                                                {/* History */}
+                                                <TabsContent
+                                                    value="history"
+                                                    className="mt-0 space-y-4 data-[state=inactive]:hidden"
+                                                >
+                                                    <div className="font-semibold">
+                                                        Application Timeline
+                                                    </div>
+                                                    <Card
+                                                        className={SECTION_CARD}
+                                                    >
+                                                        <CardContent className="px-4">
+                                                            {activeDetails ? (
+                                                                <Timeline size="sm">
+                                                                    {activeDetails.stageHistory
+                                                                        ?.slice()
+                                                                        .map(
+                                                                            (
+                                                                                history,
+                                                                                index,
+                                                                            ) => (
+                                                                                <TimelineItem
+                                                                                    key={
+                                                                                        index
+                                                                                    }
+                                                                                    date={new Date(
+                                                                                        history.changedAt,
+                                                                                    ).toLocaleString()}
+                                                                                    title={
+                                                                                        history.stage
+                                                                                    }
+                                                                                    icon={getTimelineStageIcon(
+                                                                                        history.stage,
+                                                                                    )}
+                                                                                    iconColor={
+                                                                                        STAGE_STYLES[
+                                                                                            history
+                                                                                                .stage
+                                                                                        ]
+                                                                                    }
+                                                                                    description={`Changed by ${history.changedBy || "System"}`}
+                                                                                />
+                                                                            ),
+                                                                        )}
+                                                                </Timeline>
+                                                            ) : detailsFailed[
+                                                                  activeApp.id
+                                                              ] ? (
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    Failed to
+                                                                    load
+                                                                    history.
+                                                                </p>
+                                                            ) : (
+                                                                <Loader2Icon className="animate-spin h-6 w-6 mx-auto text-muted-foreground" />
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+
+                                                    <div className="font-semibold">
+                                                        Quick Actions
+                                                    </div>
+                                                    <div className="grid grid-cols-1 gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                window.open(
+                                                                    `/org/teams/${activeApp.teamPk}/recruitment`,
+                                                                    "_blank",
+                                                                )
+                                                            }
+                                                        >
+                                                            Open in New Tab
+                                                            <ExternalLinkIcon />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                navigate(
+                                                                    `/org/teams/${activeApp.teamPk}/recruitment`,
+                                                                )
+                                                            }
+                                                        >
+                                                            View Application
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() =>
+                                                                setDetailTab(
+                                                                    "notes",
+                                                                )
+                                                            }
+                                                        >
+                                                            My Notes
+                                                        </Button>
+                                                    </div>
+                                                </TabsContent>
+                                            </div>
+                                        </ScrollArea>
+                                    </Tabs>
+                                </Card>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

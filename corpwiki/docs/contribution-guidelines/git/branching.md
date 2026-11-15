@@ -9,6 +9,7 @@ The default branch is `master`, which should always be stable and deployable. Ch
 only occur through PRs.
 
 ## Branch Naming
+
 - `feature/new-feature` → corresponds with any new feature that did not exist previously
 - `bugfix/bug-name` → a bugfix
 - `experiment/experiment-name` → for code that won’t get merged in and is just testing out things

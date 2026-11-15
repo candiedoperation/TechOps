@@ -44,22 +44,21 @@ server env files may shadow new settings: process environment wins, then `.env`,
 
 ## Ports and overrides
 
-
 :::note Port clash with the wiki dev server
 The Docusaurus wiki dev server (`npm start` in `corpwiki/`) is pinned to port `3001`, the same as the dev stack's default `GITEA_PORT`. If you run both, set `GITEA_PORT=3002` for the dev stack.
 :::
 
-| Service | Default port | Variable in dev-stack/.env |
-| --- | ---: | --- |
-| Portal backend | 3000 | `PORTAL_PORT` |
-| Vite UI | 5173 | `WEBUI_PORT` |
-| MongoDB | 27017 | `MONGO_PORT` |
-| Redis | 6379 | `REDIS_PORT` |
-| Authentik | 9000 | `AUTHENTIK_PORT` |
-| Gitea | 3001 | `GITEA_PORT` |
-| Gitea SSH | 2222 | `GITEA_SSH_PORT` |
-| Mailpit inbox | 8025 | `MAILPIT_PORT` |
-| SMTP | 1025 | `SMTP_PORT` |
+| Service        | Default port | Variable in dev-stack/.env |
+| -------------- | -----------: | -------------------------- |
+| Portal backend |         3000 | `PORTAL_PORT`              |
+| Vite UI        |         5173 | `WEBUI_PORT`               |
+| MongoDB        |        27017 | `MONGO_PORT`               |
+| Redis          |         6379 | `REDIS_PORT`               |
+| Authentik      |         9000 | `AUTHENTIK_PORT`           |
+| Gitea          |         3001 | `GITEA_PORT`               |
+| Gitea SSH      |         2222 | `GITEA_SSH_PORT`           |
+| Mailpit inbox  |         8025 | `MAILPIT_PORT`             |
+| SMTP           |         1025 | `SMTP_PORT`                |
 
 Postgres is internal only. All published Docker ports bind to `127.0.0.1`;
 `BIND_ADDRESS` must remain `127.0.0.1`. Vite keeps its normal localhost binding.
@@ -152,6 +151,7 @@ The steps below are the original manual instructions. Prefer the dev stack above
 ### MongoDB Atlas
 
 For the database, we use MongoDB Atlas. To set it up for local development:
+
 1. Create an account on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
 2. Create a new project and cluster.
 3. In the Database Access section, create a new user with read/write permissions.
@@ -168,70 +168,70 @@ Create a `docker-compose.yml` file for Authentik in a local directory configurat
 
 ```yaml
 services:
-  postgresql:
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${PG_DB:-authentik}
-      POSTGRES_PASSWORD: ${PG_PASS:?database password required}
-      POSTGRES_USER: ${PG_USER:-authentik}
-    healthcheck:
-      interval: 30s
-      retries: 5
-      start_period: 20s
-      test:
-        - CMD-SHELL
-        - pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
-      timeout: 5s
-    image: docker.io/library/postgres:16-alpine
-    restart: unless-stopped
-    volumes:
-      - database:/var/lib/postgresql/data
-  server:
-    command: server
-    depends_on:
-      postgresql:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      AUTHENTIK_POSTGRESQL__HOST: postgresql
-      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
-      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.2}
-    ports:
-      - ${COMPOSE_PORT_HTTP:-9000}:9000
-      - ${COMPOSE_PORT_HTTPS:-9443}:9443
-    restart: unless-stopped
-    volumes:
-      - ./data:/data
-      - ./custom-templates:/templates
-  worker:
-    command: worker
-    depends_on:
-      postgresql:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      AUTHENTIK_POSTGRESQL__HOST: postgresql
-      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
-      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
-      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
-      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
-    image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.2}
-    restart: unless-stopped
-    user: root
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./data:/data
-      - ./certs:/certs
-      - ./custom-templates:/templates
+    postgresql:
+        env_file:
+            - .env
+        environment:
+            POSTGRES_DB: ${PG_DB:-authentik}
+            POSTGRES_PASSWORD: ${PG_PASS:?database password required}
+            POSTGRES_USER: ${PG_USER:-authentik}
+        healthcheck:
+            interval: 30s
+            retries: 5
+            start_period: 20s
+            test:
+                - CMD-SHELL
+                - pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+            timeout: 5s
+        image: docker.io/library/postgres:16-alpine
+        restart: unless-stopped
+        volumes:
+            - database:/var/lib/postgresql/data
+    server:
+        command: server
+        depends_on:
+            postgresql:
+                condition: service_healthy
+        env_file:
+            - .env
+        environment:
+            AUTHENTIK_POSTGRESQL__HOST: postgresql
+            AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+            AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+            AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+            AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+        image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.2}
+        ports:
+            - ${COMPOSE_PORT_HTTP:-9000}:9000
+            - ${COMPOSE_PORT_HTTPS:-9443}:9443
+        restart: unless-stopped
+        volumes:
+            - ./data:/data
+            - ./custom-templates:/templates
+    worker:
+        command: worker
+        depends_on:
+            postgresql:
+                condition: service_healthy
+        env_file:
+            - .env
+        environment:
+            AUTHENTIK_POSTGRESQL__HOST: postgresql
+            AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+            AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+            AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+            AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+        image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2026.5.2}
+        restart: unless-stopped
+        user: root
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - ./data:/data
+            - ./certs:/certs
+            - ./custom-templates:/templates
 volumes:
-  database:
-    driver: local
+    database:
+        driver: local
 ```
 
 #### Environment Variables (.env)
@@ -257,12 +257,12 @@ Once Authentik is running, configure the Application and Provider to allow Peopl
 1. Log in to your Authentik instance as `akadmin`.
 2. Navigate to **Applications** > **Applications**.
 3. Click **Create with Provider** and enter:
-   - **Name**: `People Portal`
-   - **Provider Type**: `OAuth2/OpenID Provider`
+    - **Name**: `People Portal`
+    - **Provider Type**: `OAuth2/OpenID Provider`
 4. In the Provider settings configuration:
-   - **Authorization flow**: Select `default-provider-authorization-implicit-consent`
-   - **Client Type**: `Confidential`
-   - **Redirect URIs**: `http://localhost:3000/api/auth/redirect` (Replace `3000` with your backend server's port if running on a different port locally).
+    - **Authorization flow**: Select `default-provider-authorization-implicit-consent`
+    - **Client Type**: `Confidential`
+    - **Redirect URIs**: `http://localhost:3000/api/auth/redirect` (Replace `3000` with your backend server's port if running on a different port locally).
 5. Take note of the **Client ID** and **Client Secret**. These correspond to the `PEOPLEPORTAL_OIDC_CLIENTID` and `PEOPLEPORTAL_OIDC_CLIENTSECRET` environment variables on your People Portal server.
 
 #### Authentik Admin API Token
@@ -280,23 +280,24 @@ The People Portal server makes administrative calls to Authentik (creating group
 For People Portal to work, ensure the `openid`, `profile`, `email`, and a custom `people_portal` scope are configured in your OpenID Provider.
 
 To create the custom `people_portal` scope in Authentik:
+
 1. Navigate to **Customization** > **Property Mappings**.
 2. Click **Create** and select **Scope Mapping** (Map an OAuth Scope to User Properties).
 3. Enter the following variables:
-   - **Name**: `People Portal Scope`
-   - **Scope Name**: `people_portal`
+    - **Name**: `People Portal Scope`
+    - **Scope Name**: `people_portal`
 4. Use the following Python code for the filtering expression:
-   ```python
-   return {
-       "pk": request.user.pk,
-       "is_superuser": request.user.is_superuser,
-       "attributes": request.user.attributes
-   }
-   ```
+    ```python
+    return {
+        "pk": request.user.pk,
+        "is_superuser": request.user.is_superuser,
+        "attributes": request.user.attributes
+    }
+    ```
 5. Click **Create**.
 6. Go back to your **People Portal** Provider settings, under **Advanced Protocol Settings**, and add this new scope along with `openid`, `profile`, and `email`.
 
-*(For further details, refer to the [OpenID Provider Configuration](./oidc-provider-config.md) and [Environment Variables](./environment-variables.md) docs).*
+_(For further details, refer to the [OpenID Provider Configuration](./oidc-provider-config.md) and [Environment Variables](./environment-variables.md) docs)._
 
 ### Gitea Setup
 
@@ -306,27 +307,27 @@ Gitea is utilized for localized source version control integrated within People 
 version: "3"
 
 networks:
-  gitea:
-    external: false
+    gitea:
+        external: false
 
 services:
-  server:
-    image: gitea/gitea:1.21.0
-    container_name: gitea
-    environment:
-      - USER_UID=1000
-      - USER_GID=1000
-      - GITEA__database__DB_TYPE=sqlite3
-    restart: always
-    networks:
-      - gitea
-    volumes:
-      - ./gitea:/data
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
-    ports:
-      - "10000:3000"
-      - "222:22"
+    server:
+        image: gitea/gitea:1.21.0
+        container_name: gitea
+        environment:
+            - USER_UID=1000
+            - USER_GID=1000
+            - GITEA__database__DB_TYPE=sqlite3
+        restart: always
+        networks:
+            - gitea
+        volumes:
+            - ./gitea:/data
+            - /etc/timezone:/etc/timezone:ro
+            - /etc/localtime:/etc/localtime:ro
+        ports:
+            - "10000:3000"
+            - "222:22"
 ```
 
 Launch the stack with `docker compose up -d` and navigate to `http://localhost:10000` to finish the web initial configuration. Because it uses an SQLite setup for local dev, an external database instance isn't required.
@@ -453,7 +454,7 @@ The frontend is built with Vite and React. In local development, the UI server w
 
 ##### Starting the UI
 
-No separate `.env` file is required for local UI development. 
+No separate `.env` file is required for local UI development.
 
 ```bash
 ./nx run pplui:serve

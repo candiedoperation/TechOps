@@ -22,21 +22,22 @@ Screenshot 2 (a generic job-tracker table) is the target shape: one row per reco
 **Replaces** the Kanban board as the primary view in the "Applications" tab. The other two tabs on this page (**Statistics**, **Recruitment Settings**) are untouched.
 
 **Out of scope for this doc** (flagged as open questions below, not decided yet):
+
 - Whether drag-and-drop/Kanban should remain available as a secondary view toggle.
 - Bulk actions (multi-select + bulk reject, etc.) — the table layout makes this easy to add later, but it's not requested yet.
 - Pagination — addressed below as a recommendation, not a requirement.
 
 ## 3. Column spec
 
-| Column | Source | Notes |
-|---|---|---|
-| **Name** | `GET /api/ats/applications/{teamId}` → `name` | unchanged from today's card |
-| **Email** | **new** — see §5, backend change needed | not currently returned by the list endpoint |
-| **Role** | `rolePreferences[0].role` (+ a "+N more" affordance if they ranked multiple) | unchanged data, new column |
-| **Status** | `stage` | colored badge, see §4 — also the control used to change stage |
-| **Applied** | `appliedAt` | formatted date, sortable |
-| **Rating** | `stars` | existing 0–5 star field, unchanged |
-| **Other Applications** | `GET .../{applicantId}/otherapps` (lazy, on click) | dropdown/popover, see §6 |
+| Column                 | Source                                                                       | Notes                                                         |
+| ---------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| **Name**               | `GET /api/ats/applications/{teamId}` → `name`                                | unchanged from today's card                                   |
+| **Email**              | **new** — see §5, backend change needed                                      | not currently returned by the list endpoint                   |
+| **Role**               | `rolePreferences[0].role` (+ a "+N more" affordance if they ranked multiple) | unchanged data, new column                                    |
+| **Status**             | `stage`                                                                      | colored badge, see §4 — also the control used to change stage |
+| **Applied**            | `appliedAt`                                                                  | formatted date, sortable                                      |
+| **Rating**             | `stars`                                                                      | existing 0–5 star field, unchanged                            |
+| **Other Applications** | `GET .../{applicantId}/otherapps` (lazy, on click)                           | dropdown/popover, see §6                                      |
 
 Clicking anywhere else on the row (not Status, not the Other Applications control) opens the **existing** detail dialog — full profile, resume iframe, responses, notes/stars editor, stage-history timeline. That dialog is not changing; this doc is only about the row-list that launches it.
 
@@ -56,7 +57,7 @@ The color system already exists in this file and is **reused as-is**, not invent
 
 Today this only decorates the stage-history timeline and the "other applications" list inside the detail modal. This design promotes it to the primary Status cell in every row, as a `Badge`, exactly like screenshot 2's "Work Model" column (Hybrid / On Site / Remote pills).
 
-**Important behavioral difference from screenshot 2:** "Work Model" in the reference image is a static label. Status here is not static — it's how recruiters currently *drive* the pipeline (today, by dragging a card to a new column). Losing drag-and-drop means the Status badge needs to become the interaction point:
+**Important behavioral difference from screenshot 2:** "Work Model" in the reference image is a static label. Status here is not static — it's how recruiters currently _drive_ the pipeline (today, by dragging a card to a new column). Losing drag-and-drop means the Status badge needs to become the interaction point:
 
 - Clicking the badge opens a small menu listing only the stages that are valid from the current one (reusing the exact `VALID_TRANSITIONS` ruleset already enforced server-side in `ATSController.updateApplicationStage` — Applied → Interview/Rejected, Interview → Potential Hire/Hired/Rejected, Potential Hire → Hired/Rejected, Hired/Rejected → nothing).
 - Picking **Interview** or **Hired** opens the same modal/fields that exist today (interview link + guidelines; hired role + subteam) — that logic isn't changing, just its entry point moves from "drop on a column" to "pick from this menu."
@@ -130,7 +131,7 @@ Single input above the table, filtering by **email** (as requested). Recommendat
 ## 9. Open questions (need your decision before implementation)
 
 1. **Does Kanban go away entirely, or become a secondary view toggle** (e.g. a "Board / Table" switch at the top of the Applications tab)? This doc assumes full replacement per your request, but drag-and-drop is arguably faster for one-off single moves — worth confirming you're OK trading that away.
-2. **Status column interaction** — menu-on-click as described in §4, or would you rather it be a plain `<select>` dropdown? Menu-on-click can show *why* a transition is blocked (e.g. grey out Hired until Interview happened); a native select can't show that as naturally.
+2. **Status column interaction** — menu-on-click as described in §4, or would you rather it be a plain `<select>` dropdown? Menu-on-click can show _why_ a transition is blocked (e.g. grey out Hired until Interview happened); a native select can't show that as naturally.
 3. **Search scope** — email only (as asked), or also name (recommended)?
 4. **Row density at scale** — you currently have ~20 seeded candidates; if this team realistically grows past 100+, do you want client-side pagination (like screenshot 2's "5724 records" footer) or infinite scroll? Not needed yet, flagging so it's a conscious choice rather than something that becomes a problem later.
 5. **Sort defaults** — newest-applied-first (current Kanban's implicit order) or alphabetical by name?

@@ -1,13 +1,13 @@
-import React, { type ReactNode } from 'react';
-import Footer from '@theme-original/Footer';
-import type FooterType from '@theme/Footer';
-import type { WrapperProps } from '@docusaurus/types';
+import React, { type ReactNode } from "react";
+import Footer from "@theme-original/Footer";
+import type FooterType from "@theme/Footer";
+import type { WrapperProps } from "@docusaurus/types";
 
 type Props = WrapperProps<typeof FooterType>;
 
 export default function FooterWrapper(props: Props): ReactNode {
-  return (
-    /* We Dont Need a Footer & We Dont Support its Design Yet */
-    <></>
-  );
+    return (
+        /* We Dont Need a Footer & We Dont Support its Design Yet */
+        <></>
+    );
 }

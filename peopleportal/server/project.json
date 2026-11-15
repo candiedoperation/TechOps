@@ -1,98 +1,84 @@
 {
-  "name": "pplserver",
-  "projectType": "application",
-  "sourceRoot": "peopleportal/server/src",
-  "targets": {
-    "install-deps": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "npm install",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "build": {
-      "executor": "nx:run-commands",
-      "dependsOn": [
-        "install-deps"
-      ],
-      "options": {
-        "command": "tsoa spec-and-routes && tsc && cpx \"src/**/*.hbs\" dist",
-        "cwd": "{projectRoot}"
-      },
-      "outputs": [
-        "{projectRoot}/dist"
-      ]
-    },
-    "serve": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "NODE_ENV=development nodemon src/app.ts",
-        "cwd": "{projectRoot}"
-      },
-      "dependsOn": [
-        "build"
-      ]
-    },
-    "start": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "node dist/app.js",
-        "cwd": "{projectRoot}"
-      },
-      "dependsOn": [
-        "build"
-      ]
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/**/*.test.js\"",
-        "cwd": "{projectRoot}"
-      },
-      "dependsOn": [
-        "build"
-      ]
-    },
-    "test-unit": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/unit/**/*.test.js\"",
-        "cwd": "{projectRoot}"
-      },
-      "dependsOn": [
-        "build"
-      ]
-    },
-    "test-integration": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/integration/**/*.test.js\"",
-        "cwd": "{projectRoot}"
-      },
-      "dependsOn": [
-        "build"
-      ]
-    },
-    "seed": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "tsx scripts/seed.ts",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "seed-ats": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "tsx scripts/seed-ats-applicants.ts",
-        "cwd": "{projectRoot}"
-      }
-    },
-    "test-ats-concurrency": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "tsx scripts/test-ats-stage-concurrency.ts",
-        "cwd": "{projectRoot}"
-      }
+    "name": "pplserver",
+    "projectType": "application",
+    "sourceRoot": "peopleportal/server/src",
+    "targets": {
+        "install-deps": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "npm install",
+                "cwd": "{projectRoot}"
+            }
+        },
+        "build": {
+            "executor": "nx:run-commands",
+            "dependsOn": ["install-deps"],
+            "options": {
+                "command": "tsoa spec-and-routes && tsc && cpx \"src/**/*.hbs\" dist",
+                "cwd": "{projectRoot}"
+            },
+            "outputs": ["{projectRoot}/dist"]
+        },
+        "serve": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "NODE_ENV=development nodemon src/app.ts",
+                "cwd": "{projectRoot}"
+            },
+            "dependsOn": ["build"]
+        },
+        "start": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "node dist/app.js",
+                "cwd": "{projectRoot}"
+            },
+            "dependsOn": ["build"]
+        },
+        "test": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/**/*.test.js\"",
+                "cwd": "{projectRoot}"
+            },
+            "dependsOn": ["build"]
+        },
+        "test-unit": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/unit/**/*.test.js\"",
+                "cwd": "{projectRoot}"
+            },
+            "dependsOn": ["build"]
+        },
+        "test-integration": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/integration/**/*.test.js\"",
+                "cwd": "{projectRoot}"
+            },
+            "dependsOn": ["build"]
+        },
+        "seed": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "tsx scripts/seed.ts",
+                "cwd": "{projectRoot}"
+            }
+        },
+        "seed-ats": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "tsx scripts/seed-ats-applicants.ts",
+                "cwd": "{projectRoot}"
+            }
+        },
+        "test-ats-concurrency": {
+            "executor": "nx:run-commands",
+            "options": {
+                "command": "tsx scripts/test-ats-stage-concurrency.ts",
+                "cwd": "{projectRoot}"
+            }
+        }
     }
-  }
 }

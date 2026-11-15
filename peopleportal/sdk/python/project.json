@@ -1,20 +1,16 @@
 {
-  "name": "pplsdk-py",
-  "projectType": "library",
-  "sourceRoot": "peopleportal/sdk/python/src",
-  "targets": {
-    "generate": {
-      "executor": "nx:run-commands",
-      "dependsOn": [
-        "pplserver:build"
-      ],
-      "options": {
-        "command": "docker run --rm -v $PWD:/local openapitools/openapi-generator-cli generate -i /local/peopleportal/server/dist/swagger.json -g python -o /local/peopleportal/sdk/python/src --additional-properties=packageName=peopleportal_sdk",
-        "cwd": "{workspaceRoot}"
-      },
-      "outputs": [
-        "{projectRoot}/src"
-      ]
+    "name": "pplsdk-py",
+    "projectType": "library",
+    "sourceRoot": "peopleportal/sdk/python/src",
+    "targets": {
+        "generate": {
+            "executor": "nx:run-commands",
+            "dependsOn": ["pplserver:build"],
+            "options": {
+                "command": "docker run --rm -v $PWD:/local openapitools/openapi-generator-cli generate -i /local/peopleportal/server/dist/swagger.json -g python -o /local/peopleportal/sdk/python/src --additional-properties=packageName=peopleportal_sdk",
+                "cwd": "{workspaceRoot}"
+            },
+            "outputs": ["{projectRoot}/src"]
+        }
     }
-  }
 }

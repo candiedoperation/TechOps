@@ -181,26 +181,26 @@ Example output:
 
 ```json
 {
-  "root": "apps/my-app",
-  "name": "my-app",
-  "sourceRoot": "apps/my-app/src",
-  "projectType": "application",
-  "tags": ["type:app", "scope:client"],
-  "targets": {
-    "build": {
-      "executor": "@nx/vite:build",
-      "options": { "outputPath": "dist/apps/my-app" }
+    "root": "apps/my-app",
+    "name": "my-app",
+    "sourceRoot": "apps/my-app/src",
+    "projectType": "application",
+    "tags": ["type:app", "scope:client"],
+    "targets": {
+        "build": {
+            "executor": "@nx/vite:build",
+            "options": { "outputPath": "dist/apps/my-app" }
+        },
+        "serve": {
+            "executor": "@nx/vite:dev-server",
+            "options": { "buildTarget": "my-app:build" }
+        },
+        "test": {
+            "executor": "@nx/vite:test",
+            "options": {}
+        }
     },
-    "serve": {
-      "executor": "@nx/vite:dev-server",
-      "options": { "buildTarget": "my-app:build" }
-    },
-    "test": {
-      "executor": "@nx/vite:test",
-      "options": {}
-    }
-  },
-  "implicitDependencies": []
+    "implicitDependencies": []
 }
 ```
 
@@ -230,26 +230,26 @@ Example output:
 
 ```json
 {
-  "graph": {
-    "nodes": {
-      "my-app": {
-        "name": "my-app",
-        "type": "app",
-        "data": { "root": "apps/my-app", "tags": ["type:app"] }
-      },
-      "shared-ui": {
-        "name": "shared-ui",
-        "type": "lib",
-        "data": { "root": "libs/shared-ui", "tags": ["type:ui"] }
-      }
-    },
-    "dependencies": {
-      "my-app": [
-        { "source": "my-app", "target": "shared-ui", "type": "static" }
-      ],
-      "shared-ui": []
+    "graph": {
+        "nodes": {
+            "my-app": {
+                "name": "my-app",
+                "type": "app",
+                "data": { "root": "apps/my-app", "tags": ["type:app"] }
+            },
+            "shared-ui": {
+                "name": "shared-ui",
+                "type": "lib",
+                "data": { "root": "libs/shared-ui", "tags": ["type:ui"] }
+            }
+        },
+        "dependencies": {
+            "my-app": [
+                { "source": "my-app", "target": "shared-ui", "type": "static" }
+            ],
+            "shared-ui": []
+        }
     }
-  }
 }
 ```
 

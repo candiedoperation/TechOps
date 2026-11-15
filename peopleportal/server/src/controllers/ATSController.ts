@@ -507,7 +507,7 @@ export class ATSController extends Controller {
      * a distributed lock is not worth its failure modes here.
      */
     private static openTeamsRefreshInFlight = false;
-    
+
     private refreshOpenTeamsInBackground() {
         if (ATSController.openTeamsRefreshInFlight) return;
         ATSController.openTeamsRefreshInFlight = true;
@@ -1320,7 +1320,6 @@ export class ATSController extends Controller {
         }
     }
 
-
     @Get("applicantApplications/{applicantId}")
     @Tags("Recruitment Actions")
     @SuccessResponse(200)
@@ -1330,36 +1329,50 @@ export class ATSController extends Controller {
             const applications = await Application.find({
                 applicantId: applicantId,
             })
-            .lean()
-            .sort({ appliedAt: -1 })
-            .exec();
+                .lean()
+                .sort({ appliedAt: -1 })
+                .exec();
 
             const results = await Promise.all(
                 applications.map(async (app) => {
                     let teamName = app.teamPk;
 
                     try {
-                        const teamInfo = await this.authentikClient.getGroupInfo(app.teamPk);
-                        if (teamInfo && teamInfo.attributes && teamInfo.attributes.friendlyName) {
+                        const teamInfo =
+                            await this.authentikClient.getGroupInfo(app.teamPk);
+                        if (
+                            teamInfo &&
+                            teamInfo.attributes &&
+                            teamInfo.attributes.friendlyName
+                        ) {
                             teamName = teamInfo.attributes.friendlyName;
                         } else if (teamInfo && teamInfo.name) {
                             teamName = teamInfo.name;
                         }
                     } catch (e) {
-                        console.error(`Failed to fetch team info for ${app.teamPk}`, e);
+                        console.error(
+                            `Failed to fetch team info for ${app.teamPk}`,
+                            e,
+                        );
                     }
 
                     const rolePreferencesWithNames = await Promise.all(
                         (app.rolePreferences || []).map(async (pref: any) => {
                             let subteamName = pref.subteamPk;
                             try {
-                                const subteamInfo = await this.authentikClient.getGroupInfo(pref.subteamPk);
+                                const subteamInfo =
+                                    await this.authentikClient.getGroupInfo(
+                                        pref.subteamPk,
+                                    );
 
                                 subteamName =
-                                subteamInfo.attributes?.friendlyName ||
-                                subteamInfo.name;
+                                    subteamInfo.attributes?.friendlyName ||
+                                    subteamInfo.name;
                             } catch (e) {
-                                console.error(`Failed to fetch subteam info for ${pref.subteamPk}`, e);
+                                console.error(
+                                    `Failed to fetch subteam info for ${pref.subteamPk}`,
+                                    e,
+                                );
                             }
                             return rolePreferenceDto(pref, subteamName);
                         }),
@@ -1388,14 +1401,13 @@ export class ATSController extends Controller {
         }
     }
 
-
     /**
      * TODO
-     * 
-     * Fetches all applications, along with the team information and 
+     *
+     * Fetches all applications, along with the team information and
      * stage they're currently in. To access this, the user needs to be a Team
      * Owner or have the `corp:hiringaccess` bindle.
-     * 
+     *
      * @returns List of All Applications
      */
     @Get("allApplications")
@@ -1403,7 +1415,7 @@ export class ATSController extends Controller {
     @SuccessResponse(200)
     @Security("executive")
     async getAllApplications() {
-        try{
+        try {
             const applicants = await Applicant.find({}).lean();
 
             const result = await Promise.all(
@@ -1422,7 +1434,9 @@ export class ATSController extends Controller {
 
                     try {
                         const teamInfo =
-                            await this.authentikClient.getGroupInfo(application.teamPk);
+                            await this.authentikClient.getGroupInfo(
+                                application.teamPk,
+                            );
                         if (
                             teamInfo &&
                             teamInfo.attributes &&
@@ -1440,24 +1454,26 @@ export class ATSController extends Controller {
                     }
 
                     const rolePreferencesWithNames = await Promise.all(
-                        (application.rolePreferences || []).map(async (pref: any) => {
-                            let subteamName = pref.subteamPk;
-                            try {
-                                const subteamInfo =
-                                    await this.authentikClient.getGroupInfo(
-                                        pref.subteamPk,
+                        (application.rolePreferences || []).map(
+                            async (pref: any) => {
+                                let subteamName = pref.subteamPk;
+                                try {
+                                    const subteamInfo =
+                                        await this.authentikClient.getGroupInfo(
+                                            pref.subteamPk,
+                                        );
+                                    subteamName =
+                                        subteamInfo.attributes?.friendlyName ||
+                                        subteamInfo.name;
+                                } catch (e) {
+                                    console.error(
+                                        `Failed to fetch subteam info for ${pref.subteamPk}`,
+                                        e,
                                     );
-                                subteamName =
-                                    subteamInfo.attributes?.friendlyName ||
-                                    subteamInfo.name;
-                            } catch (e) {
-                                console.error(
-                                    `Failed to fetch subteam info for ${pref.subteamPk}`,
-                                    e,
-                                );
-                            }
-                            return rolePreferenceDto(pref, subteamName);
-                        }),
+                                }
+                                return rolePreferenceDto(pref, subteamName);
+                            },
+                        ),
                     );
 
                     const app = {
@@ -1468,8 +1484,7 @@ export class ATSController extends Controller {
                         stage: application.stage,
                         appliedAt: application.appliedAt,
                         hiredRole: application.hiredRole,
-                    }
-
+                    };
 
                     return {
                         applicantId: String(applicant._id),
@@ -1480,9 +1495,9 @@ export class ATSController extends Controller {
                 }),
             );
 
-        return result.filter(
-            (row): row is NonNullable<typeof row> => row != null,
-        );
+            return result.filter(
+                (row): row is NonNullable<typeof row> => row != null,
+            );
         } catch (e) {
             console.error("Error fetching all applications:", e);
             this.setStatus(500);
@@ -1514,7 +1529,6 @@ export class ATSController extends Controller {
         @Path() applicantId: string,
     ) {
         try {
-
             const teamApplication = await Application.exists({
                 applicantId,
                 teamPk: teamId,
