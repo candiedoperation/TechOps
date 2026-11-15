@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState, useEffect, JSX } from "react";
-import SearchBar from '@theme-original/SearchBar';
+import SearchBar from "@theme-original/SearchBar";
 import type SearchBarType from "@theme/SearchBar";
 import type { WrapperProps } from "@docusaurus/types";
 import {
@@ -25,7 +25,9 @@ export default function SearchBarWrapper(props: Props): JSX.Element {
   }, []);
 
   const onOpen = useCallback(() => {
-    const searchButton = document.querySelector('.DocSearch-Button') as HTMLButtonElement;
+    const searchButton = document.querySelector(
+      ".DocSearch-Button",
+    ) as HTMLButtonElement;
     if (searchButton) {
       searchButton.click();
     }

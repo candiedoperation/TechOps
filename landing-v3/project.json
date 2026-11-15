@@ -2,9 +2,7 @@
   "name": "landing-v3",
   "projectType": "application",
   "sourceRoot": "landing-v3",
-  "implicitDependencies": [
-    "pplsdk-ts"
-  ],
+  "implicitDependencies": ["pplsdk-ts"],
   "targets": {
     "install-deps": {
       "executor": "nx:run-commands",
@@ -12,30 +10,20 @@
         "command": "npm install",
         "cwd": "{projectRoot}"
       },
-      "outputs": [
-        "{projectRoot}/node_modules"
-      ]
+      "outputs": ["{projectRoot}/node_modules"]
     },
     "build": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "install-deps",
-        "^build"
-      ],
+      "dependsOn": ["install-deps", "^build"],
       "options": {
         "command": "next build",
         "cwd": "{projectRoot}"
       },
-      "outputs": [
-        "{projectRoot}/.next"
-      ]
+      "outputs": ["{projectRoot}/.next"]
     },
     "serve": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "install-deps",
-        "^build"
-      ],
+      "dependsOn": ["install-deps", "^build"],
       "options": {
         "command": "next dev --turbopack",
         "cwd": "{projectRoot}"

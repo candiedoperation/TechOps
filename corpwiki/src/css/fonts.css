@@ -1,23 +1,23 @@
 /* src/css/fonts.css */
 
-
-
 /* Expose them as variables */
 :root {
-    --font-geist-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
+  --font-geist-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
 
-    --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
-        "Liberation Mono", "Courier New", monospace;
+  --font-geist-mono:
+    "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    "Liberation Mono", "Courier New", monospace;
 
-    /* Base text weight (body, doc content) */
-    --ifm-font-weight-light: 300;
-    --ifm-font-weight-normal: 400;
-    --ifm-font-weight-semibold: 500;
-    --ifm-font-weight-bold: 600;
-    /* or 700 if you like it heavier */
-    --ifm-font-weight-base: var(--ifm-font-weight-normal);
+  /* Base text weight (body, doc content) */
+  --ifm-font-weight-light: 300;
+  --ifm-font-weight-normal: 400;
+  --ifm-font-weight-semibold: 500;
+  --ifm-font-weight-bold: 600;
+  /* or 700 if you like it heavier */
+  --ifm-font-weight-base: var(--ifm-font-weight-normal);
 
-    /* Headings */
-    --ifm-heading-font-weight: var(--ifm-font-weight-semibold);
+  /* Headings */
+  --ifm-heading-font-weight: var(--ifm-font-weight-semibold);
 }

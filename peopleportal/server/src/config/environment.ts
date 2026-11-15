@@ -36,16 +36,20 @@ import dotenv from "dotenv";
 
 export type NodeEnvironment = "development" | "test" | "production";
 
-const VALID_ENVIRONMENTS: NodeEnvironment[] = ["development", "test", "production"];
+const VALID_ENVIRONMENTS: NodeEnvironment[] = [
+  "development",
+  "test",
+  "production",
+];
 
 function resolveEnvironment(): NodeEnvironment {
-    const raw = (process.env.NODE_ENV ?? "development").toLowerCase();
-    if (!VALID_ENVIRONMENTS.includes(raw as NodeEnvironment)) {
-        throw new Error(
-            `NODE_ENV must be one of ${VALID_ENVIRONMENTS.join(", ")} (received "${raw}")`
-        );
-    }
-    return raw as NodeEnvironment;
+  const raw = (process.env.NODE_ENV ?? "development").toLowerCase();
+  if (!VALID_ENVIRONMENTS.includes(raw as NodeEnvironment)) {
+    throw new Error(
+      `NODE_ENV must be one of ${VALID_ENVIRONMENTS.join(", ")} (received "${raw}")`,
+    );
+  }
+  return raw as NodeEnvironment;
 }
 
 export const ENVIRONMENT: NodeEnvironment = resolveEnvironment();
@@ -55,22 +59,22 @@ export const isProduction = ENVIRONMENT === "production";
 
 /** Loads the .env layers for the active environment. Safe to call twice. */
 export function loadEnvironmentFiles(cwd: string = process.cwd()): string[] {
-    const candidates = [
-        ".env",
-        `.env.${ENVIRONMENT}`,
-        `.env.${ENVIRONMENT}.local`,
-    ];
+  const candidates = [
+    ".env",
+    `.env.${ENVIRONMENT}`,
+    `.env.${ENVIRONMENT}.local`,
+  ];
 
-    const loaded: string[] = [];
-    for (const candidate of candidates) {
-        const file = path.resolve(cwd, candidate);
-        if (!fs.existsSync(file)) continue;
-        /* override:false keeps the real process environment authoritative and
+  const loaded: string[] = [];
+  for (const candidate of candidates) {
+    const file = path.resolve(cwd, candidate);
+    if (!fs.existsSync(file)) continue;
+    /* override:false keeps the real process environment authoritative and
            makes the layering order above meaningful. */
-        dotenv.config({ path: file, override: false, quiet: true });
-        loaded.push(candidate);
-    }
-    return loaded;
+    dotenv.config({ path: file, override: false, quiet: true });
+    loaded.push(candidate);
+  }
+  return loaded;
 }
 
 /**
@@ -79,58 +83,60 @@ export function loadEnvironmentFiles(cwd: string = process.cwd()): string[] {
  * production still fails fast and loudly rather than at the first request.
  */
 const REQUIRED_IN_PRODUCTION = [
-    "PEOPLEPORTAL_BASE_URL",
-    "PEOPLEPORTAL_MONGO_URL",
-    "PEOPLEPORTAL_TOKEN_SECRET",
-    "PEOPLEPORTAL_OIDC_DSCVURL",
-    "PEOPLEPORTAL_OIDC_CLIENTID",
-    "PEOPLEPORTAL_OIDC_CLIENTSECRET",
-    "PEOPLEPORTAL_AUTHENTIK_ENDPOINT",
-    "PEOPLEPORTAL_AUTHENTIK_TOKEN",
+  "PEOPLEPORTAL_BASE_URL",
+  "PEOPLEPORTAL_MONGO_URL",
+  "PEOPLEPORTAL_TOKEN_SECRET",
+  "PEOPLEPORTAL_OIDC_DSCVURL",
+  "PEOPLEPORTAL_OIDC_CLIENTID",
+  "PEOPLEPORTAL_OIDC_CLIENTSECRET",
+  "PEOPLEPORTAL_AUTHENTIK_ENDPOINT",
+  "PEOPLEPORTAL_AUTHENTIK_TOKEN",
 ] as const;
 
 /** Present-but-empty is as broken as absent, and much harder to spot. */
 function isBlank(value: string | undefined): boolean {
-    return value === undefined || value.trim() === "";
+  return value === undefined || value.trim() === "";
 }
 
 export function assertRequiredEnvironment(): void {
-    if (!isProduction) return;
+  if (!isProduction) return;
 
-    const missing = REQUIRED_IN_PRODUCTION.filter((key) => isBlank(process.env[key]));
-    if (missing.length > 0) {
-        throw new Error(
-            `Missing required environment variables in production: ${missing.join(", ")}`
-        );
-    }
+  const missing = REQUIRED_IN_PRODUCTION.filter((key) =>
+    isBlank(process.env[key]),
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variables in production: ${missing.join(", ")}`,
+    );
+  }
 
-    if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
-        throw new Error(
-            "NODE_TLS_REJECT_UNAUTHORIZED=0 disables all TLS verification and must not be set in production"
-        );
-    }
+  if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === "0") {
+    throw new Error(
+      "NODE_TLS_REJECT_UNAUTHORIZED=0 disables all TLS verification and must not be set in production",
+    );
+  }
 }
 
 /** Reads a boolean flag; only an explicit "true" enables it. */
 export function envFlag(key: string, fallback = false): boolean {
-    const raw = process.env[key];
-    if (isBlank(raw)) return fallback;
-    return raw!.trim().toLowerCase() === "true";
+  const raw = process.env[key];
+  if (isBlank(raw)) return fallback;
+  return raw!.trim().toLowerCase() === "true";
 }
 
 /** Reads an integer, falling back when unset or unparseable. */
 export function envInt(key: string, fallback: number): number {
-    const raw = process.env[key];
-    if (isBlank(raw)) return fallback;
-    const parsed = Number.parseInt(raw!, 10);
-    return Number.isNaN(parsed) ? fallback : parsed;
+  const raw = process.env[key];
+  if (isBlank(raw)) return fallback;
+  const parsed = Number.parseInt(raw!, 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
 }
 
 /** Reads a variable that must exist, with a message naming the caller's need. */
 export function envRequired(key: string): string {
-    const raw = process.env[key];
-    if (isBlank(raw)) {
-        throw new Error(`Required environment variable ${key} is not set`);
-    }
-    return raw!;
+  const raw = process.env[key];
+  if (isBlank(raw)) {
+    throw new Error(`Required environment variable ${key} is not set`);
+  }
+  return raw!;
 }

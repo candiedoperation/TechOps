@@ -48,7 +48,7 @@ This page tracks the progress, current focus, and future plans for our key proje
 
 ## Completed Tasks
 
-| Task | Completion Date |
-| :--- | :--- |
-| Initial Wiki setup | Jan 2026 |
-| People Portal User Guide | Jan 2026 |
+| Task                     | Completion Date |
+| :----------------------- | :-------------- |
+| Initial Wiki setup       | Jan 2026        |
+| People Portal User Guide | Jan 2026        |

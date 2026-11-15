@@ -11,18 +11,22 @@ This project is structured as a modern **Nx Monorepo**, allowing us to seamlessl
 This repository contains several distinct applications and services:
 
 ### People Portal
-The engine behind People Portal. It orchestrates People and Team Management, Recruitment, and Shared Resource Management workflows. It also handles event management, executive permissions, SSO service integrations, team provisioning, and user onboarding. It enforces dynamic permissions via a custom authorization layer called **Bindles**. 
+
+The engine behind People Portal. It orchestrates People and Team Management, Recruitment, and Shared Resource Management workflows. It also handles event management, executive permissions, SSO service integrations, team provisioning, and user onboarding. It enforces dynamic permissions via a custom authorization layer called **Bindles**.
 
 > [!NOTE]
 > The [peopleportal](./peopleportal) directory contains all People Portal assets, including the UI, server backend, and Docker deployment configurations.
 
 ### Landing Page
+
 The official App Dev Club landing page, currently hosted at [appdevclub.com](https://appdevclub.com). It serves as the front door for prospective members, partners, and sponsors. The source code is located in the [landing-v3](./landing-v3) directory.
 
 ### Corp Wiki
+
 The App Dev Wiki, hosted at [wiki.appdevclub.com](https://wiki.appdevclub.com). This is our central knowledge base for internal documentation, guides, and organizational memory. The source code is located in the [corpwiki](./corpwiki) directory.
 
 ### Horizon
+
 Scaffolding and initial architecture for the new App Dev **Horizon** project. The source code is located in the [horizon](./horizon) directory.
 
 ---

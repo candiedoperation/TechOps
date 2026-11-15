@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState } from "react";
 import { Skeleton } from "./skeleton";
@@ -13,16 +13,17 @@ const VideoEmbed = ({ url }: { url: string }) => {
           <Skeleton className="w-full h-full" />
         </div>
       )}
-      <iframe 
+      <iframe
         className="absolute top-0 left-0 w-full h-full"
-        src={url} 
-        title="YouTube video player" 
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" 
+        src={url}
+        title="YouTube video player"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
         allowFullScreen
         onLoad={() => setLoading(false)}
-        ></iframe>
+      ></iframe>
     </div>
-  )
-}
+  );
+};
 
-export default VideoEmbed
+export default VideoEmbed;

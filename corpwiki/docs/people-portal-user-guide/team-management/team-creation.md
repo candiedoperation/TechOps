@@ -26,16 +26,17 @@ A dialog will appear where you must enter the following details:
 ### Team Details
 
 - **Team Name**: Enter a descriptive name for the team. Include the company that the contract is for, if applicable.
+
   > **Note:** Do not include the timeframe (e.g., "Fall 2025") in the name as this is selected separately.
 
 - **Team Description**: Describe the goal of the team. Details you can include but are not limited to the project scope, tech stack, and key deliverables or milestones.
 
 - **Team Type**: There are three types of teams, each with different default settings:
   - **Project Team**: Standard teams working on specific projects or contracts.
-    - **Subteams**: *Leadership* (AWS & Recruitment Access) and *Engineering* are created automatically.
+    - **Subteams**: _Leadership_ (AWS & Recruitment Access) and _Engineering_ are created automatically.
     - **Your Role**: Automatically assigned as **Project Lead**.
   - **Bootcamp Team**: Educational teams for bootcamps such as Web Dev or Quantum.
-    - **Subteams**: *Educators* (Recruitment, Permissions, Member Mgmt), *Interviewers* (Recruitment), and *Learners* are created automatically.
+    - **Subteams**: _Educators_ (Recruitment, Permissions, Member Mgmt), _Interviewers_ (Recruitment), and _Learners_ are created automatically.
     - **Your Role**: Automatically assigned as **Bootcamp Director**.
   - **Corporate Team**: Internal teams for App Dev Operations (e.g., Sponsorship, Marketing).
     - **Subteams**: No subteams are created by default.
@@ -43,10 +44,6 @@ A dialog will appear where you must enter the following details:
 
 - **Team Season**: Select the appropriate semester (e.g., Fall, Spring) and year from the dropdowns.
 
-
 ### Finalizing Creation
 
 Once all details are entered, click **Create Team**.
-
-
-

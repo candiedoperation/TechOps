@@ -125,12 +125,12 @@ Add `"jsx": "react-jsx"` — in `tsconfig.base.json` for single-framework worksp
 ### React ESLint Config
 
 ```js
-import nx from '@nx/eslint-plugin';
-import baseConfig from '../../eslint.config.mjs';
+import nx from "@nx/eslint-plugin";
+import baseConfig from "../../eslint.config.mjs";
 export default [
   ...baseConfig,
-  ...nx.configs['flat/react'],
-  { files: ['**/*.ts', '**/*.tsx'], rules: {} },
+  ...nx.configs["flat/react"],
+  { files: ["**/*.ts", "**/*.tsx"], rules: {} },
 ];
 ```
 
@@ -166,8 +166,8 @@ Add to `tsconfig.base.json` (single-framework) or per-project (mixed):
 Vue SFC files need a type declaration. Usually exists in each project's `src/` and imports cleanly. If missing:
 
 ```ts
-declare module '*.vue' {
-  import { defineComponent } from 'vue';
+declare module "*.vue" {
+  import { defineComponent } from "vue";
   const component: ReturnType<typeof defineComponent>;
   export default component;
 }
@@ -190,20 +190,20 @@ Both `@nx/js/typescript` and `@nx/vite/plugin` auto-detect `vue-tsc` when instal
 ### Vue ESLint Config Pattern
 
 ```js
-import vue from 'eslint-plugin-vue';
-import vueParser from 'vue-eslint-parser';
-import tsParser from '@typescript-eslint/parser';
-import baseConfig from '../../eslint.config.mjs';
+import vue from "eslint-plugin-vue";
+import vueParser from "vue-eslint-parser";
+import tsParser from "@typescript-eslint/parser";
+import baseConfig from "../../eslint.config.mjs";
 export default [
   ...baseConfig,
-  ...vue.configs['flat/recommended'],
+  ...vue.configs["flat/recommended"],
   {
-    files: ['**/*.vue'],
+    files: ["**/*.vue"],
     languageOptions: { parser: vueParser, parserOptions: { parser: tsParser } },
   },
   {
-    files: ['**/*.ts', '**/*.tsx', '**/*.js', '**/*.jsx', '**/*.vue'],
-    rules: { 'vue/multi-word-component-names': 'off' },
+    files: ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.vue"],
+    rules: { "vue/multi-word-component-names": "off" },
   },
 ];
 ```

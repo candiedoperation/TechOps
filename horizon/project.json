@@ -2,9 +2,7 @@
   "name": "horizon-dag",
   "projectType": "application",
   "sourceRoot": "horizon",
-  "tags": [
-    "scope:horizon"
-  ],
+  "tags": ["scope:horizon"],
   "targets": {
     "install-deps": {
       "executor": "nx:run-commands",
@@ -22,9 +20,7 @@
     },
     "lint": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "install-deps"
-      ],
+      "dependsOn": ["install-deps"],
       "options": {
         "command": ".venv/bin/ruff check pipeline tests",
         "cwd": "{projectRoot}"
@@ -32,9 +28,7 @@
     },
     "test": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "install-deps"
-      ],
+      "dependsOn": ["install-deps"],
       "options": {
         "command": "HORIZON_ENV_FILE='' .venv/bin/python -m pytest -q",
         "cwd": "{projectRoot}"
@@ -42,11 +36,7 @@
     },
     "check": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "build",
-        "test",
-        "lint"
-      ],
+      "dependsOn": ["build", "test", "lint"],
       "options": {
         "command": "true",
         "cwd": "{projectRoot}"
@@ -54,9 +44,7 @@
     },
     "serve": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "install-deps"
-      ],
+      "dependsOn": ["install-deps"],
       "options": {
         "command": "mkdir -p .dagster && DAGSTER_HOME=\"$PWD/.dagster\" .venv/bin/dagster dev -m pipeline.definitions",
         "cwd": "{projectRoot}"

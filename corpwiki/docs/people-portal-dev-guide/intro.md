@@ -13,6 +13,7 @@ People Portal is built with modern web technologies and follows best practices f
 ## What's Covered
 
 This guide includes:
+
 - Architecture overview
 - Setup and development environment
 - API documentation
@@ -23,6 +24,7 @@ This guide includes:
 ## Prerequisites
 
 Before diving into development, you should be familiar with:
+
 - TypeScript/JavaScript
 - React and Next.js
 - RESTful APIs

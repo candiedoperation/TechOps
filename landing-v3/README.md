@@ -11,4 +11,4 @@ Instead of running local `npm` scripts, you now run `nx` commands from the **roo
 - **Start Prod**: `nx run landing-v3:start`
 - **Lint**: `nx run landing-v3:lint`
 
-*Note: Running commands like `nx build landing-v3` will automatically ensure that all workspace dependencies (like `@peopleportal/sdk`) are installed and built first!*
+_Note: Running commands like `nx build landing-v3` will automatically ensure that all workspace dependencies (like `@peopleportal/sdk`) are installed and built first!_

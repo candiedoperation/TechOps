@@ -5,7 +5,10 @@ import FadeSlideIn from "../ui/fade-slide-in";
 
 const Instagram = () => {
   return (
-    <section id="contact" className="w-full flex flex-col items-center justify-center pt-32 scroll-mt-32 relative z-0">
+    <section
+      id="contact"
+      className="w-full flex flex-col items-center justify-center pt-32 scroll-mt-32 relative z-0"
+    >
       {/* title */}
       <FadeSlideIn className="max-w-[85%]">
         <h1 className="font-bold leading-[1.1] text-5xl sm:text-6xl md:text-7xl mb-8 text-center bg-gradient-to-r from-[#515BD4] via-[#8134AF] to-[#DD2A7B] bg-clip-text text-transparent">
@@ -14,7 +17,10 @@ const Instagram = () => {
       </FadeSlideIn>
 
       {/* instagram profile gradient button link */}
-      <FadeSlideIn delay={50} className="flex items-center justify-center mb-10">
+      <FadeSlideIn
+        delay={50}
+        className="flex items-center justify-center mb-10"
+      >
         <Link
           href="https://www.instagram.com/app_dev_club/"
           target="_blank"

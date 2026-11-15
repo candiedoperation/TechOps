@@ -43,7 +43,7 @@ the management account, and locks you out of the console you would use to undo i
 The console will let you do it.
 :::
 
-Archiving a team only *moves* its account into the Suspended OU. It attaches
+Archiving a team only _moves_ its account into the Suspended OU. It attaches
 nothing. The account goes inert solely because this SCP hangs on that OU, so
 verify the attachment or archived accounts keep running and keep spending.
 
@@ -116,7 +116,7 @@ lands before Express listens, so a deployment missing one does not run without
 AWS, it does not run at all. Set them before deploying.
 :::
 
-`AWS_ADMIN_ROLE_NAME` names the admin role created *inside* each member account
+`AWS_ADMIN_ROLE_NAME` names the admin role created _inside_ each member account
 by `CreateAccount`, which the app later assumes to build console links. It is
 unrelated to `BudgetEnforcementRole`, and changing it breaks console links for
 accounts created under the old name.

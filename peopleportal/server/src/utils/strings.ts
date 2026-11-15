@@ -16,11 +16,14 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import crypto from 'crypto';
-import { CustomValidationError } from './errors';
+import crypto from "crypto";
+import { CustomValidationError } from "./errors";
 
 export function generateSecureRandomString(length: number) {
-  return crypto.randomBytes(Math.ceil(length / 2)).toString('hex').slice(0, length);
+  return crypto
+    .randomBytes(Math.ceil(length / 2))
+    .toString("hex")
+    .slice(0, length);
 }
 
 export function sanitizeGroupName(str: string) {
@@ -28,7 +31,7 @@ export function sanitizeGroupName(str: string) {
   // \w matches [A-Za-z0-9_], so replace underscores by removing them after
   // [^-] will exclude anything that isn't a letter, a number, or a hyphen/underscore
 
-  let sanitized = str.replace(/[^A-Za-z0-9-_]/g, '');
+  let sanitized = str.replace(/[^A-Za-z0-9-_]/g, "");
   return sanitized;
 }
 
@@ -42,47 +45,56 @@ export function sanitizeGroupName(str: string) {
  */
 export function capitalizeString(str: string): string {
   if (!str) return str;
-  return str.split(' ').map(word => {
-    if (word.length === 0) return "";
+  return str
+    .split(" ")
+    .map((word) => {
+      if (word.length === 0) return "";
 
-    // 1. Preserve All Caps or Symbols (No lowercase letters)
-    // Example: "UI/UX", "HELLO", "USA"
-    if (/^[^a-z]*$/.test(word)) return word;
+      // 1. Preserve All Caps or Symbols (No lowercase letters)
+      // Example: "UI/UX", "HELLO", "USA"
+      if (/^[^a-z]*$/.test(word)) return word;
 
-    // 2. Preserve Acronym Plurals
-    // Example: "PMs", "SWEs", "APIs"
-    if (/^[A-Z]+s$/.test(word)) return word;
+      // 2. Preserve Acronym Plurals
+      // Example: "PMs", "SWEs", "APIs"
+      if (/^[A-Z]+s$/.test(word)) return word;
 
-    // 3. Default: Title Case (First Upper, Rest Lower)
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-  }).join(' ');
+      // 3. Default: Title Case (First Upper, Rest Lower)
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
 }
 
 /**
  * Normalizes a full name into FirstLast format, removing middle names and hyphens while capitalizing segments.
  */
 export function sanitizeUserFullName(fullName: string): string {
-  if (!fullName || typeof fullName !== 'string') return '';
+  if (!fullName || typeof fullName !== "string") return "";
 
   const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 0) return '';
+  if (parts.length === 0) return "";
 
-  const firstNameRaw = parts[0] ?? '';
-  const lastNameRaw = parts.length > 1 ? (parts[parts.length - 1] ?? '') : '';
+  const firstNameRaw = parts[0] ?? "";
+  const lastNameRaw = parts.length > 1 ? (parts[parts.length - 1] ?? "") : "";
 
   const normalizeSegment = (str: string): string => {
-    if (!str) return '';
-    return str.split('-').map(segment => {
-      return segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase();
-    }).join('');
+    if (!str) return "";
+    return str
+      .split("-")
+      .map((segment) => {
+        return segment.charAt(0).toUpperCase() + segment.slice(1).toLowerCase();
+      })
+      .join("");
   };
 
   /* The result becomes an AWS IAM session name, which permits only
      [\w+=,.@-]. Apostrophes survived normalizeSegment, so "Mary-Kate O'Neil"
      produced "MaryKateO'neil" and STS rejected the console link outright. */
-  const toSessionSafe = (str: string): string => str.replace(/[^\w+=,.@-]/g, '');
+  const toSessionSafe = (str: string): string =>
+    str.replace(/[^\w+=,.@-]/g, "");
 
-  return toSessionSafe(normalizeSegment(firstNameRaw) + normalizeSegment(lastNameRaw));
+  return toSessionSafe(
+    normalizeSegment(firstNameRaw) + normalizeSegment(lastNameRaw),
+  );
 }
 
 /**
@@ -94,12 +106,12 @@ export function sanitizeUserFullName(fullName: string): string {
  * Returns the trimmed name if valid; throws CustomValidationError otherwise.
  */
 export function validatePersonName(name: string): string {
-  const trimmed = (name ?? '').trim();
+  const trimmed = (name ?? "").trim();
 
   if (trimmed.length < 2 || trimmed.length > 60) {
     throw new CustomValidationError(
       400,
-      'Invalid name. Must be between 2 and 60 characters.'
+      "Invalid name. Must be between 2 and 60 characters.",
     );
   }
 
@@ -108,16 +120,16 @@ export function validatePersonName(name: string): string {
   if (!allowed.test(trimmed)) {
     throw new CustomValidationError(
       400,
-      "Invalid name. Use only letters, spaces, apostrophes, periods, and hyphens."
+      "Invalid name. Use only letters, spaces, apostrophes, periods, and hyphens.",
     );
   }
 
   // Enforce presence of first and last name (at least two name parts with letters)
   // Example valid: "Jane Doe", "Mary-Kate O'Neil", "J. Smith"
-  const parts = trimmed.split(/\s+/).filter(p => p.length > 0);
-  const alphaParts = parts.filter(p => /[A-Za-z]/.test(p));
+  const parts = trimmed.split(/\s+/).filter((p) => p.length > 0);
+  const alphaParts = parts.filter((p) => /[A-Za-z]/.test(p));
   if (alphaParts.length < 2) {
-    throw new CustomValidationError(400, 'Please enter a first and last name.');
+    throw new CustomValidationError(400, "Please enter a first and last name.");
   }
 
   return trimmed;
@@ -126,7 +138,10 @@ export function validatePersonName(name: string): string {
 /**
  * Formats a bindle access error message listing team owners and missing bindles.
  */
-export function formatBindleAccessError(owners: string[], missingBindles: string[]): string {
+export function formatBindleAccessError(
+  owners: string[],
+  missingBindles: string[],
+): string {
   const formatList = (items: string[], conjunction: string) => {
     if (items.length === 0) return "";
     if (items.length === 1) return items[0];
@@ -152,7 +167,7 @@ export function validateTeamName(name: string): string {
   if (name.length < 3 || name.length > 25) {
     throw new CustomValidationError(
       400,
-      "Invalid Team Name. Must be between 3 and 25 characters."
+      "Invalid Team Name. Must be between 3 and 25 characters.",
     );
   }
 
@@ -161,7 +176,7 @@ export function validateTeamName(name: string): string {
   if (!regex.test(name)) {
     throw new CustomValidationError(
       400,
-      "Invalid Team Name. Use only letters, numbers, spaces, and apostrophes."
+      "Invalid Team Name. Use only letters, numbers, spaces, and apostrophes.",
     );
   }
 
@@ -169,15 +184,18 @@ export function validateTeamName(name: string): string {
   if (!/[a-zA-Z]/.test(name)) {
     throw new CustomValidationError(
       400,
-      "Invalid Team Name. Must contain at least one letter."
+      "Invalid Team Name. Must contain at least one letter.",
     );
   }
 
   // Title Case Formatting
-  return name.split(' ').map(word => {
-    if (word.length === 0) return "";
-    return word.charAt(0).toUpperCase() + word.slice(1);
-  }).join(' ');
+  return name
+    .split(" ")
+    .map((word) => {
+      if (word.length === 0) return "";
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(" ");
 }
 
 /**

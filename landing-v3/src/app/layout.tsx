@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     "Fortune 500",
     "Digital Solutions",
     "Non Profit",
-    "501(c)(3)"
+    "501(c)(3)",
   ],
   authors: [{ name: "App Dev Club" }],
   metadataBase: new URL("https://appdevclub.com"),

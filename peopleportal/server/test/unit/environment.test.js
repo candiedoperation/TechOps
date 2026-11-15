@@ -30,7 +30,9 @@ test("recognises each valid environment exactly once", () => {
   for (const name of ["development", "test", "production"]) {
     const env = loadEnvironment(name);
     assert.equal(env.ENVIRONMENT, name);
-    const flags = [env.isDevelopment, env.isTest, env.isProduction].filter(Boolean);
+    const flags = [env.isDevelopment, env.isTest, env.isProduction].filter(
+      Boolean,
+    );
     assert.equal(flags.length, 1, `${name} should set exactly one flag`);
   }
 });
@@ -42,16 +44,29 @@ test("rejects an unknown NODE_ENV instead of silently defaulting", () => {
 test("envFlag only treats an explicit 'true' as enabled", () => {
   const env = loadEnvironment("test");
   const cases = [
-    ["true", true], ["TRUE", true], ["  true  ", true],
-    ["false", false], ["1", false], ["yes", false], ["", false],
+    ["true", true],
+    ["TRUE", true],
+    ["  true  ", true],
+    ["false", false],
+    ["1", false],
+    ["yes", false],
+    ["", false],
   ];
   for (const [raw, expected] of cases) {
     process.env.__FLAG_UNDER_TEST = raw;
-    assert.equal(env.envFlag("__FLAG_UNDER_TEST"), expected, `for ${JSON.stringify(raw)}`);
+    assert.equal(
+      env.envFlag("__FLAG_UNDER_TEST"),
+      expected,
+      `for ${JSON.stringify(raw)}`,
+    );
   }
   delete process.env.__FLAG_UNDER_TEST;
   assert.equal(env.envFlag("__FLAG_UNDER_TEST"), false);
-  assert.equal(env.envFlag("__FLAG_UNDER_TEST", true), true, "fallback is honoured");
+  assert.equal(
+    env.envFlag("__FLAG_UNDER_TEST", true),
+    true,
+    "fallback is honoured",
+  );
 });
 
 test("envInt falls back rather than yielding NaN", () => {
@@ -88,7 +103,10 @@ test("production refuses to start with a required variable missing", () => {
   for (const key of Object.keys(process.env)) {
     if (key.startsWith("PEOPLEPORTAL_")) delete process.env[key];
   }
-  assert.throws(() => env.assertRequiredEnvironment(), /Missing required environment variables/);
+  assert.throws(
+    () => env.assertRequiredEnvironment(),
+    /Missing required environment variables/,
+  );
   Object.assign(process.env, saved);
 });
 
@@ -96,11 +114,20 @@ test("production refuses to start with TLS verification disabled", () => {
   const env = loadEnvironment("production");
   const saved = { ...process.env };
   for (const key of [
-    "PEOPLEPORTAL_BASE_URL", "PEOPLEPORTAL_MONGO_URL", "PEOPLEPORTAL_TOKEN_SECRET",
-    "PEOPLEPORTAL_OIDC_DSCVURL", "PEOPLEPORTAL_OIDC_CLIENTID", "PEOPLEPORTAL_OIDC_CLIENTSECRET",
-    "PEOPLEPORTAL_AUTHENTIK_ENDPOINT", "PEOPLEPORTAL_AUTHENTIK_TOKEN",
-  ]) process.env[key] = "set";
+    "PEOPLEPORTAL_BASE_URL",
+    "PEOPLEPORTAL_MONGO_URL",
+    "PEOPLEPORTAL_TOKEN_SECRET",
+    "PEOPLEPORTAL_OIDC_DSCVURL",
+    "PEOPLEPORTAL_OIDC_CLIENTID",
+    "PEOPLEPORTAL_OIDC_CLIENTSECRET",
+    "PEOPLEPORTAL_AUTHENTIK_ENDPOINT",
+    "PEOPLEPORTAL_AUTHENTIK_TOKEN",
+  ])
+    process.env[key] = "set";
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-  assert.throws(() => env.assertRequiredEnvironment(), /NODE_TLS_REJECT_UNAUTHORIZED/);
+  assert.throws(
+    () => env.assertRequiredEnvironment(),
+    /NODE_TLS_REJECT_UNAUTHORIZED/,
+  );
   process.env = saved;
 });

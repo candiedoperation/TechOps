@@ -37,7 +37,7 @@ The preset provides shared Jest configuration (test patterns, ts-jest transform,
 **Root `jest.preset.js`:**
 
 ```js
-const nxPreset = require('@nx/jest/preset').default;
+const nxPreset = require("@nx/jest/preset").default;
 module.exports = { ...nxPreset };
 ```
 
@@ -45,8 +45,8 @@ module.exports = { ...nxPreset };
 
 ```ts
 export default {
-  displayName: 'my-lib',
-  preset: '../../jest.preset.js',
+  displayName: "my-lib",
+  preset: "../../jest.preset.js",
   // project-specific overrides
 };
 ```
@@ -150,13 +150,13 @@ Projects migrating from Jest to Vitest (or workspaces with both) need different 
 **Jest** (in `test-setup.ts`):
 
 ```ts
-import '@testing-library/jest-dom';
+import "@testing-library/jest-dom";
 ```
 
 **Vitest** (in `test-setup.ts`):
 
 ```ts
-import '@testing-library/jest-dom/vitest';
+import "@testing-library/jest-dom/vitest";
 ```
 
 If the source used Jest but the dest workspace uses Vitest for that project type, update the import path. Also add `@testing-library/jest-dom` to tsconfig `types` array.

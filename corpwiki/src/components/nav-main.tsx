@@ -1,13 +1,13 @@
 import { useLocation } from "@docusaurus/router";
 import { useEffect, useState } from "react";
-import { ChevronRight, FileText, Folder } from "lucide-react"
-import Link from '@docusaurus/Link';
+import { ChevronRight, FileText, Folder } from "lucide-react";
+import Link from "@docusaurus/Link";
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+} from "@/components/ui/collapsible";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -15,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 // Helper to recursively check if an item or its children are active
 const checkIsActive = (item: any, pathname: string): boolean => {
@@ -44,7 +44,7 @@ function SidebarItemRenderer({ item }: { item: any }) {
   const pathname = location.pathname;
 
   // State for collapsible
-  // We initialize based on whether we are currently active, 
+  // We initialize based on whether we are currently active,
   // but we also listen to changes in pathname to auto-expand.
   const [isOpen, setIsOpen] = useState(() => checkIsActive(item, pathname));
 
@@ -86,7 +86,7 @@ function SidebarItemRenderer({ item }: { item: any }) {
           </CollapsibleContent>
         </SidebarMenuItem>
       </Collapsible>
-    )
+    );
   }
 
   // Otherwise treat as link
@@ -106,11 +106,11 @@ function SidebarItemRenderer({ item }: { item: any }) {
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
-  )
+  );
 }
 
 export function NavMain({ items }: { items: any[] }) {
-  if (!items || !items.length) return null
+  if (!items || !items.length) return null;
 
   return (
     <SidebarGroup>
@@ -121,6 +121,5 @@ export function NavMain({ items }: { items: any[] }) {
         ))}
       </SidebarMenu>
     </SidebarGroup>
-  )
+  );
 }
-

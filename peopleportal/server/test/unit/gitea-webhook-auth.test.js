@@ -21,30 +21,34 @@ test("accepts only the exact configured bearer credential", () => {
   process.env.PEOPLEPORTAL_GITEA_WEBHOOK_SECRET = VALID_SECRET;
 
   assert.equal(
-    isGiteaWebhookAuthorized(requestWithAuthorization(`Bearer ${VALID_SECRET}`)),
-    true
+    isGiteaWebhookAuthorized(
+      requestWithAuthorization(`Bearer ${VALID_SECRET}`),
+    ),
+    true,
   );
   assert.equal(
     isGiteaWebhookAuthorized(requestWithAuthorization("Bearer incorrect")),
-    false
+    false,
   );
   assert.equal(
     isGiteaWebhookAuthorized(requestWithAuthorization(undefined)),
-    false
+    false,
   );
 });
 
 test("fails closed when the configured secret is absent or too short", () => {
   delete process.env.PEOPLEPORTAL_GITEA_WEBHOOK_SECRET;
   assert.equal(
-    isGiteaWebhookAuthorized(requestWithAuthorization(`Bearer ${VALID_SECRET}`)),
-    false
+    isGiteaWebhookAuthorized(
+      requestWithAuthorization(`Bearer ${VALID_SECRET}`),
+    ),
+    false,
   );
 
   process.env.PEOPLEPORTAL_GITEA_WEBHOOK_SECRET = "too-short";
   assert.equal(
     isGiteaWebhookAuthorized(requestWithAuthorization("Bearer too-short")),
-    false
+    false,
   );
 });
 
@@ -70,7 +74,7 @@ test("middleware rejects invalid credentials before dispatch", () => {
     response,
     () => {
       nextCalled = true;
-    }
+    },
   );
 
   assert.equal(response.statusCode, 401);
@@ -87,7 +91,7 @@ test("middleware dispatches valid credentials", () => {
     {},
     () => {
       nextCalled = true;
-    }
+    },
   );
 
   assert.equal(nextCalled, true);

@@ -2,6 +2,7 @@
 sidebar_position: 1
 title: Introduction
 ---
+
 # Correction of Error (COE)
 
 Correction of Error is a process for improving quality by documenting and addressing issues. You will want to define a standardized way to document critical root causes, and ensure they are reviewed and addressed.
@@ -33,6 +34,5 @@ You should have your COE reviewed by your team, as well as other teams.
 
 - **High impact COEs**: Should be reviewed during your operational meetings.
 - **The Wheel**: Use the iterative nature of the COE process to continuously improve.
-
 
 Read more about COEs and their origin [here](https://wa.aws.amazon.com/wellarchitected/2020-07-02T19-33-23/wat.concept.coe.en.html).

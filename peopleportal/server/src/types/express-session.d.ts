@@ -1,8 +1,7 @@
+import "express-session";
+import { AuthorizedUser } from "../clients/OpenIdClient";
 
-import 'express-session';
-import { AuthorizedUser } from '../clients/OpenIdClient';
-
-declare module 'express-session' {
+declare module "express-session" {
   interface SessionData {
     authorizedUser?: AuthorizedUser;
     accessToken?: string;
@@ -20,15 +19,15 @@ declare module 'express-session' {
       otpExpiry?: number;
       jwt?: string;
       user?: {
-        email: string,
-        name: string,
-        id: string,
-      }
+        email: string;
+        name: string;
+        id: string;
+      };
 
       /* Redirect Logic */
       return_to?: string;
       redirect_uri?: string;
       state?: string;
-    }
+    };
   }
 }

@@ -16,219 +16,267 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config"
-import { AppSidebar } from "@/components/app-sidebar"
-import { DashboardPeopleInfo } from "@/components/fabric/DashboardPeopleInfo"
-import { DashboardPeopleList } from "@/components/fabric/DashboardPeopleList"
-import { DashboardTeamInfo } from "@/components/fabric/DashboardTeamInfo"
-import { DashboardTeamRecruitment } from "@/components/fabric/DashboardTeamRecuitment"
-import { DashboardTeamsList } from "@/components/fabric/DashboardTeamsList"
-import { OrgChartVisualization } from "@/components/fragments/OrgChartVisualization"
-import { OrgTeamRequestReview } from "@/components/fragments/OrgTeamRequestReview"
-import { PlatformLicenseInfo } from "@/components/fragments/PlatformLicenseInfo"
-import { ActiveTeams } from "./ActiveTeams"
-import { ArchiveTeams } from "./ArchiveTeams"
-import { TeamMeetings } from "./TeamMeetings"
-import { MeetingDetail } from "./MeetingDetail"
-import { MeetingCheckin } from "./MeetingCheckin"
-import { Events } from "../components/fabric/Events"
-import { EventAttendance } from "../components/fabric/EventAttendance"
+import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config";
+import { AppSidebar } from "@/components/app-sidebar";
+import { DashboardPeopleInfo } from "@/components/fabric/DashboardPeopleInfo";
+import { DashboardPeopleList } from "@/components/fabric/DashboardPeopleList";
+import { DashboardTeamInfo } from "@/components/fabric/DashboardTeamInfo";
+import { DashboardTeamRecruitment } from "@/components/fabric/DashboardTeamRecuitment";
+import { DashboardTeamsList } from "@/components/fabric/DashboardTeamsList";
+import { OrgChartVisualization } from "@/components/fragments/OrgChartVisualization";
+import { OrgTeamRequestReview } from "@/components/fragments/OrgTeamRequestReview";
+import { PlatformLicenseInfo } from "@/components/fragments/PlatformLicenseInfo";
+import { ActiveTeams } from "./ActiveTeams";
+import { ArchiveTeams } from "./ArchiveTeams";
+import { TeamMeetings } from "./TeamMeetings";
+import { MeetingDetail } from "./MeetingDetail";
+import { MeetingCheckin } from "./MeetingCheckin";
+import { Events } from "../components/fabric/Events";
+import { EventAttendance } from "../components/fabric/EventAttendance";
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar"
-import React from "react"
-import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom"
-import { toast } from "sonner"
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import React from "react";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import { toast } from "sonner";
 
 const translateBreadcrumbPath = (path: string) => {
-    switch (path) {
-        case "org":
-            return "Organization"
+  switch (path) {
+    case "org":
+      return "Organization";
 
-        case "orgchart":
-            return "Chart"
+    case "orgchart":
+      return "Chart";
 
-        case "teams":
-            return "Teams"
+    case "teams":
+      return "Teams";
 
-        case "people":
-            return "People"
+    case "people":
+      return "People";
 
-        case "community":
-            return "Community"
+    case "community":
+      return "Community";
 
-        case "events":
-            return "Events"
+    case "events":
+      return "Events";
 
-        case "recruitment":
-            return "Recruitment Tracker"
+    case "recruitment":
+      return "Recruitment Tracker";
 
-        case "meetings":
-            return "Meetings"
+    case "meetings":
+      return "Meetings";
 
-        case "platform":
-            return "People Portal Platform"
+    case "platform":
+      return "People Portal Platform";
 
-        case "license":
-            return "Licensing"
+    case "license":
+      return "Licensing";
 
-        case "exec":
-            return "Executive"
+    case "exec":
+      return "Executive";
 
-        case "active-teams":
-            return "Active Teams"
+    case "active-teams":
+      return "Active Teams";
 
-        case "archive-teams":
-            return "Archive Teams"
+    case "archive-teams":
+      return "Archive Teams";
 
-        default:
-            return path
-    }
-}
+    default:
+      return path;
+  }
+};
 
 interface BreadcrumbItem {
-    name: string,
-    path: string
+  name: string;
+  path: string;
 }
 
 export interface CorpUserInfo {
-    /* Authentik primary key. Needed so the sidebar can link to this person's
+  /* Authentik primary key. Needed so the sidebar can link to this person's
        own profile page at /org/people/:userPk. */
-    pk: number,
-    name: string,
-    avatar: string,
-    email: string,
-    isExecutive: boolean
+  pk: number;
+  name: string;
+  avatar: string;
+  email: string;
+  isExecutive: boolean;
 }
 
 export const CorpDashboard = () => {
-    const location = useLocation()
-    const navigate = useNavigate()
-    const [breadcrumbs, setBreadcrumbs] = React.useState<BreadcrumbItem[]>([]);
-    const [userInfo, setUserInfo] = React.useState<CorpUserInfo>({
-        pk: 0,
-        name: "Unknown",
-        email: "unknown@unknown.local",
-        avatar: "",
-        isExecutive: false
-    });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [breadcrumbs, setBreadcrumbs] = React.useState<BreadcrumbItem[]>([]);
+  const [userInfo, setUserInfo] = React.useState<CorpUserInfo>({
+    pk: 0,
+    name: "Unknown",
+    email: "unknown@unknown.local",
+    avatar: "",
+    isExecutive: false,
+  });
 
-    React.useEffect(() => {
-        const path = location.pathname;
-        const pathArr = path.split("/").filter(Boolean)
-        const breadcrumbsList = pathArr.reduce((prev: BreadcrumbItem[], path: string) => {
-            const crumbName = translateBreadcrumbPath(path)
-            const accumulatedPath = (prev.length < 1) ? `/${path}` :
-                `${prev[prev.length - 1].path}/${path}`
+  React.useEffect(() => {
+    const path = location.pathname;
+    const pathArr = path.split("/").filter(Boolean);
+    const breadcrumbsList = pathArr.reduce(
+      (prev: BreadcrumbItem[], path: string) => {
+        const crumbName = translateBreadcrumbPath(path);
+        const accumulatedPath =
+          prev.length < 1
+            ? `/${path}`
+            : `${prev[prev.length - 1].path}/${path}`;
 
-            /* Append to Accumulator */
-            prev.push({
-                name: crumbName,
-                path: accumulatedPath
-            })
+        /* Append to Accumulator */
+        prev.push({
+          name: crumbName,
+          path: accumulatedPath,
+        });
 
-            /* Return the Accumulator */
-            return prev
-        }, [])
+        /* Return the Accumulator */
+        return prev;
+      },
+      [],
+    );
 
-        /* Update Crumbs */
-        setBreadcrumbs(() => breadcrumbsList)
-    }, [location]);
+    /* Update Crumbs */
+    setBreadcrumbs(() => breadcrumbsList);
+  }, [location]);
 
-    React.useEffect(() => {
-        fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/auth/userinfo`)
-            .then(async (response) => {
-                if (response.status === 401) {
-                    window.location.href = `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/auth/login?return_to=${encodeURIComponent(window.location.href)}`
-                    return
-                }
+  React.useEffect(() => {
+    fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/auth/userinfo`)
+      .then(async (response) => {
+        if (response.status === 401) {
+          window.location.href = `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/auth/login?return_to=${encodeURIComponent(window.location.href)}`;
+          return;
+        }
 
-                try {
-                    const userlistResponse: CorpUserInfo = await response.json()
-                    setUserInfo(_ => userlistResponse)
-                } catch (e) {
-                    /* Backend likely returned a redirect to login page (HTML), so we should redirect */
-                    window.location.href = `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/auth/login?return_to=${encodeURIComponent(window.location.href)}`
-                }
-            })
-            .catch((e) => {
-                toast.error("Failed to Fetch User Information: " + e.message)
-            })
-    }, []);
+        try {
+          const userlistResponse: CorpUserInfo = await response.json();
+          setUserInfo((_) => userlistResponse);
+        } catch (e) {
+          /* Backend likely returned a redirect to login page (HTML), so we should redirect */
+          window.location.href = `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/auth/login?return_to=${encodeURIComponent(window.location.href)}`;
+        }
+      })
+      .catch((e) => {
+        toast.error("Failed to Fetch User Information: " + e.message);
+      });
+  }, []);
 
-    return (
-        <SidebarProvider>
-            <AppSidebar userInfo={userInfo} />
-            <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center gap-2 px-6">
-                    <SidebarTrigger className="-ml-1" />
-                    <Separator
-                        orientation="vertical"
-                        className="mr-2 data-[orientation=vertical]:h-4"
-                    />
-                    <Breadcrumb>
-                        <BreadcrumbList>
-                            {
-                                breadcrumbs.map((crumb, index) => (
-                                    <>
-                                        <BreadcrumbItem className="hidden md:block">
-                                            {
-                                                index < breadcrumbs.length - 1 ?
-                                                    <BreadcrumbLink
-                                                        onClick={() => { navigate(crumb.path) }}
-                                                        style={{ cursor: "pointer" }}
-                                                    >
-                                                        {crumb.name}
-                                                    </BreadcrumbLink> :
-                                                    <BreadcrumbPage>{crumb.name}</BreadcrumbPage>
-                                            }
-                                        </BreadcrumbItem>
-                                        {index < breadcrumbs.length - 1 ? <BreadcrumbSeparator className="hidden md:block" /> : <></>}
-                                    </>
-                                ))
-                            }
-                        </BreadcrumbList>
-                    </Breadcrumb>
-                </header>
-                <div className="flex flex-1 flex-col gap-4 p-6 pt-0 min-h-0 overflow-y-auto">
-                    <Routes>
-                        <Route path="/" element={<Navigate to="/org/people" />} />
-                        <Route path="/org" element={<Navigate to="/org/people" />} />
-                        <Route path="/org/people" element={<DashboardPeopleList />} />
-                        <Route path="/org/people/:userPk" element={<DashboardPeopleInfo />} />
-                        <Route path="/org/teams" element={<DashboardTeamsList />} />
-                        <Route path="/org/teams/:teamId" element={<DashboardTeamInfo />} />
-                        <Route path="/org/teams/:teamId/recruitment" element={<DashboardTeamRecruitment />} />
-                        <Route path="/org/teams/:teamId/meetings" element={<TeamMeetings />} />
-                        <Route path="/org/teams/:teamId/meetings/:meetingId" element={<MeetingDetail />} />
-                        <Route path="/org/teams/:teamId/meetings/:meetingId/checkin" element={<MeetingCheckin />} />
-                        <Route path="/org/teamrequests/:requestId" element={<OrgTeamRequestReview />} />
-                        <Route path="/org/orgchart" element={<OrgChartVisualization />} />
-                        <Route path="/community/events" element={<Events />} />
-                        <Route path="/community/events/:eventId/attendance" element={<EventAttendance />} />
-                        <Route
-                            path="/exec/active-teams"
-                            element={userInfo.isExecutive ? <ActiveTeams /> : <Navigate to="/org/people" />}
-                        />
-                        <Route
-                            path="/exec/archive-teams"
-                            element={userInfo.isExecutive ? <ArchiveTeams /> : <Navigate to="/org/people" />}
-                        />
-                        <Route path="/platform/license" element={<PlatformLicenseInfo />} />
-                    </Routes>
-                </div>
-            </SidebarInset>
-        </SidebarProvider>
-    )
-}
+  return (
+    <SidebarProvider>
+      <AppSidebar userInfo={userInfo} />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 px-6">
+          <SidebarTrigger className="-ml-1" />
+          <Separator
+            orientation="vertical"
+            className="mr-2 data-[orientation=vertical]:h-4"
+          />
+          <Breadcrumb>
+            <BreadcrumbList>
+              {breadcrumbs.map((crumb, index) => (
+                <>
+                  <BreadcrumbItem className="hidden md:block">
+                    {index < breadcrumbs.length - 1 ? (
+                      <BreadcrumbLink
+                        onClick={() => {
+                          navigate(crumb.path);
+                        }}
+                        style={{ cursor: "pointer" }}
+                      >
+                        {crumb.name}
+                      </BreadcrumbLink>
+                    ) : (
+                      <BreadcrumbPage>{crumb.name}</BreadcrumbPage>
+                    )}
+                  </BreadcrumbItem>
+                  {index < breadcrumbs.length - 1 ? (
+                    <BreadcrumbSeparator className="hidden md:block" />
+                  ) : (
+                    <></>
+                  )}
+                </>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-6 pt-0 min-h-0 overflow-y-auto">
+          <Routes>
+            <Route path="/" element={<Navigate to="/org/people" />} />
+            <Route path="/org" element={<Navigate to="/org/people" />} />
+            <Route path="/org/people" element={<DashboardPeopleList />} />
+            <Route
+              path="/org/people/:userPk"
+              element={<DashboardPeopleInfo />}
+            />
+            <Route path="/org/teams" element={<DashboardTeamsList />} />
+            <Route path="/org/teams/:teamId" element={<DashboardTeamInfo />} />
+            <Route
+              path="/org/teams/:teamId/recruitment"
+              element={<DashboardTeamRecruitment />}
+            />
+            <Route
+              path="/org/teams/:teamId/meetings"
+              element={<TeamMeetings />}
+            />
+            <Route
+              path="/org/teams/:teamId/meetings/:meetingId"
+              element={<MeetingDetail />}
+            />
+            <Route
+              path="/org/teams/:teamId/meetings/:meetingId/checkin"
+              element={<MeetingCheckin />}
+            />
+            <Route
+              path="/org/teamrequests/:requestId"
+              element={<OrgTeamRequestReview />}
+            />
+            <Route path="/org/orgchart" element={<OrgChartVisualization />} />
+            <Route path="/community/events" element={<Events />} />
+            <Route
+              path="/community/events/:eventId/attendance"
+              element={<EventAttendance />}
+            />
+            <Route
+              path="/exec/active-teams"
+              element={
+                userInfo.isExecutive ? (
+                  <ActiveTeams />
+                ) : (
+                  <Navigate to="/org/people" />
+                )
+              }
+            />
+            <Route
+              path="/exec/archive-teams"
+              element={
+                userInfo.isExecutive ? (
+                  <ArchiveTeams />
+                ) : (
+                  <Navigate to="/org/people" />
+                )
+              }
+            />
+            <Route path="/platform/license" element={<PlatformLicenseInfo />} />
+          </Routes>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+};

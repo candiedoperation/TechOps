@@ -1,12 +1,12 @@
-import React from 'react'
-import Image from 'next/image'
-import { Button } from '../ui/button'
-import { ArrowRight } from 'lucide-react'
-import Link from 'next/link';
-import { FEATURED_PROJECTS } from '@/data/projects';
-import BlueBorderContainer from '../ui/blue-border-container'; 
-import { prefixPath } from '@/lib/prefix';
-import FadeSlideIn from '../ui/fade-slide-in';
+import React from "react";
+import Image from "next/image";
+import { Button } from "../ui/button";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { FEATURED_PROJECTS } from "@/data/projects";
+import BlueBorderContainer from "../ui/blue-border-container";
+import { prefixPath } from "@/lib/prefix";
+import FadeSlideIn from "../ui/fade-slide-in";
 
 const Projects = () => {
   return (
@@ -25,11 +25,11 @@ const Projects = () => {
               FEATURED_PROJECTS.length % 2 === 1;
 
             return (
-              <FadeSlideIn 
-                key={project.title} 
-                delay={idx + 1 * 100} 
-                direction={idx === 0 ? 'right' : idx === 2 ? 'left' : 'up'}
-                className='h-full'
+              <FadeSlideIn
+                key={project.title}
+                delay={idx + 1 * 100}
+                direction={idx === 0 ? "right" : idx === 2 ? "left" : "up"}
+                className="h-full"
               >
                 <BlueBorderContainer
                   className="flex flex-col items-center gap-3 p-6 h-full relative bg-white group overflow-hidden"
@@ -38,13 +38,13 @@ const Projects = () => {
                 >
                   <div className="absolute inset-0 bg-gradient-to-b from-white to-blue-300/15 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   <div className="flex justify-center items-center mb-2 z-10">
-                    <Image 
-                      src={prefixPath(project.logo)} 
-                      alt={project?.logoAlt || "Project Logo"} 
-                      width={208} 
-                      height={96} 
-                      unoptimized={project.logo.endsWith('.svg')}
-                      className="object-contain h-24 w-52" 
+                    <Image
+                      src={prefixPath(project.logo)}
+                      alt={project?.logoAlt || "Project Logo"}
+                      width={208}
+                      height={96}
+                      unoptimized={project.logo.endsWith(".svg")}
+                      className="object-contain h-24 w-52"
                     />
                   </div>
                   <div className="text-lg font-semibold mb-1 text-gray-800 text-center z-10">
@@ -53,19 +53,29 @@ const Projects = () => {
                   <div className="text-sm text-gray-600 mb-4 text-center flex-grow z-10">
                     {project.description}
                   </div>
-                  <Link href={`/projects/${project.slug}`} className="w-full mt-auto z-10">
-                    <Button variant="roundedOutline" className="w-full py-5 hover:bg-blue-100/75">
+                  <Link
+                    href={`/projects/${project.slug}`}
+                    className="w-full mt-auto z-10"
+                  >
+                    <Button
+                      variant="roundedOutline"
+                      className="w-full py-5 hover:bg-blue-100/75"
+                    >
                       Read more <ArrowRight className="ml-1" />
                     </Button>
                   </Link>
                 </BlueBorderContainer>
               </FadeSlideIn>
-            )
+            );
           })}
         </div>
         <div className="flex flex-col items-center justify-center gap-y-10 m-6">
           <Link href="/projects">
-            <Button size="lg" variant="default" className='text-lg font-semibold'>
+            <Button
+              size="lg"
+              variant="default"
+              className="text-lg font-semibold"
+            >
               View All Projects
             </Button>
           </Link>
@@ -73,6 +83,6 @@ const Projects = () => {
       </div>
     </section>
   );
-}
+};
 
-export default Projects
+export default Projects;

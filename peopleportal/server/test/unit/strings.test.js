@@ -27,7 +27,10 @@ test("sanitizeGroupName keeps only characters legal in a group name", () => {
   assert.equal(sanitizeGroupName("web-dev_fa26"), "web-dev_fa26");
   assert.equal(sanitizeGroupName("web/dev:fa26"), "webdevfa26");
   assert.equal(sanitizeGroupName("../../etc/passwd"), "etcpasswd");
-  assert.equal(sanitizeGroupName("<script>alert(1)</script>"), "scriptalert1script");
+  assert.equal(
+    sanitizeGroupName("<script>alert(1)</script>"),
+    "scriptalert1script",
+  );
   assert.equal(sanitizeGroupName(""), "");
 });
 
@@ -69,13 +72,20 @@ test("validatePersonName accepts real-world names", () => {
 
 test("validatePersonName requires both a first and a last name", () => {
   for (const name of ["Ada", "Madonna", "X"]) {
-    assert.throws(() => validatePersonName(name), /first and last name|between 2 and 60/, `for ${name}`);
+    assert.throws(
+      () => validatePersonName(name),
+      /first and last name|between 2 and 60/,
+      `for ${name}`,
+    );
   }
 });
 
 test("validatePersonName rejects out-of-range lengths", () => {
   assert.throws(() => validatePersonName("A"), /between 2 and 60/);
-  assert.throws(() => validatePersonName("A".repeat(61) + " B"), /between 2 and 60/);
+  assert.throws(
+    () => validatePersonName("A".repeat(61) + " B"),
+    /between 2 and 60/,
+  );
 });
 
 test("validatePersonName rejects characters that are not name characters", () => {
@@ -87,7 +97,11 @@ test("validatePersonName rejects characters that are not name characters", () =>
     "Ada_Lovelace Doe",
     "Ada 1337",
   ]) {
-    assert.throws(() => validatePersonName(name), /Invalid name/, `for ${JSON.stringify(name)}`);
+    assert.throws(
+      () => validatePersonName(name),
+      /Invalid name/,
+      `for ${JSON.stringify(name)}`,
+    );
   }
 });
 
@@ -119,7 +133,11 @@ test("sanitizeUserFullName output is legal as an AWS IAM session name", () => {
     "Ada  Lovelace",
   ]) {
     const result = sanitizeUserFullName(name);
-    assert.match(result, AWS_SESSION_NAME, `${JSON.stringify(name)} produced ${JSON.stringify(result)}`);
+    assert.match(
+      result,
+      AWS_SESSION_NAME,
+      `${JSON.stringify(name)} produced ${JSON.stringify(result)}`,
+    );
   }
   assert.equal(sanitizeUserFullName("Mary-Kate O'Neil"), "MaryKateOneil");
 });
@@ -132,7 +150,10 @@ test("sanitizeUserFullName handles a single name and empty input", () => {
 });
 
 test("formatBindleAccessError names both the owners and what is missing", () => {
-  const message = formatBindleAccessError(["Ada", "Grace"], ["corp:hiringaccess"]);
+  const message = formatBindleAccessError(
+    ["Ada", "Grace"],
+    ["corp:hiringaccess"],
+  );
   assert.match(message, /Ada/);
   assert.match(message, /Grace/);
   assert.match(message, /corp:hiringaccess/);

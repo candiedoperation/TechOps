@@ -22,15 +22,15 @@ A present-but-empty value counts as missing.
 
 ## Core
 
-| Variable | Notes |
-|---|---|
-| `NODE_ENV` | `development`, `test` or `production`. Anything else throws. Default `development` |
-| `PORT` | Listen port. Default `3000` |
-| `PEOPLEPORTAL_BASE_URL` | Public origin. Builds the OIDC redirect and post-logout URLs |
-| `PEOPLEPORTAL_WEBHOOK_URL` | Origin Gitea calls back on. Usually the same as above |
-| `PEOPLEPORTAL_MONGO_URL` | MongoDB connection string |
-| `PEOPLEPORTAL_REDIS_URL` | Cache. **Optional**: unset logs "running without a cache" and continues |
-| `PEOPLEPORTAL_TOKEN_SECRET` | Session signing secret |
+| Variable                    | Notes                                                                              |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `NODE_ENV`                  | `development`, `test` or `production`. Anything else throws. Default `development` |
+| `PORT`                      | Listen port. Default `3000`                                                        |
+| `PEOPLEPORTAL_BASE_URL`     | Public origin. Builds the OIDC redirect and post-logout URLs                       |
+| `PEOPLEPORTAL_WEBHOOK_URL`  | Origin Gitea calls back on. Usually the same as above                              |
+| `PEOPLEPORTAL_MONGO_URL`    | MongoDB connection string                                                          |
+| `PEOPLEPORTAL_REDIS_URL`    | Cache. **Optional**: unset logs "running without a cache" and continues            |
+| `PEOPLEPORTAL_TOKEN_SECRET` | Session signing secret                                                             |
 
 `PEOPLEPORTAL_TOKEN_SECRET` behaves differently by environment. In production it
 is required and the server throws without it. In development it generates an
@@ -38,13 +38,13 @@ ephemeral one and warns, so sessions do not survive a restart.
 
 ## Authentication
 
-| Variable | Notes |
-|---|---|
-| `PEOPLEPORTAL_AUTHENTIK_ENDPOINT` | Authentik base URL |
-| `PEOPLEPORTAL_AUTHENTIK_TOKEN` | Admin API token, sent as `Bearer` |
-| `PEOPLEPORTAL_OIDC_DSCVURL` | Discovery document URL |
-| `PEOPLEPORTAL_OIDC_CLIENTID` | Client id from the Authentik provider |
-| `PEOPLEPORTAL_OIDC_CLIENTSECRET` | Client secret |
+| Variable                          | Notes                                 |
+| --------------------------------- | ------------------------------------- |
+| `PEOPLEPORTAL_AUTHENTIK_ENDPOINT` | Authentik base URL                    |
+| `PEOPLEPORTAL_AUTHENTIK_TOKEN`    | Admin API token, sent as `Bearer`     |
+| `PEOPLEPORTAL_OIDC_DSCVURL`       | Discovery document URL                |
+| `PEOPLEPORTAL_OIDC_CLIENTID`      | Client id from the Authentik provider |
+| `PEOPLEPORTAL_OIDC_CLIENTSECRET`  | Client secret                         |
 
 The app requests `openid profile email people_portal offline_access`, and reads
 `pk`, `is_superuser` and `attributes` from the custom scope. See
@@ -53,11 +53,11 @@ including what logout needs.
 
 ## Gitea
 
-| Variable | Notes |
-|---|---|
-| `PEOPLEPORTAL_GITEA_ENDPOINT` | Gitea base URL |
-| `PEOPLEPORTAL_GITEA_TOKEN` | Admin token. Needs `write:admin` for system webhooks |
-| `PEOPLEPORTAL_GITEA_WEBHOOK_SECRET` | Shared secret. **Minimum 32 characters** |
+| Variable                            | Notes                                                |
+| ----------------------------------- | ---------------------------------------------------- |
+| `PEOPLEPORTAL_GITEA_ENDPOINT`       | Gitea base URL                                       |
+| `PEOPLEPORTAL_GITEA_TOKEN`          | Admin token. Needs `write:admin` for system webhooks |
+| `PEOPLEPORTAL_GITEA_WEBHOOK_SECRET` | Shared secret. **Minimum 32 characters**             |
 
 The webhook secret is not optional once Gitea is enabled. `GiteaHookSetup` builds
 the `Authorization: Bearer` header from it before creating either hook, and throws
@@ -67,12 +67,12 @@ with `timingSafeEqual`.
 
 ## Slack and Discord
 
-| Variable | Notes |
-|---|---|
-| `PEOPLEPORTAL_SLACK_BOT_TOKEN` | Bot token. `SlackClient` throws at construction if unset |
-| `PEOPLEPORTAL_SLACK_INVITE_URL` | Workspace invite link surfaced to new members |
-| `PEOPLEPORTAL_DISCORD_BOT_TOKEN` | Optional |
-| `PEOPLEPORTAL_DISCORD_SERVER_ID` | Optional |
+| Variable                         | Notes                                                    |
+| -------------------------------- | -------------------------------------------------------- |
+| `PEOPLEPORTAL_SLACK_BOT_TOKEN`   | Bot token. `SlackClient` throws at construction if unset |
+| `PEOPLEPORTAL_SLACK_INVITE_URL`  | Workspace invite link surfaced to new members            |
+| `PEOPLEPORTAL_DISCORD_BOT_TOKEN` | Optional                                                 |
+| `PEOPLEPORTAL_DISCORD_SERVER_ID` | Optional                                                 |
 
 Discord degrades: with either missing, the client logs "Discord integration
 disabled" and the server starts normally. A bad token also degrades rather than
@@ -85,15 +85,15 @@ requested separately from `users:read` and is easy to miss.
 
 ## Email
 
-| Variable | Notes |
-|---|---|
-| `PEOPLEPORTAL_SMTP_HOST` | SMTP server |
-| `PEOPLEPORTAL_SMTP_PORT` | `465` for SSL, `587` for STARTTLS |
-| `PEOPLEPORTAL_SMTP_SECURE` | `true` or `false` |
-| `PEOPLEPORTAL_SMTP_USER` | SMTP username |
-| `PEOPLEPORTAL_SMTP_PASS` | SMTP password |
+| Variable                        | Notes                                                |
+| ------------------------------- | ---------------------------------------------------- |
+| `PEOPLEPORTAL_SMTP_HOST`        | SMTP server                                          |
+| `PEOPLEPORTAL_SMTP_PORT`        | `465` for SSL, `587` for STARTTLS                    |
+| `PEOPLEPORTAL_SMTP_SECURE`      | `true` or `false`                                    |
+| `PEOPLEPORTAL_SMTP_USER`        | SMTP username                                        |
+| `PEOPLEPORTAL_SMTP_PASS`        | SMTP password                                        |
 | `PEOPLEPORTAL_SMTP_DEFAULTFROM` | Default From address when a request does not set one |
-| `PEOPLEPORTAL_EMAIL_CONREROUTE` | If set, mail is intercepted instead of sent |
+| `PEOPLEPORTAL_EMAIL_CONREROUTE` | If set, mail is intercepted instead of sent          |
 
 `PEOPLEPORTAL_SMTP_DEFAULTFROM` is the From fallback, not `PEOPLEPORTAL_SMTP_USER`.
 Set `PEOPLEPORTAL_EMAIL_CONREROUTE` on any environment seeded with real member
@@ -101,10 +101,10 @@ addresses, or onboarding mail reaches real people.
 
 ## Photo check
 
-| Variable | Notes |
-|---|---|
-| `PHOTO_CHECK_ENABLED` | Off unless exactly `true` |
-| `PHOTO_CHECK_URL` | Sidecar address. Default `http://localhost:8001` |
+| Variable                  | Notes                                                |
+| ------------------------- | ---------------------------------------------------- |
+| `PHOTO_CHECK_ENABLED`     | Off unless exactly `true`                            |
+| `PHOTO_CHECK_URL`         | Sidecar address. Default `http://localhost:8001`     |
 | `PHOTO_CHECK_FAIL_CLOSED` | `true` rejects uploads the service could not rule on |
 
 Leave `PHOTO_CHECK_ENABLED` off until the sidecar is actually running, otherwise
@@ -112,21 +112,21 @@ every upload is waved through.
 
 ## AWS
 
-| Variable | Notes |
-|---|---|
-| `AWS_ACCESS_KEY_ID` | Server's IAM user |
-| `AWS_SECRET_ACCESS_KEY` | |
-| `AWS_REGION` | Default `us-east-1` |
-| `S3_BUCKET_NAME` | Resumes and avatars |
-| `AWS_ORG_ROOT_ID` | Organization root, `r-...` |
-| `AWS_NONPROD_OU_ID` | OU new team accounts are moved into |
-| `AWS_SUSPENDED_OU_ID` | OU archived accounts move to |
-| `AWS_MANAGEMENT_ACCOUNT_ID` | Payer account, where budgets live |
-| `AWS_ADMIN_ROLE_NAME` | Role created inside each member account. Default `AppDevNonProductionRole` |
-| `AWS_DEFAULT_BUDGET_AMOUNT` | Monthly USD limit. Default `50` |
-| `AWS_BILLING_ALERT_EMAIL` | Budget alert recipient |
-| `AWS_DENY_ALL_SCP_ID` | DenyAll SCP, `p-...` |
-| `AWS_BUDGET_ACTION_ROLE_ARN` | Role AWS Budgets assumes to apply that SCP |
+| Variable                     | Notes                                                                      |
+| ---------------------------- | -------------------------------------------------------------------------- |
+| `AWS_ACCESS_KEY_ID`          | Server's IAM user                                                          |
+| `AWS_SECRET_ACCESS_KEY`      |                                                                            |
+| `AWS_REGION`                 | Default `us-east-1`                                                        |
+| `S3_BUCKET_NAME`             | Resumes and avatars                                                        |
+| `AWS_ORG_ROOT_ID`            | Organization root, `r-...`                                                 |
+| `AWS_NONPROD_OU_ID`          | OU new team accounts are moved into                                        |
+| `AWS_SUSPENDED_OU_ID`        | OU archived accounts move to                                               |
+| `AWS_MANAGEMENT_ACCOUNT_ID`  | Payer account, where budgets live                                          |
+| `AWS_ADMIN_ROLE_NAME`        | Role created inside each member account. Default `AppDevNonProductionRole` |
+| `AWS_DEFAULT_BUDGET_AMOUNT`  | Monthly USD limit. Default `50`                                            |
+| `AWS_BILLING_ALERT_EMAIL`    | Budget alert recipient                                                     |
+| `AWS_DENY_ALL_SCP_ID`        | DenyAll SCP, `p-...`                                                       |
+| `AWS_BUDGET_ACTION_ROLE_ARN` | Role AWS Budgets assumes to apply that SCP                                 |
 
 :::danger Three are load-bearing at import
 `AWSClient`'s constructor throws without `AWS_ORG_ROOT_ID`, `AWS_NONPROD_OU_ID`
@@ -147,10 +147,10 @@ Policy documents live in `peopleportal/server/aws/`.
 
 ## Node
 
-| Variable | Notes |
-|---|---|
+| Variable                       | Notes                             |
+| ------------------------------ | --------------------------------- |
 | `NODE_TLS_REJECT_UNAUTHORIZED` | `0` disables all TLS verification |
-| `NODE_EXTRA_CA_CERTS` | Path to an extra CA bundle |
+| `NODE_EXTRA_CA_CERTS`          | Path to an extra CA bundle        |
 
 Setting `NODE_TLS_REJECT_UNAUTHORIZED=0` in production is refused at startup. For
 internal or self-signed certificates use `NODE_EXTRA_CA_CERTS`, which trusts your

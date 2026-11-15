@@ -19,7 +19,6 @@ External services integrated with the People Portal rely on the **Shared Resourc
 
 This behavior ensures that Shared Resource Client integrations (such as Slack and App Dev Git) do not break even if a team updates its display title.
 
-
 :::
 
 ![Teams Dashboard](/img/people-portal/TeamSettings.png)
@@ -31,11 +30,9 @@ To update your Project Team's core information, go to **Organization > Teams**, 
 - **Team Name**: The display name of your team as it appears throughout the People Portal UI.
 - **Team Description**: A brief summary of the team's mission, stack, or scope.
 
-
 ## AWS Account Provisioning
 
 In the **Team Settings** section, you will find a toggle to **Provision AWS Account**.
 
 - **What it does**: When enabled, the People Portal automatically creates a dedicated AWS account for your Project Team. This account is isolated from other teams and comes with an initial budget limit.
 - **Access**: Once provisioned, members can access your AWS environment via the **AWS Console** button on your team's dashboard (managed through the Bindle permission system).
-

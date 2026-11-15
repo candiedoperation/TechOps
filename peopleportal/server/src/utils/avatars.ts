@@ -25,7 +25,10 @@ import { s3Client, BUCKET_NAME } from "../clients/AWSClient/S3Client";
    full day after any change, which is why an explicit invalidate helper was
    needed at every write site. Comparing avatarKey makes a stale hit impossible
    and leaves invalidateAvatarUrlCache as belt-and-braces. */
-const avatarUrlCache = new Map<string, { url: string, avatarKey: string, expiresAt: number }>();
+const avatarUrlCache = new Map<
+  string,
+  { url: string; avatarKey: string; expiresAt: number }
+>();
 
 /* The cached entry must die before the URL it holds. Signing happens first and
    the entry is stored after, so an equal TTL always outlives its own URL. */
@@ -33,45 +36,54 @@ const SIGNED_URL_TTL_SECONDS = 86400;
 const CACHE_TTL_SECONDS = SIGNED_URL_TTL_SECONDS - 3600;
 
 export function invalidateAvatarUrlCache(userPk: string | number): void {
-    avatarUrlCache.delete(userPk.toString());
+  avatarUrlCache.delete(userPk.toString());
 }
 
 /**
  * Generates a pre-signed URL for downloading a user's avatar.
  * Uses in-memory caching to reduce S3 API calls.
- * 
+ *
  * @param userPk The PK of the user whose avatar to fetch
  * @param avatarKey The S3 key of the avatar image
  * @returns Promise<string> The signed URL or an empty string if no avatar is provided
  */
-export async function signAvatarUrl(userPk: string | number | undefined, avatarKey?: string): Promise<string> {
-    if (!userPk) return "";
-    const pk = userPk.toString();
+export async function signAvatarUrl(
+  userPk: string | number | undefined,
+  avatarKey?: string,
+): Promise<string> {
+  if (!userPk) return "";
+  const pk = userPk.toString();
 
-    if (!avatarKey) return "";
+  if (!avatarKey) return "";
 
-    const cached = avatarUrlCache.get(pk);
-    if (cached && cached.avatarKey === avatarKey && cached.expiresAt > Date.now()) {
-        return cached.url;
-    }
+  const cached = avatarUrlCache.get(pk);
+  if (
+    cached &&
+    cached.avatarKey === avatarKey &&
+    cached.expiresAt > Date.now()
+  ) {
+    return cached.url;
+  }
 
-    try {
-        const command = new GetObjectCommand({
-            Bucket: BUCKET_NAME,
-            Key: avatarKey,
-        });
+  try {
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: avatarKey,
+    });
 
-        const url = await getSignedUrl(s3Client, command, { expiresIn: SIGNED_URL_TTL_SECONDS });
+    const url = await getSignedUrl(s3Client, command, {
+      expiresIn: SIGNED_URL_TTL_SECONDS,
+    });
 
-        avatarUrlCache.set(pk, {
-            url: url,
-            avatarKey: avatarKey,
-            expiresAt: Date.now() + CACHE_TTL_SECONDS * 1000
-        });
+    avatarUrlCache.set(pk, {
+      url: url,
+      avatarKey: avatarKey,
+      expiresAt: Date.now() + CACHE_TTL_SECONDS * 1000,
+    });
 
-        return url;
-    } catch (e) {
-        console.error(`Failed to sign avatar URL for user ${pk}`, e);
-        return "";
-    }
+    return url;
+  } catch (e) {
+    console.error(`Failed to sign avatar URL for user ${pk}`, e);
+    return "";
+  }
 }

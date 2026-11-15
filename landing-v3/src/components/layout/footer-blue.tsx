@@ -74,8 +74,9 @@ const FooterBlue = () => {
               placeholder="Send us an Email!"
               value={emailMessage}
               onChange={handleEmailChange}
-              className={`text-white border-1 border-white rounded-lg p-3 w-full bg-transparent placeholder-white pr-10 ${emailMessage.length > 0 ? "font-bold" : ""
-                }`}
+              className={`text-white border-1 border-white rounded-lg p-3 w-full bg-transparent placeholder-white pr-10 ${
+                emailMessage.length > 0 ? "font-bold" : ""
+              }`}
             />
             <a
               href={`mailto:umdappdev@gmail.com?subject=Information Request&body=${emailMessage}`}
@@ -89,7 +90,6 @@ const FooterBlue = () => {
           </div>
         </div>
       </div>
-
     </div>
   );
 };

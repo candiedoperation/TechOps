@@ -13,6 +13,7 @@ People Portal is a comprehensive platform for managing people-related operations
 ## Getting Started
 
 This guide covers:
+
 - Basic navigation and features
 - How to use key functionalities
 - Tips and best practices

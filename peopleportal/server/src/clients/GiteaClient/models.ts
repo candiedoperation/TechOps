@@ -17,15 +17,15 @@
 */
 
 export interface GiteaAPITeamDefinition {
-  id: number,
-  name: string,
-  description: string,
-  organization: string | null,
-  includes_all_repositories: boolean,
-  permission: "none" | "read" | "write" | "admin" | "owner",
-  can_create_org_repo: boolean,
-  units: string[],
-  units_map: object,
+  id: number;
+  name: string;
+  description: string;
+  organization: string | null;
+  includes_all_repositories: boolean;
+  permission: "none" | "read" | "write" | "admin" | "owner";
+  can_create_org_repo: boolean;
+  units: string[];
+  units_map: object;
 }
 
 export interface GiteaAPIUserDefinition {
@@ -156,10 +156,10 @@ export interface GiteaRepository extends GiteaRepositoryBrief {
 }
 
 export interface GiteaHookRepositoryTrigger {
-  action: string,
-  repository: GiteaRepository,
-  organization: GiteaUser,
-  sender: GiteaUser,
+  action: string;
+  repository: GiteaRepository;
+  organization: GiteaUser;
+  sender: GiteaUser;
 }
 
 export interface GiteaCommitUser {

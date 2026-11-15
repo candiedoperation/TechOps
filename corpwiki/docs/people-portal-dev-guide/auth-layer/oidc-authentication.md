@@ -3,6 +3,7 @@ sidebar_position: 1
 ---
 
 # OpenID Connect Authentication
+
 ## Overview
 
 The application relies on OpenID Connect (OIDC) for user identification and initial authentication. This layer handles the "Who are you?" question before the Bindle layer handles "What can you do?".
@@ -16,15 +17,16 @@ The Express sessions middleware currently uses an in-memory store. Therefore, OI
 :::
 
 ### Required Scopes
+
 :::info
 Ensure these scopes are explicitly allowed in your OIDC Provider's configuration (e.g., in Authentik's Provider settings).
 :::
 
 To function correctly, the OIDC Provider must support and grant the following scopes upon authorization:
 
-*   `openid`: Standard OIDC requirement.
-*   `profile`: To obtain the user's name and nickname.
-*   `email`: To link the user to their internal profile.
+- `openid`: Standard OIDC requirement.
+- `profile`: To obtain the user's name and nickname.
+- `email`: To link the user to their internal profile.
 
 ## Authentication Flow
 
@@ -38,7 +40,7 @@ sequenceDiagram
 
     Note over User, Provider: 1. Login Initiation
     User->>Server: GET /api/auth/login
-    
+
     rect rgba(0, 150, 255, 0.1)
         Server->>Server: Generate PKCE Verifier & Challenge
         Server->>Server: Create State & Config
@@ -51,7 +53,7 @@ sequenceDiagram
 
     Note over User, Provider: 3. Session Creation
     User->>Server: GET /api/auth/redirect?code=...
-    
+
     rect rgba(150, 100, 255, 0.1)
         Server->>Provider: Exchange Code for Tokens
         Provider-->>Server: Access Token + ID Token
@@ -68,15 +70,19 @@ sequenceDiagram
 The OIDC integration acts as the primary gatekeeper for the application.
 
 ### Login (`/api/auth/login`)
+
 Initiates the PKCE-enhanced Authorization Code flow. It computes the necessary nonces, state, and code challenges before redirecting the user to the configured `PEOPLEPORTAL_OIDC_DSCVURL`.
 
 ### Callback (`/api/auth/redirect`)
+
 Handles the return trip from the provider.
-*   **Verifies State**: Ensures the response matches the initiated request.
-*   **Code Exchange**: Swaps the authorization code for an `access_token` and `id_token`.
-*   **Session Inflation**: Creates an `express-session` containing the `AuthorizedUser` object and the raw `accessToken` for downstream API calls.
+
+- **Verifies State**: Ensures the response matches the initiated request.
+- **Code Exchange**: Swaps the authorization code for an `access_token` and `id_token`.
+- **Session Inflation**: Creates an `express-session` containing the `AuthorizedUser` object and the raw `accessToken` for downstream API calls.
 
 ### Logout (`/api/auth/logout`)
+
 Destroys the local `express-session` thereby, prevent the user from accessing People Portal resources without renewing the session cookie.
 
 :::tip Non-Standard Behavior
@@ -84,4 +90,5 @@ Currently, this does **not** trigger a back-channel logout to the OIDC provider.
 :::
 
 ### Session Management
+
 The application uses `express-session` backed by a session store (e.g., Redis or Memory). The presence of `req.session.accessToken` and `req.session.authorizedUser` is the canonical check for "Is Authenticated?".

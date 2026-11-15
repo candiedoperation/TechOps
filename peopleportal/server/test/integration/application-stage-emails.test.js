@@ -13,7 +13,10 @@ const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 
 const { Applicant } = require("../../dist/models/Applicant.js");
-const { Application, ApplicationStage } = require("../../dist/models/Application.js");
+const {
+  Application,
+  ApplicationStage,
+} = require("../../dist/models/Application.js");
 const { ATSController } = require("../../dist/controllers/ATSController.js");
 
 const TEAM_PK = "team-webdev-fa26";
@@ -58,7 +61,12 @@ function controllerWithCapturedEmail() {
   const controller = new ATSController();
   const sent = [];
 
-  controller.emailClient = { send: async (message) => { sent.push(message); return true; } };
+  controller.emailClient = {
+    send: async (message) => {
+      sent.push(message);
+      return true;
+    },
+  };
 
   /* Stand in for Authentik so the test needs no directory. */
   controller.authentikClient = {
@@ -95,7 +103,9 @@ async function seedApplication(stage = ApplicationStage.APPLIED) {
   const application = await Application.create({
     applicantId: applicant._id,
     teamPk: TEAM_PK,
-    rolePreferences: [{ role: "Software Engineer", subteamPk: "subteam-webdev-frontend" }],
+    rolePreferences: [
+      { role: "Software Engineer", subteamPk: "subteam-webdev-frontend" },
+    ],
     stage,
     responses: {},
     stars: 0,
@@ -109,11 +119,17 @@ test("moving an applicant to Potential Hire sends no email", async () => {
   const { controller, sent } = controllerWithCapturedEmail();
 
   const result = await controller.updateApplicationStage(
-    recruiterRequest(), TEAM_PK, String(application._id),
-    { stage: ApplicationStage.POTENTIAL_HIRE }
+    recruiterRequest(),
+    TEAM_PK,
+    String(application._id),
+    { stage: ApplicationStage.POTENTIAL_HIRE },
   );
 
-  assert.equal(result.error, undefined, `transition rejected: ${result.message}`);
+  assert.equal(
+    result.error,
+    undefined,
+    `transition rejected: ${result.message}`,
+  );
   assert.deepEqual(sent, [], "Potential Hire must not notify the applicant");
 });
 
@@ -122,11 +138,15 @@ test("no email sent to Potential Hire mentions being waitlisted", async () => {
   const { controller, sent } = controllerWithCapturedEmail();
 
   await controller.updateApplicationStage(
-    recruiterRequest(), TEAM_PK, String(application._id),
-    { stage: ApplicationStage.POTENTIAL_HIRE }
+    recruiterRequest(),
+    TEAM_PK,
+    String(application._id),
+    { stage: ApplicationStage.POTENTIAL_HIRE },
   );
 
-  const wording = sent.map((m) => `${m.subject ?? ""} ${m.templateName ?? ""}`).join(" ");
+  const wording = sent
+    .map((m) => `${m.subject ?? ""} ${m.templateName ?? ""}`)
+    .join(" ");
   assert.doesNotMatch(wording, /waitlist/i);
   assert.doesNotMatch(wording, /RecruitPotentialHireInfo/);
 });
@@ -136,13 +156,18 @@ test("the stage change itself still persists", async () => {
   const { controller } = controllerWithCapturedEmail();
 
   await controller.updateApplicationStage(
-    recruiterRequest(), TEAM_PK, String(application._id),
-    { stage: ApplicationStage.POTENTIAL_HIRE }
+    recruiterRequest(),
+    TEAM_PK,
+    String(application._id),
+    { stage: ApplicationStage.POTENTIAL_HIRE },
   );
 
   const reloaded = await Application.findById(application._id);
-  assert.equal(reloaded.stage, ApplicationStage.POTENTIAL_HIRE,
-    "the applicant should still move columns, just silently");
+  assert.equal(
+    reloaded.stage,
+    ApplicationStage.POTENTIAL_HIRE,
+    "the applicant should still move columns, just silently",
+  );
 });
 
 test("Potential Hire is still a real stage the model accepts", () => {
@@ -159,8 +184,10 @@ test("Potential Hire cannot be reached directly from Applied", async () => {
   const { controller, sent } = controllerWithCapturedEmail();
 
   const result = await controller.updateApplicationStage(
-    recruiterRequest(), TEAM_PK, String(application._id),
-    { stage: ApplicationStage.POTENTIAL_HIRE }
+    recruiterRequest(),
+    TEAM_PK,
+    String(application._id),
+    { stage: ApplicationStage.POTENTIAL_HIRE },
   );
 
   assert.equal(result.error, "BadRequest");
@@ -174,11 +201,17 @@ test("Hired and Rejected are terminal", async () => {
     const { controller } = controllerWithCapturedEmail();
 
     const result = await controller.updateApplicationStage(
-      recruiterRequest(), TEAM_PK, String(application._id),
-      { stage: ApplicationStage.INTERVIEW }
+      recruiterRequest(),
+      TEAM_PK,
+      String(application._id),
+      { stage: ApplicationStage.INTERVIEW },
     );
 
-    assert.equal(result.error, "BadRequest", `${terminal} should accept no onward transition`);
+    assert.equal(
+      result.error,
+      "BadRequest",
+      `${terminal} should accept no onward transition`,
+    );
   }
 });
 
@@ -187,8 +220,10 @@ test("re-setting the current stage is idempotent and silent", async () => {
   const { controller, sent } = controllerWithCapturedEmail();
 
   const result = await controller.updateApplicationStage(
-    recruiterRequest(), TEAM_PK, String(application._id),
-    { stage: ApplicationStage.INTERVIEW }
+    recruiterRequest(),
+    TEAM_PK,
+    String(application._id),
+    { stage: ApplicationStage.INTERVIEW },
   );
 
   assert.equal(result.error, undefined);
@@ -201,8 +236,10 @@ test("an application from another team is not found through this route", async (
   const { controller } = controllerWithCapturedEmail();
 
   const result = await controller.updateApplicationStage(
-    recruiterRequest(), "team-someone-else", String(application._id),
-    { stage: ApplicationStage.POTENTIAL_HIRE }
+    recruiterRequest(),
+    "team-someone-else",
+    String(application._id),
+    { stage: ApplicationStage.POTENTIAL_HIRE },
   );
 
   assert.equal(result.error, "NotFound");

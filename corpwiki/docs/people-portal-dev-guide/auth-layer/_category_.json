@@ -1,8 +1,8 @@
 {
-    "label": "Authentication & Authorization",
-    "position": 3,
-    "link": {
-        "type": "generated-index",
-        "description": "People Portal Architecture Diagrams"
-    }
+  "label": "Authentication & Authorization",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "People Portal Architecture Diagrams"
+  }
 }

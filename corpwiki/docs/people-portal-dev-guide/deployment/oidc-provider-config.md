@@ -79,10 +79,10 @@ nothing else to go on.
 
 Two entries, and the **types are not interchangeable**:
 
-| URL | Type |
-|---|---|
+| URL                                       | Type            |
+| ----------------------------------------- | --------------- |
 | `PEOPLEPORTAL_BASE_URL/api/auth/redirect` | `authorization` |
-| `PEOPLEPORTAL_BASE_URL/` | `logout` |
+| `PEOPLEPORTAL_BASE_URL/`                  | `logout`        |
 
 Both strict matching. Authentik validates `post_logout_redirect_uri` only against
 entries typed `logout`. Registering the landing page with the default

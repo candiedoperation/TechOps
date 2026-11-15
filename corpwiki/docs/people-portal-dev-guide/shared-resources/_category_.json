@@ -1,8 +1,8 @@
 {
-    "label": "Shared Resources",
-    "position": 3,
-    "link": {
-        "type": "generated-index",
-        "description": "People Portal Shared Resources"
-    }
+  "label": "Shared Resources",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "People Portal Shared Resources"
+  }
 }

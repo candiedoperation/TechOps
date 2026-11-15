@@ -12,16 +12,12 @@
     },
     "build": {
       "executor": "nx:run-commands",
-      "dependsOn": [
-        "install-deps"
-      ],
+      "dependsOn": ["install-deps"],
       "options": {
         "command": "tsoa spec-and-routes && tsc && cpx \"src/**/*.hbs\" dist",
         "cwd": "{projectRoot}"
       },
-      "outputs": [
-        "{projectRoot}/dist"
-      ]
+      "outputs": ["{projectRoot}/dist"]
     },
     "serve": {
       "executor": "nx:run-commands",
@@ -29,9 +25,7 @@
         "command": "NODE_ENV=development nodemon src/app.ts",
         "cwd": "{projectRoot}"
       },
-      "dependsOn": [
-        "build"
-      ]
+      "dependsOn": ["build"]
     },
     "start": {
       "executor": "nx:run-commands",
@@ -39,9 +33,7 @@
         "command": "node dist/app.js",
         "cwd": "{projectRoot}"
       },
-      "dependsOn": [
-        "build"
-      ]
+      "dependsOn": ["build"]
     },
     "test": {
       "executor": "nx:run-commands",
@@ -49,9 +41,7 @@
         "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/**/*.test.js\"",
         "cwd": "{projectRoot}"
       },
-      "dependsOn": [
-        "build"
-      ]
+      "dependsOn": ["build"]
     },
     "test-unit": {
       "executor": "nx:run-commands",
@@ -59,9 +49,7 @@
         "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/unit/**/*.test.js\"",
         "cwd": "{projectRoot}"
       },
-      "dependsOn": [
-        "build"
-      ]
+      "dependsOn": ["build"]
     },
     "test-integration": {
       "executor": "nx:run-commands",
@@ -69,9 +57,7 @@
         "command": "NODE_ENV=test node --require ./test/helpers/bootstrap.js --test \"test/integration/**/*.test.js\"",
         "cwd": "{projectRoot}"
       },
-      "dependsOn": [
-        "build"
-      ]
+      "dependsOn": ["build"]
     },
     "seed": {
       "executor": "nx:run-commands",

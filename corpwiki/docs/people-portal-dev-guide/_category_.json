@@ -1,8 +1,8 @@
 {
-    "label": "People Portal Dev Guide",
-    "position": 3,
-    "link": {
-        "type": "generated-index",
-        "description": "Technical documentation for developers working on People Portal."
-    }
+  "label": "People Portal Dev Guide",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Technical documentation for developers working on People Portal."
+  }
 }

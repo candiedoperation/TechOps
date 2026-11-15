@@ -2,9 +2,11 @@
 title: FastAPI Specific
 sidebar_position: 4
 ---
+
 # FastAPI Specific
 
 ## Input Placement
+
 Put all API input in the endpoint parameters. For request bodies, always use a developer-defined
 subclass of Pydantic's `BaseModel`. If there is a single body field, name it `payload`.
 
@@ -26,7 +28,9 @@ For more information on how FastAPI endpoint input works read up [here](https://
 I would suggest reading from `Path Parameters` to `Request Body`.
 
 ## Structuring API Endpoints
+
 Use a consistent structure in each endpoint:
+
 1. Destructure query parameters, path parameters, or request body.
 2. Validate input and return errors if necessary.
 3. Call business logic methods or perform simple database queries.
@@ -47,12 +51,14 @@ async def get_info(item_id: int) -> int:
     # Return expected result
     return result
 ```
-Note: `ErrorContext` is a pydantic class which is discussed in more detail in [Error Handling](./error-handling.md). 
+
+Note: `ErrorContext` is a pydantic class which is discussed in more detail in [Error Handling](./error-handling.md).
 
 Essentially the idea is the purpose of the route code is primarily just to process input and most
-of the actual logic is performed elsewhere. 
+of the actual logic is performed elsewhere.
 
 ## Notes
+
 1. Type hint all inputs and outputs for FastAPI endpoints (supports auto-generated docs).
 2. Use `HTTPException` for invalid input errors.
 3. Do not wrap the final result in a `data` key.

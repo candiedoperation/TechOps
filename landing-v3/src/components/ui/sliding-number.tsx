@@ -1,6 +1,6 @@
-'use client';
-import { useEffect, useState } from 'react';
-import NumberFlow from '@number-flow/react';
+"use client";
+import { useEffect, useState } from "react";
+import NumberFlow from "@number-flow/react";
 
 type SlidingNumberProps = {
   value: number;
@@ -11,7 +11,7 @@ type SlidingNumberProps = {
 const SlidingNumber = ({
   value,
   duration = 150,
-  className = 'text-4xl font-bold',
+  className = "text-4xl font-bold",
 }: SlidingNumberProps) => {
   const [current, setCurrent] = useState(value);
 
@@ -20,8 +20,7 @@ const SlidingNumber = ({
     const digits = value.toString().length;
     const min = Math.pow(10, digits - 1);
     const max = Math.pow(10, digits) - 1;
-    const randomValue =
-      Math.floor(Math.random() * (max - min + 1)) + min;
+    const randomValue = Math.floor(Math.random() * (max - min + 1)) + min;
 
     // Animate to random value
     setCurrent(randomValue);
@@ -34,7 +33,13 @@ const SlidingNumber = ({
     return () => clearTimeout(timeout);
   }, [value, duration]);
 
-  return <NumberFlow value={current} trend={value > current ? -1 : 1} className={className} />;
+  return (
+    <NumberFlow
+      value={current}
+      trend={value > current ? -1 : 1}
+      className={className}
+    />
+  );
 };
 
 export default SlidingNumber;

@@ -4,7 +4,10 @@ import Link from "next/link";
 
 export default function AppDevHacks() {
   return (
-    <section aria-labelledby="appdevhacks-heading" className="w-full text-center relative z-0">
+    <section
+      aria-labelledby="appdevhacks-heading"
+      className="w-full text-center relative z-0"
+    >
       <h2
         id="appdevhacks-heading"
         className="pt-24 text-center text-3xl md:text-5xl font-bold text-subheader"
@@ -12,8 +15,13 @@ export default function AppDevHacks() {
         App Dev Hacks
       </h2>
       <div className="my-6">
-        <p className="text-base md:text-xl text-gray-600 px-4">App Dev Hacks is a UMD student only hackathon where students team up to solve real problems for campus departments.</p>
-        <p className="text-neutral-500 mt-3 px-4">Open to all students, not just those in ADC!</p>
+        <p className="text-base md:text-xl text-gray-600 px-4">
+          App Dev Hacks is a UMD student only hackathon where students team up
+          to solve real problems for campus departments.
+        </p>
+        <p className="text-neutral-500 mt-3 px-4">
+          Open to all students, not just those in ADC!
+        </p>
       </div>
 
       <div className="flex justify-center">

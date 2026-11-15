@@ -23,17 +23,18 @@ cd TechOps
 
 The pieces you will touch:
 
-| Path | Nx project | What it is |
-|---|---|---|
+| Path                  | Nx project  | What it is                            |
+| --------------------- | ----------- | ------------------------------------- |
 | `peopleportal/server` | `pplserver` | Express API, also serves the built UI |
-| `peopleportal/webui` | `pplui` | Vite + React frontend |
-| `corpwiki` | | This wiki |
+| `peopleportal/webui`  | `pplui`     | Vite + React frontend                 |
+| `corpwiki`            |             | This wiki                             |
 
 Tasks run through Nx from the repo root, never from inside a project directory.
 
 ## MongoDB Atlas
 
 For the database, we use MongoDB Atlas. To set it up for local development:
+
 1. Create an account on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
 2. Create a new project and cluster.
 3. In the Database Access section, create a new user with read/write permissions.
@@ -162,6 +163,7 @@ The People Portal server makes administrative calls to Authentik (creating group
 For People Portal to work, ensure the `openid`, `profile`, `email`, and a custom `people_portal` scope are configured in your OpenID Provider.
 
 To create the custom `people_portal` scope in Authentik:
+
 1. Navigate to **Customization** > **Property Mappings**.
 2. Click **Create** and select **Scope Mapping** (Map an OAuth Scope to User Properties).
 3. Enter the following variables:
@@ -178,7 +180,7 @@ To create the custom `people_portal` scope in Authentik:
 5. Click **Create**.
 6. Go back to your **People Portal** Provider settings, under **Advanced Protocol Settings**, and add this new scope along with `openid`, `profile`, and `email`.
 
-*(For further details, refer to the [OpenID Provider Configuration](./oidc-provider-config.md) and [Environment Variables](./environment-variables.md) docs).*
+_(For further details, refer to the [OpenID Provider Configuration](./oidc-provider-config.md) and [Environment Variables](./environment-variables.md) docs)._
 
 ## Gitea Setup
 
@@ -335,7 +337,7 @@ The frontend is built with Vite and React. In local development, the UI server w
 
 #### Starting the UI
 
-No separate `.env` file is required for local UI development. 
+No separate `.env` file is required for local UI development.
 
 ```bash
 ./nx run pplui:serve

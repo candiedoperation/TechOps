@@ -1,19 +1,19 @@
-'use client';
-import { cn } from '@/lib/utils';
-import { useInView } from 'react-intersection-observer';
+"use client";
+import { cn } from "@/lib/utils";
+import { useInView } from "react-intersection-observer";
 
 interface FadeSlideInProps {
   children: React.ReactNode;
   delay?: number;
   className?: string;
-  direction?: 'up' | 'down' | 'left' | 'right';
+  direction?: "up" | "down" | "left" | "right";
 }
 
-function FadeSlideIn({ 
-  children, 
-  delay = 0, 
+function FadeSlideIn({
+  children,
+  delay = 0,
   className,
-  direction = 'up' 
+  direction = "up",
 }: FadeSlideInProps) {
   const { ref, inView } = useInView({
     triggerOnce: true,
@@ -22,18 +22,18 @@ function FadeSlideIn({
 
   const getTransformClasses = () => {
     if (inView) return "opacity-100";
-    
+
     // Always fade up on mobile, use direction on md and larger
     const mobileClasses = "opacity-0 translate-y-8";
-    
+
     switch (direction) {
-      case 'up':
+      case "up":
         return "opacity-0 translate-y-8";
-      case 'down':
+      case "down":
         return `${mobileClasses} md:opacity-0 md:translate-y-0 md:-translate-y-8`;
-      case 'left':
+      case "left":
         return `${mobileClasses} md:opacity-0 md:translate-y-0 md:translate-x-8`;
-      case 'right':
+      case "right":
         return `${mobileClasses} md:opacity-0 md:translate-y-0 md:-translate-x-8`;
       default:
         return "opacity-0 translate-y-8";
@@ -46,10 +46,10 @@ function FadeSlideIn({
       className={cn(
         "transition-all duration-500",
         getTransformClasses(),
-        className
+        className,
       )}
       style={{
-        transitionDelay: inView ? `${delay}ms` : '0ms'
+        transitionDelay: inView ? `${delay}ms` : "0ms",
       }}
     >
       {children}

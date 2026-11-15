@@ -9,6 +9,7 @@ sidebar_position: 1
 ## Architecture Overview
 
 The core of the system relies on the `SharedResourceClient` interface. Each external service is implemented as a client that knows how to:
+
 1.  Define its own capabilities (Bindles).
 2.  Take an internal Team definition and "sync" it to the external service.
 
@@ -23,17 +24,17 @@ sequenceDiagram
     participant AuthK as Authentik
     participant Res1 as GiteaClient
     participant Res2 as SlackClient
-    
+
     Client->>Ctrl: PATCH /teams/:id/syncbindles
     Note right of Client: Triggered by User
-    
+
     Ctrl->>AuthK: getGroupInfo(teamId)
     AuthK-->>Ctrl: Full Team Graph (Users + Subteams)
-    
+
     rect rgba(0, 150, 255, 0.1)
         note right of Ctrl: Server-Sent Events (Streams Progress)
         Ctrl-->>Client: HTTP 200 (Chunked Encoding)
-        
+
         loop For Each Enabled Resource
             Ctrl->>Res1: handleOrgBindleSync(teamInfo)
             Res1->>Res1: Calculate Delta (Add/Remove Users)
@@ -41,7 +42,7 @@ sequenceDiagram
             Res1-->>Ctrl: Progress Callback (Users Updated)
             Ctrl-->>Client: SSE JSON { "status": "Updated ...", "progress": 10% }
         end
-        
+
         loop For Next Resource
             Ctrl->>Res2: handleOrgBindleSync(teamInfo)
             Res2->>External API: API Calls to Slack
@@ -49,44 +50,48 @@ sequenceDiagram
             Ctrl-->>Client: SSE JSON { "status": "Updated ...", "progress": 50% }
         end
     end
-    
+
     Ctrl-->>Client: End Stream
 ```
 
 ## Configuring Shared Resources
+
 :::warning Shared Resources ID
 Every team provided to handleOrgBindleSync() and the subteam information within it contains a Team Name field (`teamInfo.name`). We call this name a **Shared Resource ID** which is guarenteed to be human readable and unique. Therefore, any standard addition transformation to a Shared Resource ID will also be unique and can be used as names and IDs in the external resource.
 :::
 
 ### The Interface
+
 All shared resources must implement the `SharedResourceClient` interface found in `src/clients/index.ts`.
 
 ```ts
 export interface SharedResourceClient {
-    // Unique identifier for the client
-    getResourceName(): string
-    
-    // Defines what permissions this resource supports
-    getSupportedBindles(): BindlePermissionMap
+  // Unique identifier for the client
+  getResourceName(): string;
 
-    // The Core Logic: Syncs the internal team state to the external resource
-    handleOrgBindleSync(
-        org: GetGroupInfoResponse,
-        callback: (updatedResourceCount: number, status: string) => void
-    ): Promise<boolean>
+  // Defines what permissions this resource supports
+  getSupportedBindles(): BindlePermissionMap;
+
+  // The Core Logic: Syncs the internal team state to the external resource
+  handleOrgBindleSync(
+    org: GetGroupInfoResponse,
+    callback: (updatedResourceCount: number, status: string) => void,
+  ): Promise<boolean>;
 }
 ```
 
 ### Enabling a Resource
+
 Resources are registered in `src/config.ts`. The `OrgController` iterates over this registry to discover available resources.
 
 ```ts
 // src/config.ts
-export const ENABLED_SHARED_RESOURCES: { [key: string]: SharedResourceClient } = {
-  giteaClient: new GiteaClient(),
-  slackClient: new SlackClient(),
-  // Add new clients here
-}
+export const ENABLED_SHARED_RESOURCES: { [key: string]: SharedResourceClient } =
+  {
+    giteaClient: new GiteaClient(),
+    slackClient: new SlackClient(),
+    // Add new clients here
+  };
 ```
 
 ## Deep Dive: Gitea Implementation
@@ -94,21 +99,23 @@ export const ENABLED_SHARED_RESOURCES: { [key: string]: SharedResourceClient } =
 The `GiteaClient` (`src/clients/GiteaClient/index.ts`) serves as a reference implementation for complex resource management.
 
 ### Mapping Internal to External
-*   **Organization**: Maps the Root Team (e.g., "Project Nebula") to a Gitea Organization.
-*   **Teams**: Maps internal Subteams (e.g., "Engineering", "Leadership") to Gitea Teams within that Organization.
-*   **Permissions**: Maps Bindle permissions (like `repo:allowcreate`) to Gitea specific units (e.g., "Write Access", "Issue Tracker").
+
+- **Organization**: Maps the Root Team (e.g., "Project Nebula") to a Gitea Organization.
+- **Teams**: Maps internal Subteams (e.g., "Engineering", "Leadership") to Gitea Teams within that Organization.
+- **Permissions**: Maps Bindle permissions (like `repo:allowcreate`) to Gitea specific units (e.g., "Write Access", "Issue Tracker").
 
 ### Delta Calculation
+
 To avoid rate limits and improve performance, clients typically calculate a "Delta" rather than blindly updating everyone.
 
 ```ts
 /* Logic from GiteaClient */
-const finalStateUsernames = team.users.map(u => u.username);
+const finalStateUsernames = team.users.map((u) => u.username);
 const currentStateUsernames = await this.getTeamMembers(externalTeamId);
 
 const { additions, deletions } = computeStringArrStateDiff(
-    finalStateUsernames, 
-    currentStateUsernames
+  finalStateUsernames,
+  currentStateUsernames,
 );
 
 // Only API calls for additions and deletions are made

@@ -35,11 +35,11 @@ function output(result) {
 // Called before any local fix attempt or environment rerun.
 
 function gate() {
-  const gateType = getArg('--gate-type');
+  const gateType = getArg("--gate-type");
 
-  if (gateType === 'local-fix') {
-    const count = parseInt(getArg('--local-verify-count') || '0', 10);
-    const max = parseInt(getArg('--local-verify-attempts') || '3', 10);
+  if (gateType === "local-fix") {
+    const count = parseInt(getArg("--local-verify-count") || "0", 10);
+    const max = parseInt(getArg("--local-verify-attempts") || "3", 10);
     if (count >= max) {
       return output({
         allowed: false,
@@ -54,8 +54,8 @@ function gate() {
     });
   }
 
-  if (gateType === 'env-rerun') {
-    const count = parseInt(getArg('--env-rerun-count') || '0', 10);
+  if (gateType === "env-rerun") {
+    const count = parseInt(getArg("--env-rerun-count") || "0", 10);
     if (count >= 2) {
       return output({
         allowed: false,
@@ -78,19 +78,19 @@ function gate() {
 // Returns wait mode params and whether the action was agent-triggered.
 
 function postAction() {
-  const action = getArg('--action');
-  const cipeUrl = getArg('--cipe-url');
-  const commitSha = getArg('--commit-sha');
+  const action = getArg("--action");
+  const cipeUrl = getArg("--cipe-url");
+  const commitSha = getArg("--commit-sha");
 
   // MCP-triggered or auto-applied: track by cipeUrl
-  const cipeUrlActions = ['fix-auto-applying', 'apply-mcp', 'env-rerun'];
+  const cipeUrlActions = ["fix-auto-applying", "apply-mcp", "env-rerun"];
   // Local push: track by commitSha
   const commitShaActions = [
-    'apply-local-push',
-    'reject-fix-push',
-    'local-fix-push',
-    'auto-fix-push',
-    'empty-commit-push',
+    "apply-local-push",
+    "reject-fix-push",
+    "local-fix-push",
+    "auto-fix-push",
+    "empty-commit-push",
   ];
 
   const trackByCipeUrl = cipeUrlActions.includes(action);
@@ -101,7 +101,7 @@ function postAction() {
   }
 
   // fix-auto-applying: self-healing did it, NOT the monitor
-  const agentTriggered = action !== 'fix-auto-applying';
+  const agentTriggered = action !== "fix-auto-applying";
 
   output({
     waitMode: true,
@@ -117,17 +117,17 @@ function postAction() {
 // Called at the start of handling each actionable code.
 
 function cycleCheck() {
-  const status = getArg('--code');
-  const wasAgentTriggered = getFlag('--agent-triggered');
-  let cycleCount = parseInt(getArg('--cycle-count') || '0', 10);
-  const maxCycles = parseInt(getArg('--max-cycles') || '10', 10);
-  let envRerunCount = parseInt(getArg('--env-rerun-count') || '0', 10);
+  const status = getArg("--code");
+  const wasAgentTriggered = getFlag("--agent-triggered");
+  let cycleCount = parseInt(getArg("--cycle-count") || "0", 10);
+  const maxCycles = parseInt(getArg("--max-cycles") || "10", 10);
+  let envRerunCount = parseInt(getArg("--env-rerun-count") || "0", 10);
 
   // Cycle classification: if previous cycle was agent-triggered, count it
   if (wasAgentTriggered) cycleCount++;
 
   // Reset env_rerun_count on non-environment status
-  if (status !== 'environment_issue') envRerunCount = 0;
+  if (status !== "environment_issue") envRerunCount = 0;
 
   // Cycle limit gates. limitReached is a terminal stop; approachingLimit is an
   // advisory warning emitted in the two cycles before the cap.
@@ -143,21 +143,21 @@ function cycleCheck() {
     message: limitReached
       ? `Cycle limit reached (${cycleCount}/${maxCycles}). Stopping.`
       : approachingLimit
-      ? `Approaching cycle limit (${cycleCount}/${maxCycles})`
-      : null,
+        ? `Approaching cycle limit (${cycleCount}/${maxCycles})`
+        : null,
   });
 }
 
 // --- Dispatch ---
 
 switch (command) {
-  case 'gate':
+  case "gate":
     gate();
     break;
-  case 'post-action':
+  case "post-action":
     postAction();
     break;
-  case 'cycle-check':
+  case "cycle-check":
     cycleCheck();
     break;
   default:

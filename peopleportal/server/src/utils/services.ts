@@ -20,21 +20,21 @@ import { ENABLED_SERVICE_TEAMS } from "../config";
 
 /* Function to Get All Reserved Team Names */
 const getReservedTeamNames = (): Set<string> => {
-    const reservedNames = new Set<string>();
+  const reservedNames = new Set<string>();
 
-    for (const serviceTeamName in ENABLED_SERVICE_TEAMS) {
-        reservedNames.add(serviceTeamName);
+  for (const serviceTeamName in ENABLED_SERVICE_TEAMS) {
+    reservedNames.add(serviceTeamName);
 
-        const config = ENABLED_SERVICE_TEAMS[serviceTeamName];
-        if (config && config.subteams) {
-            config.subteams.forEach(subteam => {
-                reservedNames.add(subteam.uniqueName);
-            });
-        }
+    const config = ENABLED_SERVICE_TEAMS[serviceTeamName];
+    if (config && config.subteams) {
+      config.subteams.forEach((subteam) => {
+        reservedNames.add(subteam.uniqueName);
+      });
     }
+  }
 
-    return reservedNames;
-}
+  return reservedNames;
+};
 
 /* Define Flattened Set of Service Teams */
 export const ENABLED_SERVICE_TEAM_NAMES: Set<string> = getReservedTeamNames();

@@ -30,7 +30,7 @@ sequenceDiagram
     Note over Guest, Store: Phase 2: Verification
     Guest->>Server: POST /auth/otpverify (email, otp)
     Server->>Store: Retrieve tempsession
-    
+
     alt Invalid OTP or Expired
         Server-->>Guest: 401 Unauthorized
     else Valid OTP
@@ -42,7 +42,7 @@ sequenceDiagram
 
     Note over Guest, Store: Phase 3: Protected Resources
     Guest->>Server: GET /api/ats/applications
-    
+
     rect rgba(150, 100, 255, 0.1)
         note right of Auth: @Security("ats_otp")
         Auth->>Store: Check tempsession.jwt
@@ -60,29 +60,31 @@ sequenceDiagram
 Guest sessions are isolated from the main OIDC `authorizedUser` sessions. They are stored in a dedicated object within the session cookie called `tempsession`.
 
 ### Initiation State
+
 During the OTP verification phase (before the user enters the code), the session holds the secret:
 
 ```js
 req.session.tempsession = {
-    otp: "123456",
-    otpEmail: "guest@example.com",
-    otpName: "John Doe",
-    otpExpiry: 1735689600000 // Date.now() + 5 mins
-}
+  otp: "123456",
+  otpEmail: "guest@example.com",
+  otpName: "John Doe",
+  otpExpiry: 1735689600000, // Date.now() + 5 mins
+};
 ```
 
 ### Authenticated State
+
 Once verified, the sensitive OTP data is discarded, and the session maps the user to a signed JWT. This JWT acts as the "Bearer" token for the internal API, even though it's stored in the cookie.
 
 ```js
 req.session.tempsession = {
-    jwt: "eyJhbGciOiJIUzI1NiIsIn...", // Signed 24h JWT
-    user: {
-        email: "guest@example.com",
-        name: "John Does",
-        id: "60d5ec..." // Mongo Object ID
-    }
-}
+  jwt: "eyJhbGciOiJIUzI1NiIsIn...", // Signed 24h JWT
+  user: {
+    email: "guest@example.com",
+    name: "John Does",
+    id: "60d5ec...", // Mongo Object ID
+  },
+};
 ```
 
 ## Security Middleware (`ats_otp`)

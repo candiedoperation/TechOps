@@ -1,11 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import {
-  Command,
-} from "lucide-react"
+import * as React from "react";
+import { Command } from "lucide-react";
 
-import { NavMain } from "@/components/nav-main"
+import { NavMain } from "@/components/nav-main";
 import {
   Sidebar,
   SidebarContent,
@@ -14,11 +12,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-import appconfig from "@/appconfig"
+import appconfig from "@/appconfig";
 
-export function AppSidebar({ items, ...props }: React.ComponentProps<typeof Sidebar> & { items: any[] }) {
+export function AppSidebar({
+  items,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { items: any[] }) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
@@ -31,7 +32,9 @@ export function AppSidebar({ items, ...props }: React.ComponentProps<typeof Side
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight font-semibold">
                   <span className="truncate">{appconfig.title}</span>
-                  <span className="truncate text-xs">{appconfig.description}</span>
+                  <span className="truncate text-xs">
+                    {appconfig.description}
+                  </span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -41,9 +44,7 @@ export function AppSidebar({ items, ...props }: React.ComponentProps<typeof Side
       <SidebarContent>
         <NavMain items={items} />
       </SidebarContent>
-      <SidebarFooter>
-        {/* Footer content if needed */}
-      </SidebarFooter>
+      <SidebarFooter>{/* Footer content if needed */}</SidebarFooter>
     </Sidebar>
-  )
+  );
 }

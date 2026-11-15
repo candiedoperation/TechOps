@@ -12,31 +12,34 @@
  * clean it up" and "the directory is down, abort".
  */
 export async function mapWithConcurrency<T, R>(
-    items: readonly T[],
-    limit: number,
-    mapper: (item: T, index: number) => Promise<R>
+  items: readonly T[],
+  limit: number,
+  mapper: (item: T, index: number) => Promise<R>,
 ): Promise<PromiseSettledResult<R>[]> {
-    if (items.length === 0) return [];
+  if (items.length === 0) return [];
 
-    const effectiveLimit = Math.max(1, Math.min(limit, items.length));
-    const results = new Array<PromiseSettledResult<R>>(items.length);
-    let nextIndex = 0;
+  const effectiveLimit = Math.max(1, Math.min(limit, items.length));
+  const results = new Array<PromiseSettledResult<R>>(items.length);
+  let nextIndex = 0;
 
-    /* Each worker pulls the next index until the list is exhausted, so a slow
+  /* Each worker pulls the next index until the list is exhausted, so a slow
        item delays only its own worker rather than a whole batch. */
-    const worker = async () => {
-        while (true) {
-            const index = nextIndex++;
-            if (index >= items.length) return;
+  const worker = async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
 
-            try {
-                results[index] = { status: "fulfilled", value: await mapper(items[index]!, index) };
-            } catch (reason: unknown) {
-                results[index] = { status: "rejected", reason };
-            }
-        }
-    };
+      try {
+        results[index] = {
+          status: "fulfilled",
+          value: await mapper(items[index]!, index),
+        };
+      } catch (reason: unknown) {
+        results[index] = { status: "rejected", reason };
+      }
+    }
+  };
 
-    await Promise.all(Array.from({ length: effectiveLimit }, worker));
-    return results;
+  await Promise.all(Array.from({ length: effectiveLimit }, worker));
+  return results;
 }

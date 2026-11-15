@@ -9,7 +9,7 @@ const Footer = () => {
   const [emailMessage, setEmailMessage] = useState("");
   const year = new Date().getFullYear();
   const mailto = `mailto:umdappdev@gmail.com?subject=${encodeURIComponent(
-    "Information Request"
+    "Information Request",
   )}&body=${encodeURIComponent(emailMessage)}`;
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailMessage(e.target.value);
@@ -22,7 +22,7 @@ const Footer = () => {
         aria-label="Back to top"
         onClick={() => {
           const prefersReduced = window.matchMedia(
-            "(prefers-reduced-motion: reduce)"
+            "(prefers-reduced-motion: reduce)",
           ).matches;
           window.scrollTo({
             top: 0,
@@ -37,7 +37,13 @@ const Footer = () => {
       <div className="flex flex-col justify-center items-center w-full h-full gap-y-8">
         {/* logo */}
         <Link href="/#home">
-          <Image width={256} height={64} src={prefixPath("/common/adc_logo_black.png")} alt="ADC Logo" className="w-64" />
+          <Image
+            width={256}
+            height={64}
+            src={prefixPath("/common/adc_logo_black.png")}
+            alt="ADC Logo"
+            className="w-64"
+          />
         </Link>
 
         {/* social media icons */}
@@ -47,36 +53,65 @@ const Footer = () => {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Image width={28} height={28} src={prefixPath("/icons/ig-icon.png")} alt="Instagram" className="w-7 h-auto" />
+            <Image
+              width={28}
+              height={28}
+              src={prefixPath("/icons/ig-icon.png")}
+              alt="Instagram"
+              className="w-7 h-auto"
+            />
           </Link>
           <Link
             href="https://www.linkedin.com/company/app-dev-club/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Image width={28} height={28} src={prefixPath("/icons/linkedin-icon.png")} alt="LinkedIn" className="w-7 h-auto" />
+            <Image
+              width={28}
+              height={28}
+              src={prefixPath("/icons/linkedin-icon.png")}
+              alt="LinkedIn"
+              className="w-7 h-auto"
+            />
           </Link>
           <Link
             href="https://github.com/appdev-club"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Image width={28} height={28} src={prefixPath("/icons/github-icon.png")} alt="GitHub" className="w-7 h-auto" />
+            <Image
+              width={28}
+              height={28}
+              src={prefixPath("/icons/github-icon.png")}
+              alt="GitHub"
+              className="w-7 h-auto"
+            />
           </Link>
           <Link
             href="mailto:umdappdev@gmail.com"
             target="_blank"
             rel="noopener noreferrer"
           >
-
-            <Image width={28} height={28} src={prefixPath("/icons/email-icon2.svg")} alt="Email" className="w-7 h-auto" />
+            <Image
+              width={28}
+              height={28}
+              src={prefixPath("/icons/email-icon2.svg")}
+              alt="Email"
+              className="w-7 h-auto"
+            />
           </Link>
           <Link
             href="https://discord.com/invite/scSeVbTT7G"
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Image width={28} height={28} src={prefixPath("/icons/discord-icon.svg")} alt="Discord" className="w-7 h-auto" />
+            <Image
+              width={28}
+              height={28}
+              src={prefixPath("/icons/discord-icon.svg")}
+              alt="Discord"
+              className="w-7 h-auto"
+            />
           </Link>
         </div>
 
@@ -93,8 +128,9 @@ const Footer = () => {
               value={emailMessage}
               onChange={handleEmailChange}
               className={`w-full rounded-lg border border-black p-3 bg-transparent text-black placeholder-black/70 pr-10
-                      focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30 ${emailMessage ? "font-bold" : ""
-                }`}
+                      focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30 ${
+                        emailMessage ? "font-bold" : ""
+                      }`}
             />
             <a
               href={mailto}
@@ -116,8 +152,11 @@ const Footer = () => {
 
       {/* bottom text */}
       <div className="w-full absolute inset-x-0 bottom-5 text-center text-black">
-        © {year} App Dev Club<br />
-        App Dev Club is a registered 501(c)(3) nonprofit organization (EIN: 93-3692144)<br/>
+        © {year} App Dev Club
+        <br />
+        App Dev Club is a registered 501(c)(3) nonprofit organization (EIN:
+        93-3692144)
+        <br />
         Registered Address: 1600 Stockton Road, Joppa, MD 21085
       </div>
     </footer>

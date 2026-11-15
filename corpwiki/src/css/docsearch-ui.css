@@ -1,70 +1,73 @@
 /* Map DocSearch variables to shadcn-style tokens */
 :root {
-    /* Modal + overlay */
-    --docsearch-modal-background: var(--popover);
-    /* Match Popover bg */
-    --docsearch-modal-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    /* shadow-md */
+  /* Modal + overlay */
+  --docsearch-modal-background: var(--popover);
+  /* Match Popover bg */
+  --docsearch-modal-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  /* shadow-md */
 
-    /* Text colors */
-    --docsearch-text-color: var(--foreground);
-    --docsearch-muted-color: var(--muted-foreground);
+  /* Text colors */
+  --docsearch-text-color: var(--foreground);
+  --docsearch-muted-color: var(--muted-foreground);
 
-    /* Search box */
-    --docsearch-searchbox-background: transparent;
-    --docsearch-searchbox-focus-background: transparent;
+  /* Search box */
+  --docsearch-searchbox-background: transparent;
+  --docsearch-searchbox-focus-background: transparent;
 
-    /* Hits */
-    --docsearch-hit-background: transparent;
-    --docsearch-hit-shadow: none;
-    --docsearch-hit-color: var(--foreground);
+  /* Hits */
+  --docsearch-hit-background: transparent;
+  --docsearch-hit-shadow: none;
+  --docsearch-hit-color: var(--foreground);
 
-    /* Highlight color */
-    --docsearch-highlight-color: var(--primary);
+  /* Highlight color */
+  --docsearch-highlight-color: var(--primary);
 
-    /* Borders */
-    --docsearch-border-color: var(--border);
+  /* Borders */
+  --docsearch-border-color: var(--border);
 }
 
 /* ------------ Container & Modal ------------ */
 
 .DocSearch-Container {
-    background-color: rgba(0, 0, 0, 0.8) !important;
-    /* backdrop-blur equivalent usually needs alpha bg */
-    backdrop-filter: blur(4px) !important;
-    z-index: 200 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 0 !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  /* backdrop-blur equivalent usually needs alpha bg */
+  backdrop-filter: blur(4px) !important;
+  z-index: 200 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
 }
 
 .DocSearch-Modal {
-    background-color: var(--docsearch-modal-background) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius) !important;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
-    margin: 0 !important;
-    position: relative !important;
-    width: 100% !important;
-    max-width: 600px !important;
-    overflow: hidden !important;
-    display: flex !important;
-    flex-direction: column !important;
+  background-color: var(--docsearch-modal-background) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  margin: 0 !important;
+  position: relative !important;
+  width: 100% !important;
+  max-width: 600px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
 
-    /* Animations */
-    animation: docsearch-zoom-in 0.2s ease-out;
-    /* Animate height directly for smoother interaction */
-    transition: height 0.3s cubic-bezier(0.2, 0, 0.2, 1), background-color 0.2s;
-    transform-origin: center top;
-    box-shadow: none !important;
+  /* Animations */
+  animation: docsearch-zoom-in 0.2s ease-out;
+  /* Animate height directly for smoother interaction */
+  transition:
+    height 0.3s cubic-bezier(0.2, 0, 0.2, 1),
+    background-color 0.2s;
+  transform-origin: center top;
+  box-shadow: none !important;
 
-    /* Default state (Results): Use a large fixed height relative to viewport */
-    height: 100px;
-    min-height: 100px;
-    /* Consistent baseline */
-    overflow: hidden;
-    max-height: 80vh !important;
+  /* Default state (Results): Use a large fixed height relative to viewport */
+  height: 100px;
+  min-height: 100px;
+  /* Consistent baseline */
+  overflow: hidden;
+  max-height: 80vh !important;
 }
 
 /* Initial state (Start Screen / No Results): Constrain specific height */
@@ -72,137 +75,137 @@
 .DocSearch-Modal:has(.DocSearch-StartScreen),
 .DocSearch-Modal:has(.DocSearch-NoResults),
 .DocSearch-Modal:has(.DocSearch-Dropdown) {
-    height: 450px;
+  height: 450px;
 }
 
 /* ------------ Header & Search Input ------------ */
 
 /* Header: title + search box */
 .DocSearch-SearchBar {
-    border-bottom: 1px solid var(--border) !important;
-    padding: 0.5rem 0.5rem 0.5rem !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 0.5rem 0.5rem 0.5rem !important;
 }
 
 /* ------------ Search box ------------ */
 
 /* Search box wrapper */
 .DocSearch-Form {
-    /* Match shadcn input h-9 (36px) */
-    height: 2.25rem !important;
-    min-height: 2.25rem !important;
-    max-height: 2.25rem !important;
-    /* border-radius: calc(var(--radius) - 2px) !important;
+  /* Match shadcn input h-9 (36px) */
+  height: 2.25rem !important;
+  min-height: 2.25rem !important;
+  max-height: 2.25rem !important;
+  /* border-radius: calc(var(--radius) - 2px) !important;
     border: 1px solid var(--input) !important; */
-    /* shadcn input is bg-transparent (or slightly colored in dark mode if configured, but usually transparent) */
-    background-color: transparent !important;
-    /* box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important; */
-    /* shadow-xs approximation */
-    display: flex !important;
-    align-items: center !important;
-    padding: 0 0.5rem !important;
+  /* shadcn input is bg-transparent (or slightly colored in dark mode if configured, but usually transparent) */
+  background-color: transparent !important;
+  /* box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important; */
+  /* shadow-xs approximation */
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 0.5rem !important;
 }
 
 /* Input */
 .DocSearch-Input {
-    font-size: 0.875rem !important;
-    /* text-sm */
-    /* Remove default paddings that make it fat */
-    /* Reduced left padding from 2.5rem to 2rem to bring text closer to icon */
-    padding: 0 2.5rem 0 2rem !important;
-    background: transparent !important;
-    color: var(--foreground) !important;
-    height: 100% !important;
-    appearance: none !important;
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
+  font-size: 0.875rem !important;
+  /* text-sm */
+  /* Remove default paddings that make it fat */
+  /* Reduced left padding from 2.5rem to 2rem to bring text closer to icon */
+  padding: 0 2.5rem 0 2rem !important;
+  background: transparent !important;
+  color: var(--foreground) !important;
+  height: 100% !important;
+  appearance: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Placeholder */
 .DocSearch-Input::placeholder {
-    color: var(--muted-foreground) !important;
-    opacity: 1 !important;
+  color: var(--muted-foreground) !important;
+  opacity: 1 !important;
 }
 
 /* Ensure icon stays muted even when focused */
 .DocSearch-Form:focus-within .DocSearch-MagnifierLabel,
 .DocSearch-Form:focus-within .DocSearch-MagnifierLabel svg,
 .DocSearch-Form:focus-within .DocSearch-MagnifierLabel path {
-    color: var(--muted-foreground) !important;
-    fill: currentColor !important;
+  color: var(--muted-foreground) !important;
+  fill: currentColor !important;
 }
 
 /* Magnifier + reset */
 .DocSearch-MagnifierLabel {
-    color: var(--muted-foreground) !important;
-    /* Adjust icon size/pos if needed */
-    width: 2.25rem !important;
-    height: 2.25rem !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 0 !important;
-    position: absolute !important;
-    left: 0 !important;
+  color: var(--muted-foreground) !important;
+  /* Adjust icon size/pos if needed */
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  position: absolute !important;
+  left: 0 !important;
 }
 
 .DocSearch-MagnifierLabel svg {
-    width: 1rem !important;
-    height: 1rem !important;
+  width: 1rem !important;
+  height: 1rem !important;
 }
 
 /* Reset (X) Button */
 .DocSearch-Reset {
-    color: var(--muted-foreground) !important;
-    border-radius: 0 !important;
-    padding: 0 0.5rem !important;
-    width: auto !important;
-    height: 1.25rem !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 0 !important;
-    position: absolute !important;
-    right: 0.5rem !important;
-    background: transparent !important;
-    cursor: pointer !important;
-    transition: all 0.2s !important;
+  color: var(--muted-foreground) !important;
+  border-radius: 0 !important;
+  padding: 0 0.5rem !important;
+  width: auto !important;
+  height: 1.25rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  position: absolute !important;
+  right: 0.5rem !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
 }
 
 .DocSearch-Reset:hover {
-    color: var(--foreground) !important;
-    /* Remove bg hover on the separator style usually, or keep it subtle */
-    background: transparent !important;
+  color: var(--foreground) !important;
+  /* Remove bg hover on the separator style usually, or keep it subtle */
+  background: transparent !important;
 }
 
 .DocSearch-Reset svg {
-    width: 1rem !important;
-    height: 1rem !important;
-    display: block !important;
+  width: 1rem !important;
+  height: 1rem !important;
+  display: block !important;
 }
 
 /* Loading Indicator */
 .DocSearch-LoadingIndicator svg {
-    display: none !important;
+  display: none !important;
 }
 
 /* ------------ Dropdown / Results Body ------------ */
 
 .DocSearch-Dropdown {
-    padding: 0 0.5rem !important;
-    flex: 1 !important;
-    overflow-y: auto !important;
-    /* Ensure full width and proper scrolling */
-    width: 100% !important;
+  padding: 0 0.5rem !important;
+  flex: 1 !important;
+  overflow-y: auto !important;
+  /* Ensure full width and proper scrolling */
+  width: 100% !important;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .DocSearch-Dropdown-Container {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 /* Scrollbar styling could be added here if needed */
@@ -211,223 +214,223 @@
 
 .DocSearch-StartScreen,
 .DocSearch-NoResults {
-    padding: 2rem !important;
-    text-align: center !important;
-    color: var(--muted-foreground) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    height: 100% !important;
+  padding: 2rem !important;
+  text-align: center !important;
+  color: var(--muted-foreground) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
 }
 
 /* ------------ Hit Group Headers (e.g. "Documentation") ------------ */
 
 .DocSearch-Hit-source {
-    background: transparent !important;
-    color: var(--muted-foreground) !important;
-    font-size: 0.875rem !important;
-    font-weight: 500 !important;
-    line-height: 1.5 !important;
-    margin: 1rem 0 0.5rem 0.5rem !important;
-    padding: 0 !important;
-    text-transform: capitalize !important;
-    /* Optional */
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  line-height: 1.5 !important;
+  margin: 1rem 0 0.5rem 0.5rem !important;
+  padding: 0 !important;
+  text-transform: capitalize !important;
+  /* Optional */
 }
 
 /* ------------ Hit Items ------------ */
 
 .DocSearch-Hit {
-    padding: 0 !important;
-    margin-bottom: 0.25rem !important;
-    border-radius: calc(var(--radius) - 2px) !important;
+  padding: 0 !important;
+  margin-bottom: 0.25rem !important;
+  border-radius: calc(var(--radius) - 2px) !important;
 }
 
 .DocSearch-Hit a {
-    background: transparent !important;
-    border-radius: calc(var(--radius) - 2px) !important;
-    box-shadow: none !important;
-    padding: 0.5rem 0.75rem !important;
-    display: flex !important;
-    align-items: center !important;
-    /* Remove default border-left or other artifacts */
-    border: none !important;
-    text-decoration: none !important;
+  background: transparent !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+  box-shadow: none !important;
+  padding: 0.5rem 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  /* Remove default border-left or other artifacts */
+  border: none !important;
+  text-decoration: none !important;
 }
 
 /* Active / Hover State */
 .DocSearch-Hit[aria-selected="true"] a,
 .DocSearch-Hit--active a {
-    background-color: var(--accent) !important;
-    color: var(--accent-foreground) !important;
+  background-color: var(--accent) !important;
+  color: var(--accent-foreground) !important;
 }
 
 /* ------------ Inner Hit Layout ------------ */
 
 .DocSearch-Hit-Container {
-    display: flex !important;
-    align-items: center !important;
-    width: 100% !important;
-    height: auto !important;
-    padding: 0 !important;
-    flex-direction: row !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  height: auto !important;
+  padding: 0 !important;
+  flex-direction: row !important;
 }
 
 /* Icon (left) */
 .DocSearch-Hit-icon {
-    width: 1.25rem !important;
-    height: 1.25rem !important;
-    margin-right: 0.75rem !important;
-    color: var(--muted-foreground) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    flex-shrink: 0 !important;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  margin-right: 0.75rem !important;
+  color: var(--muted-foreground) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
 /* Active icon color */
 .DocSearch-Hit[aria-selected="true"] .DocSearch-Hit-icon {
-    color: var(--accent-foreground) !important;
+  color: var(--accent-foreground) !important;
 }
 
 /* Content (Middle) */
 .DocSearch-Hit-content-wrapper {
-    flex: 1 1 auto !important;
-    display: flex !important;
-    flex-direction: column !important;
-    /* Stack Title and Path */
-    justify-content: center !important;
-    overflow: hidden !important;
-    align-items: flex-start !important;
-    margin: 0 !important;
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  /* Stack Title and Path */
+  justify-content: center !important;
+  overflow: hidden !important;
+  align-items: flex-start !important;
+  margin: 0 !important;
 }
 
 /* Title (Main Text) */
 .DocSearch-Hit-title {
-    font-size: 0.95rem !important;
-    font-weight: 500 !important;
-    color: var(--foreground) !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    width: 100% !important;
-    line-height: 1.2 !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  color: var(--foreground) !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  line-height: 1.2 !important;
 }
 
 .DocSearch-Hit[aria-selected="true"] .DocSearch-Hit-title {
-    color: var(--accent-foreground) !important;
+  color: var(--accent-foreground) !important;
 }
 
 /* Highlighted match text */
 .DocSearch-Hit mark {
-    background: transparent !important;
-    color: var(--primary) !important;
-    font-weight: bold !important;
-    text-decoration: underline !important;
-    text-decoration-color: var(--primary) !important;
-    text-decoration-thickness: 2px !important;
-    padding: 0 !important;
+  background: transparent !important;
+  color: var(--primary) !important;
+  font-weight: bold !important;
+  text-decoration: underline !important;
+  text-decoration-color: var(--primary) !important;
+  text-decoration-thickness: 2px !important;
+  padding: 0 !important;
 }
 
 /* Active highlight */
 .DocSearch-Hit[aria-selected="true"] mark {
-    color: var(--accent-foreground) !important;
-    text-decoration-color: var(--accent-foreground) !important;
+  color: var(--accent-foreground) !important;
+  text-decoration-color: var(--accent-foreground) !important;
 }
 
 /* Path / Breadcrumb (Subtext) */
 .DocSearch-Hit-path {
-    font-size: 0.75rem !important;
-    color: var(--muted-foreground) !important;
-    margin-top: 0.1rem !important;
-    /* slight gap */
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    width: 100% !important;
-    display: block !important;
+  font-size: 0.75rem !important;
+  color: var(--muted-foreground) !important;
+  margin-top: 0.1rem !important;
+  /* slight gap */
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  width: 100% !important;
+  display: block !important;
 }
 
 .DocSearch-Hit[aria-selected="true"] .DocSearch-Hit-path {
-    color: var(--accent-foreground) !important;
-    opacity: 0.8 !important;
+  color: var(--accent-foreground) !important;
+  opacity: 0.8 !important;
 }
 
 /* Action Icon (Right Arrow) */
 .DocSearch-Hit-action {
-    margin-left: 0.75rem !important;
-    display: flex !important;
-    /* Often hidden by default css, force flex */
-    align-items: center !important;
-    color: var(--muted-foreground) !important;
-    flex-shrink: 0 !important;
+  margin-left: 0.75rem !important;
+  display: flex !important;
+  /* Often hidden by default css, force flex */
+  align-items: center !important;
+  color: var(--muted-foreground) !important;
+  flex-shrink: 0 !important;
 }
 
 .DocSearch-Hit-action svg {
-    width: 1rem !important;
-    height: 1rem !important;
+  width: 1rem !important;
+  height: 1rem !important;
 }
 
 .DocSearch-Hit[aria-selected="true"] .DocSearch-Hit-action {
-    color: var(--accent-foreground) !important;
+  color: var(--accent-foreground) !important;
 }
 
 /* Select icon specifically */
 .DocSearch-Hit-Select-Icon {
-    display: block !important;
-    /* Sometimes hidden */
+  display: block !important;
+  /* Sometimes hidden */
 }
 
 /* Hide the "commands" icon in the action button if user prefers simple arrow, 
    but standard DocSearch puts the enter key or arrow there. */
 
-
 /* ------------ Footer ------------ */
 
 /* Footer: branding + shortcuts */
 .DocSearch-Footer {
-    background-color: transparent;
-    color: var(--foreground);
-    border-radius: 10px;
-    height: fit-content;
-    padding: 10px;
+  background-color: transparent;
+  color: var(--foreground);
+  border-radius: 10px;
+  height: fit-content;
+  padding: 10px;
 }
 
 .DocSearch-Commands .DocSearch-Label {
-    margin-left: 5px;
+  margin-left: 5px;
 }
 
 .DocSearch-Logo #Layer_1 {
-    width: 65px;
-    margin-left: 5px;
-    margin-right: 5px;
+  width: 65px;
+  margin-left: 5px;
+  margin-right: 5px;
 }
 
 /* ------------ Keyboard shortcuts ------------ */
 
 .DocSearch-Commands {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 /* Individual key "chip" */
 .DocSearch-Commands-Key {
-    border-radius: calc(var(--radius) - 6px);
-    border: 1px solid var(--border);
-    background-color: var(--background);
-    color: var(--foreground);
-    padding: 0.1rem 0.3rem;
-    font-size: 0.7rem;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
+  border-radius: calc(var(--radius) - 6px);
+  border: 1px solid var(--border);
+  background-color: var(--background);
+  color: var(--foreground);
+  padding: 0.1rem 0.3rem;
+  font-size: 0.7rem;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
 }
 
 /* Branding text */
 .DocSearch-Logo svg,
 .DocSearch-Logo path {
-    color: var(--foreground);
-    fill: currentColor;
+  color: var(--foreground);
+  fill: currentColor;
 }
 
 /* Hide annoying "Search by Algolia" text if desired, usually kept for free tier */
@@ -435,27 +438,27 @@
 /* ------------ Animations ------------ */
 
 @keyframes docsearch-fade-in {
-    0% {
-        opacity: 0;
-    }
+  0% {
+    opacity: 0;
+  }
 
-    100% {
-        opacity: 1;
-    }
+  100% {
+    opacity: 1;
+  }
 }
 
 @keyframes docsearch-zoom-in {
-    0% {
-        opacity: 0;
-        transform: scale(0.95);
-    }
+  0% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
 
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .DocSearch-Container {
-    animation: docsearch-fade-in 0.2s ease-out;
+  animation: docsearch-fade-in 0.2s ease-out;
 }

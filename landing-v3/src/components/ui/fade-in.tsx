@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import React, {
   JSXElementConstructor,
   PropsWithChildren,
@@ -19,7 +19,10 @@ interface Props {
 
 export default function FadeIn(props: PropsWithChildren<Props>) {
   const [maxIsVisible, setMaxIsVisible] = useState(0);
-  const transitionDuration = typeof props.transitionDuration === "number" ? props.transitionDuration : 400;
+  const transitionDuration =
+    typeof props.transitionDuration === "number"
+      ? props.transitionDuration
+      : 400;
   const delay = typeof props.delay === "number" ? props.delay : 50;
   const WrapperTag = props.wrapperTag || "div";
   const ChildTag = props.childTag || "div";
