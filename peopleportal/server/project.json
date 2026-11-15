@@ -73,6 +73,14 @@
         "build"
       ]
     },
+    "seed-event": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "command": "tsx scripts/seed-event.ts",
+        "cwd": "{projectRoot}"
+      }
+    },
     "seed": {
       "executor": "nx:run-commands",
       "options": {

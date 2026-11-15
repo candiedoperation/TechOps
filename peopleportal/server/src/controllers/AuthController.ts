@@ -40,12 +40,13 @@ import { generateSecureRandomString, capitalizeString } from "../utils/strings";
 import { AuthentikClient } from "../clients/AuthentikClient";
 import { EmailClient } from "../clients/EmailClient";
 import { signAvatarUrl } from "../utils/avatars";
-import { executiveAuthVerify } from "../auth";
+import { executiveAuthVerify, eventsAuthVerify } from "../auth";
 import { describeUnknownError } from "../utils/errors";
 
 export interface CorpUserInfoResponse extends UserInfoResponse {
     avatar: string;
     isExecutive: boolean;
+    canManageEvents: boolean;
 }
 
 interface OtpInitRequest {
@@ -103,10 +104,18 @@ export class AuthController extends Controller {
             isExecutive = false;
         }
 
+        let canManageEvents = false;
+        try {
+            canManageEvents = await eventsAuthVerify(req, [], true);
+        } catch {
+            canManageEvents = false;
+        }
+
         return {
             ...userInfo,
             avatar: avatarUrl,
             isExecutive,
+            canManageEvents,
         };
     }
 

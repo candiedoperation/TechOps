@@ -117,6 +117,7 @@ export interface CorpUserInfo {
     avatar: string;
     email: string;
     isExecutive: boolean;
+    canManageEvents: boolean;
 }
 
 export const CorpDashboard = () => {
@@ -129,6 +130,7 @@ export const CorpDashboard = () => {
         email: "unknown@unknown.local",
         avatar: "",
         isExecutive: false,
+        canManageEvents: false,
     });
 
     React.useEffect(() => {
@@ -274,7 +276,7 @@ export const CorpDashboard = () => {
                             path="/org/orgchart"
                             element={<OrgChartVisualization />}
                         />
-                        <Route path="/community/events" element={<Events />} />
+                        <Route path="/community/events" element={<Events canManageEvents={userInfo.canManageEvents === true} />} />
                         <Route
                             path="/community/events/:eventId/attendance"
                             element={<EventAttendance />}

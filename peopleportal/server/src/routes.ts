@@ -1011,7 +1011,7 @@ const models: TsoaRoute.Models = {
         "dataType": "refObject",
         "properties": {
             "status": {"dataType":"string","required":true},
-            "data": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"rsvp":{"dataType":"union","subSchemas":[{"dataType":"enum","enums":["Accept"]},{"dataType":"enum","enums":["Walk-in"]},{"dataType":"enum","enums":["Manual"]}],"required":true},"method":{"dataType":"union","subSchemas":[{"dataType":"enum","enums":["qr"]},{"dataType":"enum","enums":["code"]},{"dataType":"enum","enums":["manual"]}],"required":true},"checkedInAt":{"dataType":"string","required":true},"email":{"dataType":"string","required":true}}},"required":true},
+            "data": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"rsvp":{"dataType":"union","subSchemas":[{"dataType":"enum","enums":["Accept"]},{"dataType":"enum","enums":["Walk-in"]},{"dataType":"enum","enums":["Manual"]}],"required":true},"checkedInAt":{"dataType":"string","required":true},"email":{"dataType":"string","required":true}}},"required":true},
             "pagination": {"dataType":"nestedObjectLiteral","nestedProperties":{"totalPages":{"dataType":"double","required":true}},"required":true},
             "counts": {"dataType":"nestedObjectLiteral","nestedProperties":{"total":{"dataType":"double","required":true}},"required":true},
         },
@@ -1092,6 +1092,7 @@ const models: TsoaRoute.Models = {
             "address": {"ref":"UserInfoAddress"},
             "avatar": {"dataType":"string","required":true},
             "isExecutive": {"dataType":"boolean","required":true},
+            "canManageEvents": {"dataType":"boolean","required":true},
         },
         "additionalProperties": false,
     },

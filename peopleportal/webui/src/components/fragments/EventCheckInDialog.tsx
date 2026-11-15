@@ -113,7 +113,9 @@ export function EventCheckInDialog({
                     <DialogTitle>
                         {checkedInAt ? "You're checked in!" : "Event check-in"}
                     </DialogTitle>
-                    <DialogDescription>{eventName}</DialogDescription>
+                    <DialogDescription>
+                        Event: {eventName}
+                    </DialogDescription>
                 </DialogHeader>
 
                 {checkedInAt ? (

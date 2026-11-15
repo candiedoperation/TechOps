@@ -344,8 +344,6 @@ export class EventController extends Controller {
                 .exec()
             : null;
 
-        const now = Date.now();
-
         // Initialize settings for older events when their creator/admin views them.
         const checkInSettings = canManage
             ? await this.ensureCheckInSettings(event._id.toString())
@@ -356,10 +354,13 @@ export class EventController extends Controller {
                 .lean()
                 .exec();
 
+        const now = Date.now();
+        const opensAt =
+            new Date(event.startTime).getTime() - 10 * 60 * 1000;
         const withinCheckInWindow =
             checkInSettings !== null &&
             !checkInSettings.closed &&
-            now >= new Date(event.startTime).getTime() &&
+            now >= opensAt &&
             now < new Date(event.endTime).getTime();
 
         return {
@@ -618,20 +619,27 @@ export class EventController extends Controller {
             );
         }
 
-        const now = Date.now();
+        // QR check-in opens 10 minutes early; code entry bypasses the schedule.
+        // Both methods still respect the organizer's manual close setting above.
+        if (hasToken) {
+            const now = Date.now();
+            const opensAt =
+                new Date(event.startTime).getTime() - 10 * 60 * 1000;
+            const closesAt = new Date(event.endTime).getTime();
 
-        if (now < new Date(event.startTime).getTime()) {
-            throw new ResourceAccessError(
-                409,
-                "Check-in has not opened yet.",
-            );
-        }
+            if (now < opensAt) {
+                throw new ResourceAccessError(
+                    409,
+                    "QR check-in opens 10 minutes before the event starts.",
+                );
+            }
 
-        if (now >= new Date(event.endTime).getTime()) {
-            throw new ResourceAccessError(
-                409,
-                "Check-in for this event has closed.",
-            );
+            if (now >= closesAt) {
+                throw new ResourceAccessError(
+                    409,
+                    "QR check-in has ended. Use the event code or ask the organizer for help.",
+                );
+            }
         }
 
         const supplied = hasCode

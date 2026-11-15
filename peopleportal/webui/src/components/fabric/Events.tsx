@@ -212,30 +212,28 @@ const EventCard = ({
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                     {onEdit !== undefined && (
-                        <>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => onEdit(event)}
-                            >
-                                <PencilIcon />
-                                Edit
-                            </Button>
-
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                    navigate(
-                                        `/community/events/${event._id}/attendance`,
-                                    )
-                                }
-                            >
-                                <ClipboardListIcon />
-                                Attendance
-                            </Button>
-                        </>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEdit(event)}
+                        >
+                            <PencilIcon />
+                            Edit
+                        </Button>
                     )}
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                            navigate(
+                                `/community/events/${event._id}/attendance`,
+                            )
+                        }
+                    >
+                        <ClipboardListIcon />
+                        Attendance
+                    </Button>
 
                     {canManageCheckIn && (
                         <Button
@@ -630,7 +628,7 @@ const EventFormDialog = ({
     );
 };
 
-export const Events = () => {
+export const Events = ({ canManageEvents = false }: { canManageEvents?: boolean }) => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
     const [editingEvent, setEditingEvent] = useState<EventDoc | undefined>(
@@ -701,12 +699,14 @@ export const Events = () => {
     }, [events]);
 
     const openCreate = () => {
+        if (!canManageEvents) return;
         setEditingEvent(undefined);
         setDialogMode("create");
         setDialogOpen(true);
     };
 
     const openEdit = (event: EventDoc) => {
+        if (!canManageEvents) return;
         setEditingEvent(event);
         setDialogMode("edit");
         setDialogOpen(true);
@@ -723,19 +723,21 @@ export const Events = () => {
                         Create club events, manage RSVPs, and track attendance
                     </h4>
                 </div>
-                <Button className="shrink-0" onClick={openCreate}>
-                    <PlusIcon />
-                    New Event
-                </Button>
+                {canManageEvents && (
+                    <Button className="shrink-0" onClick={openCreate}>
+                        <PlusIcon />
+                        New Event
+                    </Button>
+                )}
             </div>
 
-            <EventFormDialog
+            {canManageEvents && <EventFormDialog
                 open={dialogOpen}
                 onOpenChange={setDialogOpen}
                 mode={dialogMode}
                 editingEvent={editingEvent}
                 onSaved={refreshEvents}
-            />
+            />}
 
             <Tabs
                 defaultValue="upcoming"
@@ -749,9 +751,9 @@ export const Events = () => {
                     {loadingEvents ? (
                         <EventListSkeleton />
                     ) : upcoming.length === 0 ? (
-                        <EventsEmptyState label="No upcoming events yet. Create one to get started." />
+                        <EventsEmptyState label={canManageEvents ? "No upcoming events yet. Create one to get started." : "No upcoming events yet."} />
                     ) : (
-                        <EventList events={upcoming} onEdit={openEdit} />
+                        <EventList events={upcoming} onEdit={canManageEvents ? openEdit : undefined} />
                     )}
                 </TabsContent>
                 <TabsContent value="past" className="flex flex-1 flex-col">
@@ -760,7 +762,7 @@ export const Events = () => {
                     ) : past.length === 0 ? (
                         <EventsEmptyState label="No past events to show." />
                     ) : (
-                        <EventList events={past} onEdit={openEdit} />
+                        <EventList events={past} onEdit={canManageEvents ? openEdit : undefined} />
                     )}
                 </TabsContent>
             </Tabs>
