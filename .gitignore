@@ -23,3 +23,4 @@ peopleportal/authentik/
 peopleportal/dev-stack/
 peopleportal/server/scripts/.oidc-gitea
 pyrightconfig.json
+community/intermingler/logs/*.log
