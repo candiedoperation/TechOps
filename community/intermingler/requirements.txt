@@ -1,0 +1,7 @@
+pydantic==2.14.3
+python-dotenv==1.2.4
+requests==2.34.2
+slack-bolt==1.30.0
+slack-cli-hooks==0.3.0
+slack-sdk==3.46.0
+supabase==2.34.1
