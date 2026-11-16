@@ -33,7 +33,8 @@ select = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["../tests"]
+pythonpath = ["."]
 log_file = "logs/pytest.log"
 log_file_level = "DEBUG"
 log_format = "%(asctime)s %(levelname)s %(message)s"
