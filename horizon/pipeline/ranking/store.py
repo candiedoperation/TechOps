@@ -95,6 +95,22 @@ def read_season_members(
     ]
 
 
+def read_team_settings(
+    connection: psycopg.Connection, project_pks: Sequence[str]
+) -> dict[str, dict[str, bool]]:
+    """Per-project rubric switches; a project with no row keeps every bucket on."""
+
+    rows = connection.execute(
+        """
+        SELECT project_pk, engineers_review_prs
+        FROM horizon_ranking.project_review_settings
+        WHERE project_pk = ANY(%s)
+        """,
+        (list(project_pks),),
+    ).fetchall()
+    return {row[0]: {"engineers_review_prs": row[1]} for row in rows}
+
+
 def read_project_repositories(
     connection: psycopg.Connection, season_type: str, season_year: int
 ) -> list[tuple[str, str]]:
@@ -226,8 +242,8 @@ def replace_ranked_members(
             INSERT INTO horizon_ranking.ranked_members (
                 ranking_run_id, authentik_user_pk, project_pk, role, display_name,
                 role_title, project_name, comparison_group, tenure_semesters,
-                window_start, window_end
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                window_start, window_end, excluded_buckets
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::text[])
             """,
             [
                 (
@@ -235,6 +251,7 @@ def replace_ranked_members(
                     member.role, member.display_name, member.role_title,
                     member.project_name, member.comparison_group,
                     member.tenure_semesters, member.window_start, member.window_end,
+                    list(member.excluded_buckets),
                 )
                 for member in members
             ],

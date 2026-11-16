@@ -6,7 +6,16 @@
 #
 # Event attendance and weekly-report regularity from the original weights doc
 # are left out on purpose (no data yet); their shares were redistributed inside
-# their buckets.
+# their buckets. Both on-time rates and the engineer end-loading metric were
+# removed before v1 was published; consistency now uses the longest inactive
+# stretch instead. review_turnaround_hours is the time from a reviewer being
+# assigned to a PR to that reviewer's review.
+#
+# A bucket with team_setting only counts when that project setting is on
+# (horizon_ranking.project_review_settings; a project with no row counts as on).
+# When it is off, the bucket's weight is split equally over the role's other
+# buckets. Only roles compared per project may use it, so everyone in a
+# comparison group is scored with the same weights.
 #
 # Do not edit a published version. A changed file under the same version is
 # rejected at the next run; copy it to v2.yaml instead.
@@ -47,12 +56,7 @@ roles:
           - key: verified_completion
             label: Verified task completion
             unit: ratio
-            share: 70
-            direction: higher_is_better
-          - key: on_time_rate
-            label: Tasks completed on time
-            unit: ratio
-            share: 30
+            share: 100
             direction: higher_is_better
       - key: consistency
         label: Consistency
@@ -61,16 +65,17 @@ roles:
           - key: active_week_ratio
             label: Weeks with commits
             unit: ratio
-            share: 62.5
+            share: 60
             direction: higher_is_better
-          - key: end_loading
-            label: Share of code added in the final three weeks
-            unit: ratio
-            share: 37.5
+          - key: longest_inactive_stretch
+            label: Longest inactive stretch
+            unit: days
+            share: 40
             direction: lower_is_better
       - key: review_collaboration
         label: Review and collaboration
         weight: 15
+        team_setting: engineers_review_prs
         metrics:
           - key: prs_reviewed
             label: Teammate PRs reviewed
@@ -78,7 +83,7 @@ roles:
             share: 40
             direction: higher_is_better
           - key: review_turnaround_hours
-            label: Median review turnaround
+            label: Median time to review once assigned
             unit: hours
             share: 30
             direction: lower_is_better
@@ -131,12 +136,7 @@ roles:
           - key: team_verified_completion
             label: Team verified task completion
             unit: ratio
-            share: 70
-            direction: higher_is_better
-          - key: team_on_time_rate
-            label: Team tasks completed on time
-            unit: ratio
-            share: 30
+            share: 100
             direction: higher_is_better
       - key: review_unblocking
         label: Review and unblocking
@@ -148,7 +148,7 @@ roles:
             share: 35
             direction: higher_is_better
           - key: review_turnaround_hours
-            label: Median review turnaround
+            label: Median time to review once assigned
             unit: hours
             share: 35
             direction: lower_is_better

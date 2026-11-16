@@ -9,8 +9,14 @@ from pipeline.ranking.members import (
     resolve_role_mapping_version,
     select_ranked_members,
 )
+from pipeline.ranking.rubric import load_rubric
 
 AS_OF = datetime(2026, 11, 9, 15, 0, tzinfo=timezone.utc)
+RUBRIC = load_rubric("v1").rubric
+
+
+def _select(projects, members, as_of, **kwargs):
+    return select_ranked_members(projects, members, as_of, rubric=RUBRIC, **kwargs)
 
 
 def _project(pk="p1", *, archived=False, window_end=date(2026, 12, 15), **overrides):
@@ -48,7 +54,7 @@ def _by_user(rows):
 
 
 def test_a_member_with_both_roles_is_ranked_once_as_tech_lead():
-    rows = select_ranked_members(
+    rows = _select(
         [_project()], [_member("u1", ["engineer", "tech_lead"])], AS_OF
     )
 
@@ -58,7 +64,7 @@ def test_a_member_with_both_roles_is_ranked_once_as_tech_lead():
 
 
 def test_engineers_are_grouped_by_project():
-    rows = select_ranked_members(
+    rows = _select(
         [_project("p1"), _project("p2")],
         [_member("u1", ["engineer"], "p1"), _member("u2", ["engineer"], "p2")],
         AS_OF,
@@ -75,11 +81,11 @@ def test_engineers_are_grouped_by_project():
     [["pm"], ["designer"], ["project_lead"], ["unknown"], ["pm", "designer", "project_lead"], []],
 )
 def test_members_without_an_engineer_or_tech_lead_role_are_skipped(roles):
-    assert select_ranked_members([_project()], [_member("u1", roles)], AS_OF) == []
+    assert _select([_project()], [_member("u1", roles)], AS_OF) == []
 
 
 def test_project_leads_who_also_engineer_are_ranked_as_engineers():
-    rows = select_ranked_members(
+    rows = _select(
         [_project()], [_member("u1", ["project_lead", "engineer"])], AS_OF
     )
 
@@ -87,7 +93,7 @@ def test_project_leads_who_also_engineer_are_ranked_as_engineers():
 
 
 def test_archived_projects_and_members_of_unknown_projects_are_skipped():
-    rows = select_ranked_members(
+    rows = _select(
         [_project("p1", archived=True), _project("p2")],
         [
             _member("u1", ["engineer"], "p1"),
@@ -103,14 +109,14 @@ def test_archived_projects_and_members_of_unknown_projects_are_skipped():
 def test_window_end_is_capped_at_the_as_of_date_in_new_york():
     # 03:00 UTC on Nov 10 is still Nov 9 in New York (UTC-5).
     late_evening = datetime(2026, 11, 10, 3, 0, tzinfo=timezone.utc)
-    rows = select_ranked_members([_project()], [_member("u1", ["engineer"])], late_evening)
+    rows = _select([_project()], [_member("u1", ["engineer"])], late_evening)
 
     assert rows[0].window_start == date(2026, 9, 1)
     assert rows[0].window_end == date(2026, 11, 9)
 
 
 def test_window_end_is_kept_when_the_semester_already_ended():
-    rows = select_ranked_members(
+    rows = _select(
         [_project(window_end=date(2026, 11, 1))], [_member("u1", ["engineer"])], AS_OF
     )
 
@@ -119,11 +125,11 @@ def test_window_end_is_kept_when_the_semester_already_ended():
 
 def test_naive_as_of_is_rejected():
     with pytest.raises(ValueError, match="timezone-aware"):
-        select_ranked_members([_project()], [], datetime(2026, 11, 9))
+        _select([_project()], [], datetime(2026, 11, 9))
 
 
 def test_display_name_falls_back_to_username_then_pk():
-    rows = select_ranked_members(
+    rows = _select(
         [_project()],
         [
             _member("u1", ["engineer"]),
@@ -138,7 +144,7 @@ def test_display_name_falls_back_to_username_then_pk():
 
 
 def test_role_titles_are_deduplicated_sorted_and_joined():
-    rows = select_ranked_members(
+    rows = _select(
         [_project()],
         [
             _member(
@@ -156,7 +162,7 @@ def test_role_titles_are_deduplicated_sorted_and_joined():
 
 
 def test_project_name_and_tenure_come_from_the_roster():
-    rows = select_ranked_members(
+    rows = _select(
         [_project("p1")], [_member("u1", ["engineer"], tenure_semesters=4)], AS_OF
     )
 
@@ -188,3 +194,31 @@ def test_mixed_role_mapping_versions_are_rejected():
 def test_an_empty_roster_has_no_role_mapping_version():
     with pytest.raises(RoleMappingError, match="No project members"):
         resolve_role_mapping_version([_project()], [])
+
+
+def test_engineers_on_a_team_without_engineer_reviews_exclude_the_review_bucket():
+    rows = _select(
+        [_project("p1"), _project("p2")],
+        [
+            _member("u1", ["engineer"], "p1"),
+            _member("u2", ["tech_lead"], "p1"),
+            _member("u3", ["engineer"], "p2"),
+        ],
+        AS_OF,
+        team_settings={"p1": {"engineers_review_prs": False}},
+    )
+    excluded = {pk: row.excluded_buckets for pk, row in _by_user(rows).items()}
+
+    # Tech leads keep their own review bucket; p2 has no setting, so it stays on.
+    assert excluded == {"u1": ("review_collaboration",), "u2": (), "u3": ()}
+
+
+def test_engineers_on_a_team_with_engineer_reviews_keep_every_bucket():
+    rows = _select(
+        [_project()],
+        [_member("u1", ["engineer"])],
+        AS_OF,
+        team_settings={"p1": {"engineers_review_prs": True}},
+    )
+
+    assert rows[0].excluded_buckets == ()

@@ -3,12 +3,17 @@
 Weights and shares are percentages in the file. The loader rejects a rubric
 whose bucket weights per role, or metric shares per bucket, do not each sum to
 100, so a typo can never silently rescale a score.
+
+A bucket may name a ``team_setting``; when a project turns that setting off,
+the bucket is excluded and its weight is split equally over the role's other
+buckets (``RoleRubric.effective_weights``).
 """
 
 from __future__ import annotations
 
 import hashlib
 import math
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -21,10 +26,13 @@ RUBRICS_DIR = Path(__file__).parent / "rubrics"
 _SUM_TOLERANCE = 1e-9
 
 Unit = Literal[
-    "lines", "files", "commits", "PRs", "hours", "ratio", "rating_1_3", "semesters"
+    "lines", "files", "commits", "PRs", "hours", "days", "ratio", "rating_1_3",
+    "semesters",
 ]
 Direction = Literal["higher_is_better", "lower_is_better"]
 RankedRole = Literal["engineer", "tech_lead"]
+# Per-project switches, stored in horizon_ranking.project_review_settings.
+TeamSetting = Literal["engineers_review_prs"]
 
 
 class _Strict(BaseModel):
@@ -50,6 +58,7 @@ class Bucket(_Strict):
     key: str = Field(min_length=1)
     label: str = Field(min_length=1)
     weight: float = Field(gt=0, le=100)
+    team_setting: TeamSetting | None = None
     metrics: tuple[Metric, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -77,7 +86,37 @@ class RoleRubric(_Strict):
         metric_keys = [metric.key for bucket in self.buckets for metric in bucket.metrics]
         if len(set(metric_keys)) != len(metric_keys):
             raise ValueError("metric keys must be unique within a role")
+        toggled = [bucket for bucket in self.buckets if bucket.team_setting]
+        if toggled and self.comparison_group != "project":
+            # A club-wide group mixes projects, so its members would be scored
+            # with different weights.
+            raise ValueError("team_setting buckets need comparison_group 'project'")
+        if len(toggled) == len(self.buckets):
+            raise ValueError("at least one bucket must not depend on a team setting")
         return self
+
+    def excluded_buckets(self, team_settings: Mapping[str, bool]) -> tuple[str, ...]:
+        """Keys of the buckets a project's settings switch off; a missing setting is on."""
+
+        return tuple(
+            bucket.key
+            for bucket in self.buckets
+            if bucket.team_setting is not None
+            and not team_settings.get(bucket.team_setting, True)
+        )
+
+    def effective_weights(self, excluded: Iterable[str] = ()) -> dict[str, float]:
+        """Bucket weights with each excluded bucket's weight split equally over the rest."""
+
+        excluded = set(excluded)
+        unknown = excluded - {bucket.key for bucket in self.buckets}
+        if unknown:
+            raise ValueError(f"unknown bucket key(s): {sorted(unknown)}")
+        kept = [bucket for bucket in self.buckets if bucket.key not in excluded]
+        if not kept:
+            raise ValueError("cannot exclude every bucket")
+        freed = sum(bucket.weight for bucket in self.buckets if bucket.key in excluded)
+        return {bucket.key: bucket.weight + freed / len(kept) for bucket in kept}
 
 
 class RubricRules(_Strict):

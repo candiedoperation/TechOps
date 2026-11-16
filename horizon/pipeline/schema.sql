@@ -401,7 +401,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS ranking_runs_one_final
 CREATE INDEX IF NOT EXISTS ranking_runs_season
     ON horizon_ranking.ranking_runs (season_type, season_year, as_of DESC);
 
+-- Per-project rubric switches, set by the exec board. A project is already
+-- season-specific, and a project with no row keeps every bucket on. When
+-- engineers_review_prs is false, the engineer review_collaboration bucket is
+-- excluded and its weight is split equally over the other engineer buckets.
+-- No foreign key to horizon_gt_features.projects: that table belongs to T1.1.
+CREATE TABLE IF NOT EXISTS horizon_ranking.project_review_settings (
+    project_pk TEXT PRIMARY KEY,
+    engineers_review_prs BOOLEAN NOT NULL,
+    updated_by TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- comparison_group is 'project:<project_pk>:engineer' or 'club:tech_lead'.
+-- excluded_buckets snapshots the buckets project_review_settings switched off
+-- for this member when the run started.
 CREATE TABLE IF NOT EXISTS horizon_ranking.ranked_members (
     ranking_run_id UUID REFERENCES horizon_ranking.ranking_runs ON DELETE CASCADE,
     authentik_user_pk TEXT,
@@ -414,6 +428,7 @@ CREATE TABLE IF NOT EXISTS horizon_ranking.ranked_members (
     tenure_semesters INT NOT NULL,
     window_start DATE NOT NULL,
     window_end DATE NOT NULL,
+    excluded_buckets TEXT[] NOT NULL DEFAULT '{}',
     PRIMARY KEY (ranking_run_id, authentik_user_pk, project_pk)
 );
 

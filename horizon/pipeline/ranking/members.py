@@ -7,10 +7,12 @@ pm, designer or unknown are not ranked.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
+
+from .rubric import Rubric
 
 CLUB_TIMEZONE = ZoneInfo("America/New_York")
 TECH_LEAD_GROUP = "club:tech_lead"
@@ -58,6 +60,7 @@ class RankedMember:
     tenure_semesters: int
     window_start: date
     window_end: date
+    excluded_buckets: tuple[str, ...] = ()
 
 
 class RoleMappingError(ValueError):
@@ -85,13 +88,21 @@ def select_ranked_members(
     projects: Sequence[ProjectRow],
     members: Sequence[ProjectMemberRow],
     as_of: datetime,
+    *,
+    rubric: Rubric,
+    team_settings: Mapping[str, Mapping[str, bool]] | None = None,
 ) -> list[RankedMember]:
     """Snapshot one row per ranked (member, project), skipping archived projects.
 
     ``window_end`` is capped at the ``as_of`` date in the club's timezone, so a
     mid-semester run never measures days that have not happened yet.
+    ``team_settings`` maps a project pk to its settings (for example
+    ``{"engineers_review_prs": False}``); each row records the buckets those
+    settings switch off for the member's role, so an old run still shows which
+    weights it used after a setting changes.
     """
 
+    team_settings = team_settings or {}
     if as_of.tzinfo is None:
         raise ValueError("as_of must be timezone-aware")
     as_of_date = as_of.astimezone(CLUB_TIMEZONE).date()
@@ -119,6 +130,9 @@ def select_ranked_members(
                 tenure_semesters=member.tenure_semesters,
                 window_start=project.window_start,
                 window_end=min(project.window_end, as_of_date),
+                excluded_buckets=rubric.roles[role].excluded_buckets(
+                    team_settings.get(project.project_pk, {})
+                ),
             )
         )
     return sorted(ranked, key=lambda row: (row.project_pk, row.authentik_user_pk))

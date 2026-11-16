@@ -5,7 +5,9 @@ from pydantic import ValidationError
 from pipeline.ranking.rubric import RUBRICS_DIR, load_rubric
 from pipeline.ranking.store import RubricChangedError, upsert_rubric
 
-UNITS = {"lines", "files", "commits", "PRs", "hours", "ratio", "rating_1_3", "semesters"}
+UNITS = {
+    "lines", "files", "commits", "PRs", "hours", "days", "ratio", "rating_1_3", "semesters",
+}
 
 
 def _weights(role):
@@ -49,15 +51,25 @@ def test_v1_loads_with_the_card_weights():
     assert engineer[("code_ownership", "files_majority_owned")] == 40
     assert engineer[("code_ownership", "non_boundary_lines")] == 35
     assert engineer[("code_ownership", "surviving_commits")] == 25
-    assert engineer[("delivery", "verified_completion")] == 70
-    assert engineer[("consistency", "active_week_ratio")] == 62.5
-    assert engineer[("consistency", "end_loading")] == 37.5
+    assert {key for (bucket, key) in engineer if bucket == "delivery"} == {
+        "verified_completion"
+    }
+    assert engineer[("delivery", "verified_completion")] == 100
+    assert {key for (bucket, key) in engineer if bucket == "consistency"} == {
+        "active_week_ratio", "longest_inactive_stretch",
+    }
+    assert engineer[("consistency", "active_week_ratio")] == 60
+    assert engineer[("consistency", "longest_inactive_stretch")] == 40
     assert engineer[("review_collaboration", "prs_reviewed")] == 40
     assert engineer[("club_engagement", "tenure_semesters")] == 100
     assert {key for (bucket, key) in engineer if bucket == "peer_ratings"} == {
         "eng_timeliness", "eng_proactiveness", "eng_design", "eng_collaboration",
     }
     tech_lead = _shares(rubric.roles["tech_lead"])
+    assert {key for (bucket, key) in tech_lead if bucket == "team_delivery"} == {
+        "team_verified_completion"
+    }
+    assert tech_lead[("team_delivery", "team_verified_completion")] == 100
     assert tech_lead[("review_unblocking", "team_prs_reviewed")] == 35
     assert tech_lead[("review_unblocking", "review_spread")] == 30
     assert tech_lead[("own_code", "files_majority_owned")] == 50
@@ -85,7 +97,68 @@ def test_only_the_card_metrics_are_lower_is_better():
         for metric in bucket.metrics
         if metric.direction == "lower_is_better"
     }
-    assert lower == {"end_loading", "review_turnaround_hours", "team_end_loading"}
+    assert lower == {
+        "longest_inactive_stretch", "review_turnaround_hours", "team_end_loading",
+    }
+
+
+def test_only_the_engineer_review_bucket_depends_on_a_team_setting():
+    rubric = load_rubric("v1").rubric
+
+    toggled = {
+        (role_key, bucket.key): bucket.team_setting
+        for role_key, role in rubric.roles.items()
+        for bucket in role.buckets
+        if bucket.team_setting
+    }
+    assert toggled == {("engineer", "review_collaboration"): "engineers_review_prs"}
+
+
+def test_turning_off_engineer_reviews_splits_15_points_equally():
+    engineer = load_rubric("v1").rubric.roles["engineer"]
+
+    excluded = engineer.excluded_buckets({"engineers_review_prs": False})
+    weights = engineer.effective_weights(excluded)
+
+    assert excluded == ("review_collaboration",)
+    # 15 / 5 remaining buckets = +3 each.
+    assert weights == {
+        "code_ownership": 33,
+        "delivery": 23,
+        "consistency": 18,
+        "peer_ratings": 13,
+        "club_engagement": 13,
+    }
+    assert sum(weights.values()) == 100
+
+
+@pytest.mark.parametrize("settings", [{}, {"engineers_review_prs": True}])
+def test_engineer_reviews_are_on_unless_switched_off(settings):
+    engineer = load_rubric("v1").rubric.roles["engineer"]
+
+    assert engineer.excluded_buckets(settings) == ()
+    assert engineer.effective_weights()["review_collaboration"] == 15
+
+
+def test_tech_leads_ignore_the_engineer_review_setting():
+    tech_lead = load_rubric("v1").rubric.roles["tech_lead"]
+
+    assert tech_lead.excluded_buckets({"engineers_review_prs": False}) == ()
+
+
+def test_excluding_an_unknown_bucket_is_rejected():
+    engineer = load_rubric("v1").rubric.roles["engineer"]
+
+    with pytest.raises(ValueError, match="unknown bucket"):
+        engineer.effective_weights(["reviews"])
+
+
+def test_a_team_setting_on_a_club_wide_role_is_rejected(tmp_path):
+    def toggle_tech_lead_bucket(data):
+        data["roles"]["tech_lead"]["buckets"][1]["team_setting"] = "engineers_review_prs"
+
+    with pytest.raises(ValidationError, match="comparison_group 'project'"):
+        load_rubric("v1", _write_variant(tmp_path, toggle_tech_lead_bucket))
 
 
 def _write_variant(tmp_path, edit):

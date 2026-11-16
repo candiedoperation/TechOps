@@ -51,6 +51,8 @@ class RankingRun:
     season_type: str
     season_year: int
     as_of: datetime
+    rubric_version: str
+    rubric_sha256: str
 
 
 def _resolve_as_of(value: Optional[str]) -> datetime:
@@ -140,7 +142,14 @@ def ranking_run(
             "project_run_id": MetadataValue.text(project_run_id or "none published"),
         }
     )
-    return RankingRun(ranking_run_id, config.season_type, config.season_year, as_of)
+    return RankingRun(
+        ranking_run_id,
+        config.season_type,
+        config.season_year,
+        as_of,
+        loaded.version,
+        loaded.sha256,
+    )
 
 
 @asset(
@@ -149,7 +158,8 @@ def ranking_run(
     description=(
         "Snapshots who is ranked in which role for the run: tech leads in one "
         "club-wide group, engineers per project. PMs, designers and project "
-        "leads are not ranked in the pilot; archived projects are skipped."
+        "leads are not ranked in the pilot; archived projects are skipped. "
+        "Records the rubric buckets each project's review settings switch off."
     ),
     metadata={"table": "horizon_ranking.ranked_members"},
 )
@@ -158,11 +168,28 @@ def ranked_members(
     ranking_run: RankingRun,
     postgres: PostgresResource,
 ) -> int:
+    loaded = load_rubric(ranking_run.rubric_version)
+    if loaded.sha256 != ranking_run.rubric_sha256:
+        raise Failure(
+            description=(
+                f"rubric {loaded.version} changed during the run; "
+                "create a new version instead"
+            )
+        )
     season = (ranking_run.season_type, ranking_run.season_year)
     with postgres.connect() as connection:
         projects = store.read_season_projects(connection, *season)
         members = store.read_season_members(connection, *season)
-        ranked = select_ranked_members(projects, members, ranking_run.as_of)
+        team_settings = store.read_team_settings(
+            connection, [project.project_pk for project in projects]
+        )
+        ranked = select_ranked_members(
+            projects,
+            members,
+            ranking_run.as_of,
+            rubric=loaded.rubric,
+            team_settings=team_settings,
+        )
         rows = store.replace_ranked_members(connection, ranking_run.ranking_run_id, ranked)
 
     roles = Counter(member.role for member in ranked)
@@ -172,6 +199,9 @@ def ranked_members(
             "persisted_rows": MetadataValue.int(rows),
             "engineers": MetadataValue.int(roles["engineer"]),
             "tech_leads": MetadataValue.int(roles["tech_lead"]),
+            "members_with_excluded_buckets": MetadataValue.int(
+                sum(1 for member in ranked if member.excluded_buckets)
+            ),
         }
     )
     return rows
