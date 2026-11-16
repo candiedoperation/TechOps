@@ -10,6 +10,17 @@ import { HydratedDocument } from "mongoose";
 import { ENABLED_SHARED_RESOURCES } from "../../../config";
 import { SlackClient } from "../../SlackClient";
 import { DiscordClient } from "../../DiscordClient";
+import {
+    Application,
+    ApplicationStage,
+} from "../../../models/Application";
+import {
+    BulkApplicationRecipientStatus,
+    BulkApplicationUpdateJob,
+    BulkApplicationUpdateRecipient,
+    BulkApplicationUpdateStatus,
+} from "../../../models/BulkApplicationUpdate";
+import { isValidApplicationStageTransition } from "../../../models/application-stage-transitions";
 
 interface _JobData {
     jobName: string;
@@ -145,6 +156,10 @@ export interface SendEmailJobPayload extends JobPayload {
 
 export interface SendEventRemindersPayload extends JobPayload {
     eventId: string;
+}
+
+export interface SendBulkApplicationUpdatesPayload extends JobPayload {
+    jobId: string;
 }
 
 // Define Agenda jobs here
@@ -309,6 +324,190 @@ export const DefinedJobs: Record<
         },
         options: {
             removeOnComplete: true, // Frees space by removing job from MongoDB on completion
+        },
+    },
+
+    sendBulkApplicationUpdates: {
+        workerFunction: async (
+            job: Job<SendBulkApplicationUpdatesPayload>,
+        ) => {
+            const bulkJob = await BulkApplicationUpdateJob.findById(
+                job.attrs.data.jobId,
+            ).exec();
+            if (!bulkJob) {
+                throw new Error(
+                    `Bulk application update job ${job.attrs.data.jobId} was not found`,
+                );
+            }
+
+            bulkJob.status = BulkApplicationUpdateStatus.PROCESSING;
+            await bulkJob.save();
+
+            const recipients = await BulkApplicationUpdateRecipient.find({
+                jobId: bulkJob._id,
+                status: {
+                    $in: [
+                        BulkApplicationRecipientStatus.PENDING,
+                        BulkApplicationRecipientStatus.PROCESSING,
+                    ],
+                },
+            })
+                .sort({ createdAt: 1 })
+                .exec();
+            const emailClient = new EmailClient();
+
+            for (const recipient of recipients) {
+                recipient.status = BulkApplicationRecipientStatus.PROCESSING;
+                recipient.attempts += 1;
+                recipient.error = undefined;
+                recipient.failurePhase = undefined;
+                await recipient.save();
+
+                try {
+                    if (!recipient.stageChangedAt) {
+                        const application = await Application.findOne({
+                            _id: recipient.applicationId,
+                            teamPk: bulkJob.teamPk,
+                        }).exec();
+
+                        if (!application) {
+                            throw new Error(
+                                "Application no longer exists in this team",
+                            );
+                        }
+
+                        const existingBulkTransition =
+                            application.stageHistory.find(
+                                (entry) =>
+                                    entry.bulkJobId ===
+                                    bulkJob._id.toString(),
+                            );
+                        if (
+                            application.stage === recipient.targetStage &&
+                            existingBulkTransition
+                        ) {
+                            recipient.stageChangedAt =
+                                existingBulkTransition.changedAt;
+                        } else {
+                            if (
+                                !recipient.previousStage ||
+                                application.stage !==
+                                    recipient.previousStage ||
+                                !isValidApplicationStageTransition(
+                                    application.stage,
+                                    recipient.targetStage,
+                                )
+                            ) {
+                                throw new Error(
+                                    "Application stage changed after this batch was submitted",
+                                );
+                            }
+
+                            const changedAt = new Date();
+                            application.stage = recipient.targetStage;
+                            application.stageHistory.push({
+                                stage: recipient.targetStage,
+                                changedAt,
+                                changedBy: `${bulkJob.requestedByName} (${bulkJob.requestedByUsername})`,
+                                bulkJobId: bulkJob._id.toString(),
+                            });
+                            await application.save();
+                            recipient.stageChangedAt = changedAt;
+                        }
+                        await recipient.save();
+                    }
+
+                    if (!recipient.email || !recipient.applicantName) {
+                        throw new Error(
+                            "Applicant contact information is unavailable",
+                        );
+                    }
+
+                    if (recipient.targetStage === ApplicationStage.INTERVIEW) {
+                        await emailClient.send({
+                            to: recipient.email,
+                            cc: [bulkJob.requestedByEmail],
+                            replyTo: [bulkJob.requestedByEmail],
+                            subject: `Next Steps: ${bulkJob.teamName} Interview`,
+                            templateName: "RecruitInterviewRequest",
+                            templateVars: {
+                                applicantName: recipient.applicantName,
+                                interviewerName: bulkJob.requestedByName,
+                                teamName: bulkJob.teamName,
+                                interviewLink: bulkJob.interviewLink,
+                                interviewGuidelines:
+                                    bulkJob.interviewGuidelines,
+                            },
+                        });
+                    } else if (
+                        recipient.targetStage === ApplicationStage.REJECTED
+                    ) {
+                        await emailClient.send({
+                            to: recipient.email,
+                            cc: [bulkJob.requestedByEmail],
+                            replyTo: [bulkJob.requestedByEmail],
+                            subject: `Update on ${bulkJob.teamName}`,
+                            templateName: "RecruitApplicationDeclined",
+                            templateVars: {
+                                applicantName: recipient.applicantName,
+                                teamName: bulkJob.teamName,
+                            },
+                        });
+                    } else {
+                        throw new Error(
+                            `No bulk email template is available for ${recipient.targetStage}`,
+                        );
+                    }
+
+                    recipient.status = BulkApplicationRecipientStatus.SENT;
+                    recipient.failurePhase = undefined;
+                    recipient.error = undefined;
+                    recipient.sentAt = new Date();
+                    await recipient.save();
+                } catch (error: unknown) {
+                    recipient.status = BulkApplicationRecipientStatus.FAILED;
+                    recipient.failurePhase = recipient.stageChangedAt
+                        ? "email"
+                        : "stage";
+                    recipient.error =
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown recipient processing error";
+                    await recipient.save();
+                }
+            }
+
+            const remainingRecipients =
+                await BulkApplicationUpdateRecipient.countDocuments({
+                    jobId: bulkJob._id,
+                    status: {
+                        $in: [
+                            BulkApplicationRecipientStatus.PENDING,
+                            BulkApplicationRecipientStatus.PROCESSING,
+                        ],
+                    },
+                }).exec();
+            const unsuccessfulRecipients =
+                await BulkApplicationUpdateRecipient.countDocuments({
+                    jobId: bulkJob._id,
+                    status: {
+                        $in: [
+                            BulkApplicationRecipientStatus.FAILED,
+                            BulkApplicationRecipientStatus.VALIDATION_FAILED,
+                        ],
+                    },
+                }).exec();
+
+            bulkJob.status = remainingRecipients
+                ? BulkApplicationUpdateStatus.QUEUED
+                : unsuccessfulRecipients
+                  ? BulkApplicationUpdateStatus.COMPLETED_WITH_ERRORS
+                  : BulkApplicationUpdateStatus.COMPLETED;
+            await bulkJob.save();
+        },
+        options: {
+            concurrency: 1,
+            removeOnComplete: true,
         },
     },
 };

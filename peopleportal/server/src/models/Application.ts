@@ -37,6 +37,7 @@ export interface IApplication extends Document {
         stage: ApplicationStage;
         changedAt: Date;
         changedBy?: string;
+        bulkJobId?: string;
     }>;
     hiredRole?: string;
     hiredSubteamPk?: string;
@@ -90,6 +91,7 @@ const ApplicationSchema = new Schema<IApplication>(
                 },
                 changedAt: { type: Date, default: Date.now },
                 changedBy: { type: String },
+                bulkJobId: { type: String },
             },
         ],
         hiredRole: { type: String, required: false },

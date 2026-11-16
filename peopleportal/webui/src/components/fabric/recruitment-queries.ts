@@ -4,6 +4,7 @@ import {
     useQuery,
     useQueryClient,
 } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config";
 
 /** Application summary returned by the recruitment board endpoint. */
@@ -15,7 +16,22 @@ export interface RecruitmentApplication {
     rolePreferences: { role: string; subteamPk: string }[];
     appliedAt: string;
     stars: number;
+    latestEmailUpdate?: {
+        stage: string;
+        status: string;
+        updatedAt: string;
+    };
     [key: string]: unknown;
+}
+
+export interface RecruitmentEmailUpdate {
+    jobId: string;
+    stage: string;
+    status: string;
+    attempts: number;
+    createdAt: string;
+    sentAt?: string;
+    error?: string;
 }
 
 /** Application information returned by the detail endpoint. */
@@ -28,6 +44,7 @@ export interface RecruitmentDetails extends RecruitmentApplication {
     appDevInternalPk?: number;
     notes?: string;
     stageHistory?: { stage: string; changedAt: string; changedBy?: string }[];
+    emailUpdates: RecruitmentEmailUpdate[];
 }
 
 interface OtherApplication {
@@ -157,6 +174,18 @@ export function useRecruitmentQueries(
         ]);
     }
 
+    const refreshApplicationData = useCallback(async () => {
+        const detailsKey = ["recruitment", teamId, "details"] as const;
+        await Promise.all([
+            client.cancelQueries({ queryKey: keys.applications(teamId) }),
+            client.cancelQueries({ queryKey: detailsKey }),
+        ]);
+        await Promise.all([
+            client.invalidateQueries({ queryKey: keys.applications(teamId) }),
+            client.invalidateQueries({ queryKey: detailsKey }),
+        ]);
+    }, [client, teamId]);
+
     const feedback = useMutation({
         mutationKey: ["recruitment", teamId, "feedback", selectedId],
         mutationFn: ({
@@ -210,6 +239,7 @@ export function useRecruitmentQueries(
         feedback,
         isFeedbackPending,
         stage,
+        refreshApplicationData,
         selected: selected ?? details.data ?? null,
     };
 }

@@ -1079,6 +1079,11 @@ const models: TsoaRoute.Models = {
         "type": {"dataType":"nestedObjectLiteral","nestedProperties":{},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BulkApplicationRecipientStatus": {
+        "dataType": "refEnum",
+        "enums": ["pending","processing","sent","failed","validation_failed"],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ATSKanbanApplicationCard": {
         "dataType": "refObject",
         "properties": {
@@ -1089,6 +1094,7 @@ const models: TsoaRoute.Models = {
             "appliedAt": {"dataType":"datetime","required":true},
             "stage": {"ref":"ApplicationStage","required":true},
             "stars": {"dataType":"double","required":true,"validators":{"minimum":{"errorMsg":"Minimum Stars is 0","value":0},"maximum":{"errorMsg":"Maximum Stars is 5","value":5}}},
+            "latestEmailUpdate": {"dataType":"nestedObjectLiteral","nestedProperties":{"updatedAt":{"dataType":"datetime","required":true},"status":{"ref":"BulkApplicationRecipientStatus","required":true},"stage":{"ref":"ApplicationStage","required":true}}},
         },
         "additionalProperties": false,
     },
@@ -1103,6 +1109,7 @@ const models: TsoaRoute.Models = {
             "appliedAt": {"dataType":"datetime","required":true},
             "stage": {"ref":"ApplicationStage","required":true},
             "stars": {"dataType":"double","required":true,"validators":{"minimum":{"errorMsg":"Minimum Stars is 0","value":0},"maximum":{"errorMsg":"Maximum Stars is 5","value":5}}},
+            "latestEmailUpdate": {"dataType":"nestedObjectLiteral","nestedProperties":{"updatedAt":{"dataType":"datetime","required":true},"status":{"ref":"BulkApplicationRecipientStatus","required":true},"stage":{"ref":"ApplicationStage","required":true}}},
             "email": {"dataType":"string","required":true},
             "profile": {"ref":"Record_string.string_","required":true},
             "responses": {"ref":"Record_string.string_","required":true},
@@ -1110,6 +1117,7 @@ const models: TsoaRoute.Models = {
             "hiredRole": {"dataType":"string"},
             "appDevInternalPk": {"dataType":"double"},
             "notes": {"dataType":"string"},
+            "emailUpdates": {"dataType":"array","array":{"dataType":"nestedObjectLiteral","nestedProperties":{"error":{"dataType":"string"},"sentAt":{"dataType":"datetime"},"createdAt":{"dataType":"datetime","required":true},"attempts":{"dataType":"double","required":true},"status":{"ref":"BulkApplicationRecipientStatus","required":true},"stage":{"ref":"ApplicationStage","required":true},"jobId":{"dataType":"string","required":true}}},"required":true},
         },
         "additionalProperties": false,
     },
@@ -1124,6 +1132,37 @@ const models: TsoaRoute.Models = {
             "hiredSubteamPk": {"dataType":"string"},
         },
         "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BulkApplicationUpdateStatus.COMPLETED_WITH_ERRORS": {
+        "dataType": "refEnum",
+        "enums": ["completed_with_errors"],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BulkApplicationUpdateStatus": {
+        "dataType": "refEnum",
+        "enums": ["queued","processing","completed","completed_with_errors"],
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "ATSBulkApplicationUpdateRequest": {
+        "dataType": "refObject",
+        "properties": {
+            "applicationIds": {"dataType":"array","array":{"dataType":"string"},"required":true},
+            "stage": {"ref":"ApplicationStage","required":true},
+            "interviewLink": {"dataType":"string"},
+            "interviewGuidelines": {"dataType":"string"},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BulkApplicationFailurePhase": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["stage"]},{"dataType":"enum","enums":["email"]},{"dataType":"enum","enums":["queue"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "BulkApplicationUpdateStatus.QUEUED": {
+        "dataType": "refEnum",
+        "enums": ["queued"],
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "ApplicantProfile": {
@@ -3875,6 +3914,137 @@ export function RegisterRoutes(app: Router) {
                 next,
                 validatedArgs,
                 successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsATSController_createBulkApplicationUpdate: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                teamId: {"in":"path","name":"teamId","required":true,"dataType":"string"},
+                body: {"in":"body","name":"body","required":true,"ref":"ATSBulkApplicationUpdateRequest"},
+        };
+        app.post('/api/ats/applications/:teamId/bulk-updates',
+            authenticateMiddleware([{"bindles":["corp:hiringaccess"]}]),
+            ...(fetchMiddlewares<RequestHandler>(ATSController)),
+            ...(fetchMiddlewares<RequestHandler>(ATSController.prototype.createBulkApplicationUpdate)),
+
+            async function ATSController_createBulkApplicationUpdate(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsATSController_createBulkApplicationUpdate, request, response });
+
+                const controller = new ATSController();
+
+              await templateService.apiHandler({
+                methodName: 'createBulkApplicationUpdate',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 201,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsATSController_getBulkApplicationUpdates: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                teamId: {"in":"path","name":"teamId","required":true,"dataType":"string"},
+        };
+        app.get('/api/ats/applications/:teamId/bulk-updates',
+            authenticateMiddleware([{"bindles":["corp:hiringaccess"]}]),
+            ...(fetchMiddlewares<RequestHandler>(ATSController)),
+            ...(fetchMiddlewares<RequestHandler>(ATSController.prototype.getBulkApplicationUpdates)),
+
+            async function ATSController_getBulkApplicationUpdates(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsATSController_getBulkApplicationUpdates, request, response });
+
+                const controller = new ATSController();
+
+              await templateService.apiHandler({
+                methodName: 'getBulkApplicationUpdates',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsATSController_getBulkApplicationUpdate: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                teamId: {"in":"path","name":"teamId","required":true,"dataType":"string"},
+                jobId: {"in":"path","name":"jobId","required":true,"dataType":"string"},
+        };
+        app.get('/api/ats/applications/:teamId/bulk-updates/:jobId',
+            authenticateMiddleware([{"bindles":["corp:hiringaccess"]}]),
+            ...(fetchMiddlewares<RequestHandler>(ATSController)),
+            ...(fetchMiddlewares<RequestHandler>(ATSController.prototype.getBulkApplicationUpdate)),
+
+            async function ATSController_getBulkApplicationUpdate(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsATSController_getBulkApplicationUpdate, request, response });
+
+                const controller = new ATSController();
+
+              await templateService.apiHandler({
+                methodName: 'getBulkApplicationUpdate',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 200,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsATSController_retryBulkApplicationUpdate: Record<string, TsoaRoute.ParameterSchema> = {
+                req: {"in":"request","name":"req","required":true,"dataType":"object"},
+                teamId: {"in":"path","name":"teamId","required":true,"dataType":"string"},
+                jobId: {"in":"path","name":"jobId","required":true,"dataType":"string"},
+        };
+        app.post('/api/ats/applications/:teamId/bulk-updates/:jobId/retry',
+            authenticateMiddleware([{"bindles":["corp:hiringaccess"]}]),
+            ...(fetchMiddlewares<RequestHandler>(ATSController)),
+            ...(fetchMiddlewares<RequestHandler>(ATSController.prototype.retryBulkApplicationUpdate)),
+
+            async function ATSController_retryBulkApplicationUpdate(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsATSController_retryBulkApplicationUpdate, request, response });
+
+                const controller = new ATSController();
+
+              await templateService.apiHandler({
+                methodName: 'retryBulkApplicationUpdate',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: 202,
               });
             } catch (err) {
                 return next(err);
