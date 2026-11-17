@@ -18,16 +18,18 @@ register_listeners(app)
 
 @app.message("people")
 @with_mentioned_users
-def increment_points(user_ids, message, say):
-    awarded = award_points(user_ids, display_name)
+def increment_points(event, message, say):
+    awarded = award_points(event, display_name)
     names = ", ".join(user.slack_user_name for user in awarded)
     say(f"points updated for {names}")
 
 
 @app.message("add")
 @with_mentioned_users
-def add_user(user_ids, message, say):
-    added = [register_user(user_id, display_name(user_id)) for user_id in user_ids]
+def add_user(event, message, say):
+    print(event)
+    added = [register_user(user_id, display_name(user_id)) for user_id in event]
+    print(added)
     names = ", ".join(user.slack_user_name for user in added)
     say(f"users {names} added to the competition!")
 
@@ -53,7 +55,7 @@ def error_handler(error, say):
     elif isinstance(error, DatabaseException):
         say(f"Internal server error: {error.code}")
     else:
-        say(f"Unknown error: {error.message}")
+        say(f"Unknown error: {error}")
 
 
 if __name__ == "__main__":

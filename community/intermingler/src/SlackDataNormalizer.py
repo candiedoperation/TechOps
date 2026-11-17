@@ -22,6 +22,6 @@ def display_name(slack_user_id: str) -> str:
 def with_mentioned_users(func):
     @wraps(func)
     def wrapper(event, *args, **kwargs):
-        return func(mentioned_user_ids(event), event, *args, **kwargs)
+        return func(event=mentioned_user_ids(event), *args, **kwargs)
 
     return wrapper
