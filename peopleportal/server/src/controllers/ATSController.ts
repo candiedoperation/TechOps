@@ -47,8 +47,16 @@ import {
     IApplication,
     ApplicationStage,
 } from "../models/Application";
+import {
+    BulkApplicationRecipientStatus,
+    BulkApplicationUpdateJob,
+    BulkApplicationUpdateRecipient,
+    BulkApplicationUpdateStatus,
+} from "../models/BulkApplicationUpdate";
+import { isValidApplicationStageTransition } from "../models/application-stage-transitions";
 import { Security } from "tsoa";
 import * as express from "express";
+import { Types } from "mongoose";
 import path from "path";
 import {
     PutObjectCommand,
@@ -61,6 +69,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, BUCKET_NAME } from "../clients/AWSClient/S3Client";
 import { Query } from "tsoa";
 import { EmailClient } from "../clients/EmailClient";
+import { agendaClient } from "../clients/AgendaClient";
 import { OrgController } from "./OrgController";
 import { BindleController } from "./BindleController";
 import { AuthorizedUser } from "../clients/OpenIdClient";
@@ -108,6 +117,13 @@ interface ATSUpdateApplicationStageRequest {
     hiredSubteamPk?: string;
 }
 
+interface ATSBulkApplicationUpdateRequest {
+    applicationIds: string[];
+    stage: ApplicationStage;
+    interviewLink?: string;
+    interviewGuidelines?: string;
+}
+
 interface ATSKanbanApplicationCard {
     id: string;
     applicantId: string;
@@ -122,6 +138,11 @@ interface ATSKanbanApplicationCard {
      * @maximum 5 Maximum Stars is 5
      */
     stars: number;
+    latestEmailUpdate?: {
+        stage: ApplicationStage;
+        status: BulkApplicationRecipientStatus;
+        updatedAt: Date;
+    };
 }
 
 interface ATSApplicationDetails extends ATSKanbanApplicationCard {
@@ -136,6 +157,15 @@ interface ATSApplicationDetails extends ATSKanbanApplicationCard {
     hiredRole?: string;
     appDevInternalPk?: number;
     notes?: string;
+    emailUpdates: {
+        jobId: string;
+        stage: ApplicationStage;
+        status: BulkApplicationRecipientStatus;
+        attempts: number;
+        createdAt: Date;
+        sentAt?: Date;
+        error?: string;
+    }[];
 }
 
 // Constants
@@ -774,17 +804,55 @@ export class ATSController extends Controller {
                 .lean()
                 .exec();
 
+            const applicationIds = applications.map((app) =>
+                app._id.toString(),
+            );
+            const recentUpdates = await BulkApplicationUpdateRecipient.find({
+                teamPk: teamId,
+                applicationId: { $in: applicationIds },
+            })
+                .sort({ createdAt: -1, _id: -1 })
+                .select("applicationId targetStage status updatedAt")
+                .lean()
+                .exec();
+            const latestUpdateByApplication = new Map<
+                string,
+                (typeof recentUpdates)[number]
+            >();
+            for (const update of recentUpdates) {
+                if (!latestUpdateByApplication.has(update.applicationId)) {
+                    latestUpdateByApplication.set(
+                        update.applicationId,
+                        update,
+                    );
+                }
+            }
+
             // Map to Kanban-friendly format
             const kanbanData: ATSKanbanApplicationCard[] = applications.map(
-                (app) => ({
-                    id: app._id.toString(),
-                    applicantId: app.applicantId._id.toString(),
-                    name: app.applicantId.fullName || "Unknown Applicant",
-                    stage: app.stage,
-                    rolePreferences: app.rolePreferences,
-                    appliedAt: app.appliedAt,
-                    stars: app.stars || 0,
-                }),
+                (app) => {
+                    const latestUpdate = latestUpdateByApplication.get(
+                        app._id.toString(),
+                    );
+                    return {
+                        id: app._id.toString(),
+                        applicantId: app.applicantId._id.toString(),
+                        name: app.applicantId.fullName || "Unknown Applicant",
+                        stage: app.stage,
+                        rolePreferences: app.rolePreferences,
+                        appliedAt: app.appliedAt,
+                        stars: app.stars || 0,
+                        ...(latestUpdate
+                            ? {
+                                  latestEmailUpdate: {
+                                      stage: latestUpdate.targetStage,
+                                      status: latestUpdate.status,
+                                      updatedAt: latestUpdate.updatedAt,
+                                  },
+                              }
+                            : {}),
+                    };
+                },
             );
 
             return kanbanData;
@@ -827,6 +895,18 @@ export class ATSController extends Controller {
                 return { error: "NotFound", message: "Application not found" };
             }
 
+            const emailUpdates =
+                await BulkApplicationUpdateRecipient.find({
+                    teamPk: teamId,
+                    applicationId: app._id.toString(),
+                })
+                    .sort({ createdAt: -1, _id: -1 })
+                    .select(
+                        "jobId targetStage status attempts createdAt sentAt error",
+                    )
+                    .lean()
+                    .exec();
+
             return {
                 id: app._id.toString(),
                 applicantId: app.applicantId._id.toString(),
@@ -841,6 +921,15 @@ export class ATSController extends Controller {
                 profile: app.applicantId.profile as any,
                 responses: app.responses as any,
                 stageHistory: app.stageHistory,
+                emailUpdates: emailUpdates.map((update) => ({
+                    jobId: update.jobId.toString(),
+                    stage: update.targetStage,
+                    status: update.status,
+                    attempts: update.attempts,
+                    createdAt: update.createdAt,
+                    ...(update.sentAt ? { sentAt: update.sentAt } : {}),
+                    ...(update.error ? { error: update.error } : {}),
+                })),
                 ...(app.notes ? { notes: app.notes } : {}),
                 ...(app.hiredRole ? { hiredRole: app.hiredRole } : {}),
                 ...(app.appDevInternalPk
@@ -1158,26 +1247,7 @@ export class ATSController extends Controller {
             }
 
             // Transition Validation
-            const VALID_TRANSITIONS: Record<string, ApplicationStage[]> = {
-                [ApplicationStage.APPLIED]: [
-                    ApplicationStage.INTERVIEW,
-                    ApplicationStage.REJECTED,
-                ],
-                [ApplicationStage.INTERVIEW]: [
-                    ApplicationStage.POTENTIAL_HIRE,
-                    ApplicationStage.HIRED,
-                    ApplicationStage.REJECTED,
-                ],
-                [ApplicationStage.POTENTIAL_HIRE]: [
-                    ApplicationStage.HIRED,
-                    ApplicationStage.REJECTED,
-                ],
-                [ApplicationStage.HIRED]: [],
-                [ApplicationStage.REJECTED]: [],
-            };
-
-            const allowed = VALID_TRANSITIONS[currentStage] || [];
-            if (!allowed.includes(stage)) {
+            if (!isValidApplicationStageTransition(currentStage, stage)) {
                 this.setStatus(400);
                 return {
                     error: "BadRequest",
@@ -1308,6 +1378,625 @@ export class ATSController extends Controller {
             return {
                 error: "ServerError",
                 message: "Failed to update application stage",
+            };
+        }
+    }
+
+    /**
+     * Creates a persistent batch stage-change job. Interview and Rejected are
+     * the only bulk stages with applicant-facing status templates.
+     */
+    @Post("applications/{teamId}/bulk-updates")
+    @Tags("Recruitment Actions")
+    @SuccessResponse(201, "Bulk application update created")
+    @Security("bindles", ["corp:hiringaccess"])
+    async createBulkApplicationUpdate(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+        @Body() body: ATSBulkApplicationUpdateRequest,
+    ) {
+        if (!req.session?.authorizedUser) {
+            this.setStatus(401);
+            return {
+                error: "Unauthorized",
+                message: "Authenticated user not found",
+            };
+        }
+
+        if (
+            !Array.isArray(body.applicationIds) ||
+            body.applicationIds.length === 0 ||
+            body.applicationIds.length > 100 ||
+            body.applicationIds.some(
+                (applicationId) =>
+                    typeof applicationId !== "string" ||
+                    applicationId.trim() === "",
+            )
+        ) {
+            this.setStatus(400);
+            return {
+                error: "BadRequest",
+                message:
+                    "Provide between 1 and 100 non-empty application IDs",
+            };
+        }
+
+        if (
+            body.stage !== ApplicationStage.INTERVIEW &&
+            body.stage !== ApplicationStage.REJECTED
+        ) {
+            this.setStatus(400);
+            return {
+                error: "BadRequest",
+                message:
+                    "Bulk email stage updates are available only for Interview and Rejected",
+            };
+        }
+
+        const interviewLink = body.interviewLink?.trim();
+        const interviewGuidelines = body.interviewGuidelines?.trim();
+        if (
+            body.stage === ApplicationStage.INTERVIEW &&
+            (!interviewLink ||
+                !interviewGuidelines ||
+                interviewGuidelines.length < 50 ||
+                interviewGuidelines.length > 500)
+        ) {
+            this.setStatus(400);
+            return {
+                error: "BadRequest",
+                message:
+                    "Interview link and 50-500 character interview guidelines are required",
+            };
+        }
+        if (body.stage === ApplicationStage.INTERVIEW) {
+            let parsedInterviewLink: URL;
+            try {
+                    parsedInterviewLink = new URL(interviewLink!);
+            } catch {
+                    this.setStatus(400);
+                    return {
+                        error: "BadRequest",
+                        message: "Interview link must be a valid HTTP(S) URL",
+                    };
+            }
+            if (
+                    parsedInterviewLink.protocol !== "http:" &&
+                    parsedInterviewLink.protocol !== "https:"
+            ) {
+                    this.setStatus(400);
+                    return {
+                        error: "BadRequest",
+                        message: "Interview link must be a valid HTTP(S) URL",
+                    };
+            }
+        }
+
+        const uniqueApplicationIds = Array.from(
+            new Set(body.applicationIds.map((id) => id.trim())),
+        );
+        const authorizedUser = req.session.authorizedUser;
+        try {
+            const teamInfo = await this.getAuthorizedHiringTeam(
+                authorizedUser,
+                teamId,
+            );
+            if (!teamInfo) {
+                this.setStatus(403);
+                return {
+                    error: "Forbidden",
+                    message: "You do not have hiring access to this team",
+                };
+            }
+
+            const validIds = uniqueApplicationIds.filter((id) =>
+                Types.ObjectId.isValid(id),
+            );
+            const applications = validIds.length
+                ? await Application.find({
+                      _id: { $in: validIds },
+                      teamPk: teamId,
+                  })
+                      .populate<{ applicantId: IApplicant | null }>(
+                          "applicantId",
+                          "fullName email",
+                      )
+                      .exec()
+                : [];
+            const applicationsById = new Map(
+                applications.map((application) => [
+                    application._id.toString(),
+                    application,
+                ]),
+            );
+
+            const job = await BulkApplicationUpdateJob.create({
+                teamPk: teamId,
+                teamName: teamInfo.attributes.friendlyName || teamInfo.name,
+                targetStage: body.stage,
+                ...(body.stage === ApplicationStage.INTERVIEW
+                    ? {
+                          interviewLink,
+                          interviewGuidelines,
+                      }
+                    : {}),
+                requestedByName: authorizedUser.name,
+                requestedByEmail: authorizedUser.email,
+                requestedByUsername: authorizedUser.username,
+                status: BulkApplicationUpdateStatus.QUEUED,
+            });
+
+            const recipients = uniqueApplicationIds.map((applicationId) => {
+                const application = applicationsById.get(applicationId);
+                if (!application) {
+                    return {
+                        jobId: job._id,
+                        teamPk: teamId,
+                        applicationId,
+                        targetStage: body.stage,
+                        status:
+                            BulkApplicationRecipientStatus.VALIDATION_FAILED,
+                        error: "Application not found for this team",
+                        attempts: 0,
+                    };
+                }
+
+                const applicant = application.applicantId;
+                let validationError: string | undefined;
+                if (!applicant || !applicant.email || !applicant.fullName) {
+                    validationError =
+                        "Applicant name or email is unavailable";
+                } else if (application.stage === body.stage) {
+                    validationError = `Application is already in ${body.stage}`;
+                } else if (
+                    !isValidApplicationStageTransition(
+                        application.stage,
+                        body.stage,
+                    )
+                ) {
+                    validationError = `Invalid transition from ${application.stage} to ${body.stage}`;
+                }
+
+                return {
+                    jobId: job._id,
+                    teamPk: teamId,
+                    applicationId,
+                    ...(applicant
+                        ? {
+                              applicantId: applicant._id.toString(),
+                              applicantName: applicant.fullName,
+                              email: applicant.email,
+                          }
+                        : {}),
+                    previousStage: application.stage,
+                    targetStage: body.stage,
+                    status: validationError
+                        ? BulkApplicationRecipientStatus.VALIDATION_FAILED
+                        : BulkApplicationRecipientStatus.PENDING,
+                    ...(validationError ? { error: validationError } : {}),
+                    attempts: 0,
+                };
+            });
+
+            await BulkApplicationUpdateRecipient.insertMany(recipients);
+            const queuedRecipients = recipients.filter(
+                (recipient) =>
+                    recipient.status ===
+                    BulkApplicationRecipientStatus.PENDING,
+            ).length;
+            const validationFailedRecipients =
+                recipients.length - queuedRecipients;
+
+            if (queuedRecipients === 0) {
+                job.status = BulkApplicationUpdateStatus.COMPLETED_WITH_ERRORS;
+                await job.save();
+                this.setStatus(201);
+                return {
+                    jobId: job._id.toString(),
+                    status: job.status,
+                    queued: false,
+                    queuedRecipients,
+                    validationFailedRecipients,
+                };
+            }
+
+            try {
+                await agendaClient.scheduleJobOnce({
+                    runAt: new Date(),
+                    jobName: "sendBulkApplicationUpdates",
+                    jobPayload: { jobId: job._id.toString() },
+                });
+            } catch (error: unknown) {
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown background queue error";
+                await BulkApplicationUpdateRecipient.updateMany(
+                    {
+                        jobId: job._id,
+                        status: BulkApplicationRecipientStatus.PENDING,
+                    },
+                    {
+                        $set: {
+                            status: BulkApplicationRecipientStatus.FAILED,
+                            failurePhase: "queue",
+                            error: `Could not schedule email job: ${message}`,
+                        },
+                    },
+                ).exec();
+                job.status = BulkApplicationUpdateStatus.COMPLETED_WITH_ERRORS;
+                await job.save();
+                console.error("Failed to schedule bulk application update", error);
+                this.setStatus(503);
+                return {
+                    error: "QueueUnavailable",
+                    message:
+                        "The batch was saved but could not be queued. Retry it from batch history.",
+                    jobId: job._id.toString(),
+                    status: job.status,
+                    queued: false,
+                    queuedRecipients: 0,
+                    validationFailedRecipients,
+                };
+            }
+
+            this.setStatus(201);
+            return {
+                jobId: job._id.toString(),
+                status: job.status,
+                queued: true,
+                queuedRecipients,
+                validationFailedRecipients,
+            };
+        } catch (error: unknown) {
+            console.error("Error creating bulk application update:", error);
+            this.setStatus(500);
+            return {
+                error: "ServerError",
+                message: "Failed to create bulk application update",
+            };
+        }
+    }
+
+    /**
+     * Lists recent persisted batch jobs so a recruiter can resume monitoring
+     * after leaving the page or signing in on another device.
+     */
+    @Get("applications/{teamId}/bulk-updates")
+    @Tags("Recruitment Actions")
+    @SuccessResponse(200)
+    @Security("bindles", ["corp:hiringaccess"])
+    async getBulkApplicationUpdates(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+    ) {
+        try {
+            if (!req.session?.authorizedUser) {
+                this.setStatus(401);
+                return {
+                    error: "Unauthorized",
+                    message: "Authenticated user not found",
+                };
+            }
+            const teamInfo = await this.getAuthorizedHiringTeam(
+                req.session.authorizedUser,
+                teamId,
+            );
+            if (!teamInfo) {
+                this.setStatus(403);
+                return {
+                    error: "Forbidden",
+                    message: "You do not have hiring access to this team",
+                };
+            }
+
+            const jobs = await BulkApplicationUpdateJob.find({
+                teamPk: teamId,
+            })
+                .sort({ createdAt: -1 })
+                .limit(20)
+                .exec();
+            if (!jobs.length) return [];
+
+            const groupedCounts =
+                await BulkApplicationUpdateRecipient.aggregate<{
+                    _id: {
+                        jobId: Types.ObjectId;
+                        status: BulkApplicationRecipientStatus;
+                    };
+                    count: number;
+                }>([
+                    {
+                        $match: {
+                            jobId: { $in: jobs.map((job) => job._id) },
+                        },
+                    },
+                    {
+                        $group: {
+                            _id: { jobId: "$jobId", status: "$status" },
+                            count: { $sum: 1 },
+                        },
+                    },
+                ]).exec();
+            const countsByJob = new Map<
+                string,
+                Record<string, number>
+            >();
+            for (const row of groupedCounts) {
+                const jobId = row._id.jobId.toString();
+                const counts = countsByJob.get(jobId) ?? {};
+                counts[row._id.status] = row.count;
+                countsByJob.set(jobId, counts);
+            }
+
+            return jobs.map((job) => {
+                const counts = countsByJob.get(job._id.toString()) ?? {};
+                const total = Object.values(counts).reduce(
+                    (sum, count) => sum + count,
+                    0,
+                );
+                return {
+                    jobId: job._id.toString(),
+                    targetStage: job.targetStage,
+                    status: job.status,
+                    createdAt: job.createdAt,
+                    counts: {
+                        total,
+                        pending:
+                            counts[BulkApplicationRecipientStatus.PENDING] ??
+                            0,
+                        processing:
+                            counts[
+                                BulkApplicationRecipientStatus.PROCESSING
+                            ] ?? 0,
+                        sent: counts[BulkApplicationRecipientStatus.SENT] ?? 0,
+                        failed:
+                            counts[BulkApplicationRecipientStatus.FAILED] ?? 0,
+                        validationFailed:
+                            counts[
+                                BulkApplicationRecipientStatus
+                                    .VALIDATION_FAILED
+                            ] ?? 0,
+                    },
+                };
+            });
+        } catch (error: unknown) {
+            console.error("Error fetching bulk application updates:", error);
+            this.setStatus(500);
+            return {
+                error: "ServerError",
+                message: "Failed to fetch bulk application updates",
+            };
+        }
+    }
+
+    /**
+     * Returns a batch and its individual recipient outcomes.
+     */
+    @Get("applications/{teamId}/bulk-updates/{jobId}")
+    @Tags("Recruitment Actions")
+    @SuccessResponse(200)
+    @Security("bindles", ["corp:hiringaccess"])
+    async getBulkApplicationUpdate(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+        @Path() jobId: string,
+    ) {
+        if (!req.session?.authorizedUser) {
+            this.setStatus(401);
+            return {
+                error: "Unauthorized",
+                message: "Authenticated user not found",
+            };
+        }
+        if (!Types.ObjectId.isValid(jobId)) {
+            this.setStatus(404);
+            return { error: "NotFound", message: "Batch job not found" };
+        }
+
+        try {
+            const teamInfo = await this.getAuthorizedHiringTeam(
+                req.session.authorizedUser,
+                teamId,
+            );
+            if (!teamInfo) {
+                this.setStatus(403);
+                return {
+                    error: "Forbidden",
+                    message: "You do not have hiring access to this team",
+                };
+            }
+
+            const job = await BulkApplicationUpdateJob.findOne({
+                _id: jobId,
+                teamPk: teamId,
+            }).exec();
+            if (!job) {
+                this.setStatus(404);
+                return { error: "NotFound", message: "Batch job not found" };
+            }
+
+            const recipients = await BulkApplicationUpdateRecipient.find({
+                jobId: job._id,
+            })
+                .sort({ createdAt: 1 })
+                .select(
+                    "applicationId applicantName email previousStage targetStage status failurePhase error attempts stageChangedAt sentAt createdAt",
+                )
+                .lean()
+                .exec();
+
+            return {
+                jobId: job._id.toString(),
+                targetStage: job.targetStage,
+                status: job.status,
+                createdAt: job.createdAt,
+                recipients: recipients.map((recipient) => ({
+                    applicationId: recipient.applicationId,
+                    applicantName: recipient.applicantName ?? "Unknown applicant",
+                    email: recipient.email,
+                    previousStage: recipient.previousStage,
+                    targetStage: recipient.targetStage,
+                    status: recipient.status,
+                    failurePhase: recipient.failurePhase,
+                    error: recipient.error,
+                    attempts: recipient.attempts,
+                    stageChangedAt: recipient.stageChangedAt,
+                    sentAt: recipient.sentAt,
+                    createdAt: recipient.createdAt,
+                })),
+            };
+        } catch (error: unknown) {
+            console.error("Error fetching bulk application update:", error);
+            this.setStatus(500);
+            return {
+                error: "ServerError",
+                message: "Failed to fetch bulk application update",
+            };
+        }
+    }
+
+    /**
+     * Requeues failed email sends and batches that could not be scheduled.
+     * Validation and stage-transition failures are not retryable.
+     */
+    @Post("applications/{teamId}/bulk-updates/{jobId}/retry")
+    @Tags("Recruitment Actions")
+    @SuccessResponse(202, "Eligible recipients queued for retry")
+    @Security("bindles", ["corp:hiringaccess"])
+    async retryBulkApplicationUpdate(
+        @Request() req: express.Request,
+        @Path() teamId: string,
+        @Path() jobId: string,
+    ) {
+        if (!req.session?.authorizedUser) {
+            this.setStatus(401);
+            return {
+                error: "Unauthorized",
+                message: "Authenticated user not found",
+            };
+        }
+        if (!Types.ObjectId.isValid(jobId)) {
+            this.setStatus(404);
+            return { error: "NotFound", message: "Batch job not found" };
+        }
+
+        try {
+            const teamInfo = await this.getAuthorizedHiringTeam(
+                req.session.authorizedUser,
+                teamId,
+            );
+            if (!teamInfo) {
+                this.setStatus(403);
+                return {
+                    error: "Forbidden",
+                    message: "You do not have hiring access to this team",
+                };
+            }
+
+            const job = await BulkApplicationUpdateJob.findOne({
+                _id: jobId,
+                teamPk: teamId,
+            }).exec();
+            if (!job) {
+                this.setStatus(404);
+                return { error: "NotFound", message: "Batch job not found" };
+            }
+
+            const retryableRecipients =
+                await BulkApplicationUpdateRecipient.find({
+                    jobId: job._id,
+                    status: BulkApplicationRecipientStatus.FAILED,
+                    $or: [
+                        {
+                            failurePhase: "email",
+                            stageChangedAt: { $ne: null },
+                        },
+                        { failurePhase: "queue" },
+                    ],
+                }).exec();
+            if (!retryableRecipients.length) {
+                this.setStatus(409);
+                return {
+                    error: "NoRetryableRecipients",
+                    message: "This batch has no eligible failed recipients to retry",
+                };
+            }
+
+            const retryableRecipientIds = retryableRecipients.map(
+                (recipient) => recipient._id.toString(),
+            );
+            const requeued =
+                await BulkApplicationUpdateRecipient.updateMany(
+                {
+                    _id: { $in: retryableRecipientIds },
+                    status: BulkApplicationRecipientStatus.FAILED,
+                },
+                {
+                    $set: {
+                        status: BulkApplicationRecipientStatus.PENDING,
+                    },
+                    $unset: { error: 1, failurePhase: 1 },
+                },
+                ).exec();
+            if (requeued.modifiedCount === 0) {
+                this.setStatus(409);
+                return {
+                    error: "NoRetryableRecipients",
+                    message:
+                        "The failed recipients have already been retried",
+                };
+            }
+            job.status = BulkApplicationUpdateStatus.QUEUED;
+            await job.save();
+
+            try {
+                await agendaClient.scheduleJobOnce({
+                    runAt: new Date(),
+                    jobName: "sendBulkApplicationUpdates",
+                    jobPayload: { jobId: job._id.toString() },
+                });
+            } catch (error: unknown) {
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown background queue error";
+                await BulkApplicationUpdateRecipient.updateMany(
+                    {
+                        _id: { $in: retryableRecipientIds },
+                        status: BulkApplicationRecipientStatus.PENDING,
+                    },
+                    {
+                        $set: {
+                            status: BulkApplicationRecipientStatus.FAILED,
+                            failurePhase: "queue",
+                            error: `Could not schedule email retry: ${message}`,
+                        },
+                    },
+                ).exec();
+                job.status = BulkApplicationUpdateStatus.COMPLETED_WITH_ERRORS;
+                await job.save();
+                console.error("Failed to schedule bulk application retry", error);
+                this.setStatus(503);
+                return {
+                    error: "QueueUnavailable",
+                    message: "The retry could not be queued",
+                    jobId: job._id.toString(),
+                };
+            }
+
+            this.setStatus(202);
+            return {
+                jobId: job._id.toString(),
+                queuedRecipients: requeued.modifiedCount,
+                status: job.status,
+            };
+        } catch (error: unknown) {
+            console.error("Error retrying bulk application update:", error);
+            this.setStatus(500);
+            return {
+                error: "ServerError",
+                message: "Failed to retry bulk application update",
             };
         }
     }

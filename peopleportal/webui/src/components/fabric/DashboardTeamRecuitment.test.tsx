@@ -41,10 +41,16 @@ function deferred<T>() {
 
 let applications: RecruitmentApplication[];
 let details: Map<string, RecruitmentDetails>;
-let requests: { path: string; signal: AbortSignal | null | undefined }[];
+let requests: {
+    path: string;
+    signal: AbortSignal | null | undefined;
+    method?: string;
+    body?: BodyInit | null;
+}[];
 let responses: Map<string, Promise<Response>>;
 
 beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
     applications = [makeApplication("a"), makeApplication("b")];
     details = new Map(
         applications.map((application) => [
@@ -55,6 +61,7 @@ beforeEach(() => {
                 profile: { whyAppDev: `Background ${application.id}` },
                 responses: {},
                 notes: `Notes ${application.id}`,
+                emailUpdates: [],
             },
         ]),
     );
@@ -65,7 +72,12 @@ beforeEach(() => {
         "fetch",
         async (input: RequestInfo | URL, init?: RequestInit) => {
             const path = String(input);
-            requests.push({ path, signal: init?.signal });
+            requests.push({
+                path,
+                signal: init?.signal,
+                method: init?.method,
+                body: init?.body,
+            });
             const response = responses.get(path);
             if (response) return response;
             if (path === "/api/org/teams/team-a") {
@@ -90,6 +102,38 @@ beforeEach(() => {
                         "Hired",
                     ].map((id) => ({ id, name: id })),
                 );
+            if (path === `${apiPath}/bulk-updates`) {
+                if (init?.method === "POST") {
+                    return Response.json(
+                        {
+                            jobId: "job-1",
+                            queued: true,
+                            queuedRecipients: 1,
+                            validationFailedRecipients: 0,
+                        },
+                        { status: 201 },
+                    );
+                }
+                return Response.json([]);
+            }
+            if (path === `${apiPath}/bulk-updates/job-1`) {
+                return Response.json({
+                    jobId: "job-1",
+                    targetStage: "Rejected",
+                    status: "queued",
+                    createdAt: "2026-09-01T12:00:00.000Z",
+                    recipients: [
+                        {
+                            applicationId: "a",
+                            applicantName: "Applicant A",
+                            targetStage: "Rejected",
+                            status: "pending",
+                            attempts: 0,
+                            createdAt: "2026-09-01T12:00:00.000Z",
+                        },
+                    ],
+                });
+            }
             if (path === apiPath) return Response.json(applications);
             for (const application of applications) {
                 if (path === `${apiPath}/${application.id}/info`)
@@ -260,5 +304,68 @@ describe("recruitment review", () => {
             expect(result.current.applications.isFetching).toBe(false),
         );
         expect(result.current.selected?.stars).toBe(5);
+    });
+
+    it("queues selected applicants and shows the persisted batch progress", async () => {
+        openBoard();
+        await userEvent.click(
+            await screen.findByRole("checkbox", {
+                name: "Select Applicant A",
+            }),
+        );
+        await userEvent.click(
+            screen.getByRole("button", { name: "Update selected (1)" }),
+        );
+        screen
+            .getByRole("combobox", { name: "New application stage" })
+            .focus();
+        await userEvent.keyboard("{ENTER}{ARROWDOWN}{ARROWDOWN}{ENTER}");
+        await userEvent.click(
+            screen.getByRole("button", {
+                name: "Queue update for 1 applicants",
+            }),
+        );
+
+        const progressDialog = await screen.findByRole("dialog", {
+            name: "Bulk update progress",
+        });
+        expect(progressDialog).toHaveTextContent("Pending: 1");
+        expect(progressDialog).toHaveTextContent("Applicant A");
+
+        const submittedRequest = requests.find(
+            (request) =>
+                request.path === `${apiPath}/bulk-updates` &&
+                request.method === "POST",
+        );
+        expect(submittedRequest).toBeDefined();
+        expect(JSON.parse(String(submittedRequest?.body))).toEqual({
+            applicationIds: ["a"],
+            stage: "Rejected",
+        });
+    });
+
+    it("shows each applicant's latest email status and update history", async () => {
+        applications[0].latestEmailUpdate = {
+            stage: "Rejected",
+            status: "sent",
+            updatedAt: "2026-09-01T12:00:00.000Z",
+        };
+        details.get("a")!.emailUpdates = [
+            {
+                jobId: "job-1",
+                stage: "Rejected",
+                status: "sent",
+                attempts: 1,
+                createdAt: "2026-09-01T12:00:00.000Z",
+                sentAt: "2026-09-01T12:01:00.000Z",
+            },
+        ];
+
+        openBoard();
+        await screen.findByText("sent Rejected");
+        await openA();
+
+        expect(screen.getByText("Applicant email updates")).toBeInTheDocument();
+        expect(screen.getByText(/Attempts: 1 · Sent/)).toBeInTheDocument();
     });
 });

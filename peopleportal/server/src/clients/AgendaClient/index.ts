@@ -21,6 +21,13 @@ import { Agenda } from "agenda";
 import { MongoBackend } from "@agendajs/mongo-backend";
 import { DefinedJobs, JobSchedulingData, RecurringJobs } from "./Jobs";
 
+// Agenda exports this channel at runtime but omits it from its root type declarations.
+const { InMemoryNotificationChannel } = require("agenda") as {
+    InMemoryNotificationChannel: new () => Parameters<
+        Agenda["notifyVia"]
+    >[0];
+};
+
 export class AgendaClient {
     private static readonly TAG = "AgendaClient";
     private agenda: Agenda | undefined;
@@ -41,6 +48,7 @@ export class AgendaClient {
                 mongo: mongoose.connection.db!,
             }),
             processEvery: dbQueryInterval,
+            notificationChannel: new InMemoryNotificationChannel(),
         });
 
         // Define all jobs

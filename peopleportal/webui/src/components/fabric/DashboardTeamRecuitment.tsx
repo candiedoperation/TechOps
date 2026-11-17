@@ -101,6 +101,59 @@ interface StageDefinition {
     [key: string]: unknown; // Index signature for Kanban compatibility
 }
 
+interface BulkApplicationUpdateJobSummary {
+    jobId: string;
+    targetStage: string;
+    status: string;
+    createdAt: string;
+    counts: {
+        total: number;
+        pending: number;
+        processing: number;
+        sent: number;
+        failed: number;
+        validationFailed: number;
+    };
+}
+
+interface BulkApplicationUpdateDetails {
+    jobId: string;
+    targetStage: string;
+    status: string;
+    createdAt: string;
+    recipients: {
+        applicationId: string;
+        applicantName: string;
+        email?: string;
+        previousStage?: string;
+        targetStage: string;
+        status: string;
+        failurePhase?: string;
+        error?: string;
+        attempts: number;
+        sentAt?: string;
+        createdAt: string;
+    }[];
+}
+
+async function fetchBulkUpdate<T>(
+    teamId: string,
+    path = "",
+    init?: RequestInit,
+): Promise<T> {
+    const response = await fetch(
+        `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${encodeURIComponent(teamId)}/bulk-updates${path}`,
+        { ...init, credentials: "include" },
+    );
+    const data = (await response.json()) as T & { message?: string };
+    if (!response.ok) {
+        throw new Error(
+            data.message || `Bulk update request failed (${response.status})`,
+        );
+    }
+    return data;
+}
+
 /** Recruitment cache is private to this mounted team/reviewer, never persisted. */
 export const DashboardTeamRecruitment = ({
     reviewerId,
@@ -142,6 +195,7 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
     const [searchParams, setSearchParams] = useSearchParams();
     const selectedId = searchParams.get("application");
     const review = useRecruitmentQueries(teamId, selectedId);
+    const refreshApplicationData = review.refreshApplicationData;
     const applications = review.applications.data ?? [];
     const selectedApplication = review.selected;
     const selectedApplicationDetails = review.details.data;
@@ -174,6 +228,29 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
     const [roleSpecQuestions, setRoleSpecQuestions] = React.useState<{
         [key: string]: { [key: string]: string[] };
     }>({});
+
+    const [selectedApplicationIds, setSelectedApplicationIds] = React.useState<
+        string[]
+    >([]);
+    const [bulkUpdateDialogOpen, setBulkUpdateDialogOpen] =
+        React.useState(false);
+    const [bulkTargetStage, setBulkTargetStage] = React.useState("");
+    const [bulkInterviewLink, setBulkInterviewLink] = React.useState("");
+    const [bulkInterviewGuidelines, setBulkInterviewGuidelines] =
+        React.useState("");
+    const [isSubmittingBulkUpdate, setIsSubmittingBulkUpdate] =
+        React.useState(false);
+    const [bulkUpdateJobs, setBulkUpdateJobs] = React.useState<
+        BulkApplicationUpdateJobSummary[]
+    >([]);
+    const [activeBulkUpdateId, setActiveBulkUpdateId] = React.useState<
+        string | null
+    >(null);
+    const [activeBulkUpdate, setActiveBulkUpdate] =
+        React.useState<BulkApplicationUpdateDetails | null>(null);
+    const [bulkUpdateLoadError, setBulkUpdateLoadError] = React.useState<
+        string | null
+    >(null);
 
     // --- Stage Transition Logic ---
     const VALID_TRANSITIONS: { [key: string]: string[] } = {
@@ -381,6 +458,190 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
             initiateStageUpdate(app.id, app.stage, targetStage);
         }
     }
+
+    const refreshBulkUpdateJobs = React.useCallback(
+        async (notifyOnError = false) => {
+            try {
+                const data = await fetchBulkUpdate<
+                    BulkApplicationUpdateJobSummary[]
+                >(teamId);
+                setBulkUpdateJobs(data);
+            } catch (error) {
+                console.error("Failed to fetch batch update history:", error);
+                if (notifyOnError) {
+                    toast.error(
+                        `Failed to fetch batch update history: ${error instanceof Error ? error.message : "Unknown error"}`,
+                    );
+                }
+            }
+        },
+        [teamId],
+    );
+
+    const refreshBulkUpdateDetails = React.useCallback(
+        async (jobId: string) => {
+            setBulkUpdateLoadError(null);
+            try {
+                const details =
+                    await fetchBulkUpdate<BulkApplicationUpdateDetails>(
+                        teamId,
+                        `/${encodeURIComponent(jobId)}`,
+                    );
+                setActiveBulkUpdate(details);
+            } catch (error) {
+                console.error("Failed to fetch batch update status:", error);
+                setBulkUpdateLoadError(
+                    error instanceof Error ? error.message : "Unknown error",
+                );
+            }
+        },
+        [teamId],
+    );
+
+    async function submitBulkApplicationUpdate() {
+        if (
+            !bulkTargetStage ||
+            selectedApplicationIds.length === 0 ||
+            selectedApplicationIds.length > 100
+        ) {
+            return;
+        }
+        setIsSubmittingBulkUpdate(true);
+        try {
+            const response = await fetch(
+                `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/ats/applications/${encodeURIComponent(teamId)}/bulk-updates`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        applicationIds: selectedApplicationIds,
+                        stage: bulkTargetStage,
+                        ...(bulkTargetStage === "Interview"
+                            ? {
+                                  interviewLink: bulkInterviewLink,
+                                  interviewGuidelines:
+                                      bulkInterviewGuidelines,
+                              }
+                            : {}),
+                    }),
+                },
+            );
+            const data = (await response.json()) as {
+                message?: string;
+                jobId?: string;
+                queued?: boolean;
+                queuedRecipients?: number;
+                validationFailedRecipients?: number;
+            };
+            if (data.jobId) {
+                setActiveBulkUpdateId(data.jobId);
+                setActiveBulkUpdate(null);
+                setBulkUpdateDialogOpen(false);
+                setSelectedApplicationIds([]);
+                await Promise.all([
+                    refreshBulkUpdateJobs(),
+                    refreshBulkUpdateDetails(data.jobId),
+                    review.refreshApplicationData(),
+                ]);
+            }
+            if (!response.ok) {
+                throw new Error(
+                    data.message ||
+                        `Could not create batch update (${response.status})`,
+                );
+            }
+            if (!data.jobId) {
+                throw new Error("The server did not return a batch job ID.");
+            }
+
+            if (data.queued) {
+                toast.success(
+                    `Batch update queued for ${data.queuedRecipients ?? 0} applicants`,
+                    {
+                        description: data.validationFailedRecipients
+                            ? `${data.validationFailedRecipients} selected application(s) were not eligible.`
+                            : undefined,
+                    },
+                );
+            } else {
+                toast.error("No applicants were eligible for this batch", {
+                    description: `${data.validationFailedRecipients ?? 0} selected application(s) failed validation.`,
+                });
+            }
+        } catch (error) {
+            toast.error(
+                `Failed to create batch update: ${error instanceof Error ? error.message : "Unknown error"}`,
+            );
+        } finally {
+            setIsSubmittingBulkUpdate(false);
+        }
+    }
+
+    const retryBulkApplicationUpdate = React.useCallback(
+        async (jobId: string) => {
+            try {
+                const data = await fetchBulkUpdate<{
+                    queuedRecipients: number;
+                }>(teamId, `/${encodeURIComponent(jobId)}/retry`, {
+                    method: "POST",
+                });
+                toast.success(
+                    `Queued ${data.queuedRecipients} failed recipient(s) for retry`,
+                );
+                await Promise.all([
+                    refreshBulkUpdateJobs(),
+                    refreshBulkUpdateDetails(jobId),
+                    refreshApplicationData(),
+                ]);
+            } catch (error) {
+                toast.error(
+                    `Failed to retry batch: ${error instanceof Error ? error.message : "Unknown error"}`,
+                );
+            }
+        },
+        [
+            refreshBulkUpdateDetails,
+            refreshBulkUpdateJobs,
+            refreshApplicationData,
+            teamId,
+        ],
+    );
+
+    React.useEffect(() => {
+        void refreshBulkUpdateJobs(true);
+    }, [refreshBulkUpdateJobs]);
+
+    React.useEffect(() => {
+        if (!activeBulkUpdateId) {
+            setActiveBulkUpdate(null);
+            setBulkUpdateLoadError(null);
+            return;
+        }
+        void refreshBulkUpdateDetails(activeBulkUpdateId);
+    }, [activeBulkUpdateId, refreshBulkUpdateDetails]);
+
+    React.useEffect(() => {
+        const hasActiveJobs = bulkUpdateJobs.some((job) =>
+            ["queued", "processing"].includes(job.status),
+        );
+        if (!hasActiveJobs) return;
+
+        const interval = window.setInterval(() => {
+            void refreshBulkUpdateJobs();
+            void refreshApplicationData();
+            if (activeBulkUpdateId) {
+                void refreshBulkUpdateDetails(activeBulkUpdateId);
+            }
+        }, 3000);
+        return () => window.clearInterval(interval);
+    }, [
+        activeBulkUpdateId,
+        bulkUpdateJobs,
+        refreshBulkUpdateDetails,
+        refreshBulkUpdateJobs,
+        refreshApplicationData,
+    ]);
 
     // Fetch application stages
     React.useEffect(() => {
@@ -597,6 +858,57 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
                                 </Button>
                             </div>
                         )}
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <Button
+                                onClick={() => {
+                                    setBulkTargetStage("");
+                                    setBulkUpdateDialogOpen(true);
+                                }}
+                                disabled={selectedApplicationIds.length === 0}
+                            >
+                                Update selected (
+                                {selectedApplicationIds.length})
+                            </Button>
+                            {selectedApplicationIds.length > 0 && (
+                                <Button
+                                    variant="outline"
+                                    onClick={() =>
+                                        setSelectedApplicationIds([])
+                                    }
+                                >
+                                    Clear selection
+                                </Button>
+                            )}
+                            {bulkUpdateJobs.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1">
+                                    <span className="text-sm text-muted-foreground">
+                                        Recent batches:
+                                    </span>
+                                    {bulkUpdateJobs.slice(0, 5).map((job) => (
+                                        <Button
+                                            key={job.jobId}
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setActiveBulkUpdate(null);
+                                                setBulkUpdateLoadError(null);
+                                                setActiveBulkUpdateId(
+                                                    job.jobId,
+                                                );
+                                            }}
+                                        >
+                                            {job.targetStage}: {job.counts.sent}/
+                                            {job.counts.total} sent
+                                            {job.counts.failed +
+                                                job.counts.validationFailed >
+                                            0
+                                                ? `, ${job.counts.failed + job.counts.validationFailed} failed`
+                                                : ""}
+                                        </Button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <KanbanProvider
                             columns={stages}
                             data={applications}
@@ -644,11 +956,53 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
                                                         >
                                                             <div className="flex flex-col w-full">
                                                                 <div className="flex items-baseline justify-between gap-2">
-                                                                    <span className="font-semibold text-xs truncate leading-tight">
-                                                                        {
-                                                                            item.name
-                                                                        }
-                                                                    </span>
+                                                                    <div className="flex min-w-0 items-center gap-1">
+                                                                        <Checkbox
+                                                                            aria-label={`Select ${item.name}`}
+                                                                            checked={selectedApplicationIds.includes(
+                                                                                item.id,
+                                                                            )}
+                                                                            onClick={(
+                                                                                event,
+                                                                            ) => {
+                                                                                event.stopPropagation();
+                                                                            }}
+                                                                            onPointerDown={(
+                                                                                event,
+                                                                            ) => {
+                                                                                event.stopPropagation();
+                                                                            }}
+                                                                            onCheckedChange={(
+                                                                                checked,
+                                                                            ) => {
+                                                                                setSelectedApplicationIds(
+                                                                                    (current) =>
+                                                                                        checked ===
+                                                                                        true
+                                                                                            ? [
+                                                                                                  ...new Set(
+                                                                                                      [
+                                                                                                          ...current,
+                                                                                                          item.id,
+                                                                                                      ],
+                                                                                                  ),
+                                                                                              ]
+                                                                                            : current.filter(
+                                                                                                  (
+                                                                                                      id,
+                                                                                                  ) =>
+                                                                                                      id !==
+                                                                                                      item.id,
+                                                                                              ),
+                                                                                );
+                                                                            }}
+                                                                        />
+                                                                        <span className="font-semibold text-xs truncate leading-tight">
+                                                                            {
+                                                                                item.name
+                                                                            }
+                                                                        </span>
+                                                                    </div>
                                                                     <span className="text-[9px] text-muted-foreground whitespace-nowrap tabular-nums shrink-0">
                                                                         {new Date(
                                                                             item.appliedAt,
@@ -689,6 +1043,31 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
                                                                             12
                                                                         }
                                                                     />
+                                                                    {item.latestEmailUpdate && (
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className={`ml-auto text-[9px] ${
+                                                                                item.latestEmailUpdate
+                                                                                    .status ===
+                                                                                "sent"
+                                                                                    ? "border-green-300 text-green-700"
+                                                                                    : item.latestEmailUpdate
+                                                                                            .status ===
+                                                                                        "failed"
+                                                                                      ? "border-red-300 text-red-700"
+                                                                                      : "border-amber-300 text-amber-700"
+                                                                            }`}
+                                                                        >
+                                                                            {
+                                                                                item.latestEmailUpdate
+                                                                                    .status
+                                                                            }{" "}
+                                                                            {
+                                                                                item.latestEmailUpdate
+                                                                                    .stage
+                                                                            }
+                                                                        </Badge>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </KanbanCard>
@@ -1453,6 +1832,67 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
                                 ))}
                             </div>
 
+                            <div className="flex flex-col gap-2">
+                                <p className="text-lg text-muted-foreground">
+                                    Applicant email updates
+                                </p>
+                                {selectedApplicationDetails?.emailUpdates
+                                    ?.length ? (
+                                    <div className="flex flex-col gap-2">
+                                        {selectedApplicationDetails.emailUpdates.map(
+                                            (update) => (
+                                                <div
+                                                    key={update.jobId}
+                                                    className="rounded-md border bg-background p-2 text-sm"
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <span>
+                                                            {update.stage} ·{" "}
+                                                            {new Date(
+                                                                update.createdAt,
+                                                            ).toLocaleString()}
+                                                        </span>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={
+                                                                update.status ===
+                                                                "sent"
+                                                                    ? "border-green-300 text-green-700"
+                                                                    : update.status ===
+                                                                        "failed"
+                                                                      ? "border-red-300 text-red-700"
+                                                                      : "border-amber-300 text-amber-700"
+                                                            }
+                                                        >
+                                                            {update.status.replace(
+                                                                /_/g,
+                                                                " ",
+                                                            )}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Attempts:{" "}
+                                                        {update.attempts}
+                                                        {update.sentAt
+                                                            ? ` · Sent ${new Date(update.sentAt).toLocaleString()}`
+                                                            : ""}
+                                                    </p>
+                                                    {update.error && (
+                                                        <p className="text-xs text-destructive">
+                                                            {update.error}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ),
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                        No batch email updates recorded.
+                                    </p>
+                                )}
+                            </div>
+
                             {/* Other applications load independently of the resume. */}
                             <p className="text-lg text-muted-foreground">
                                 Other Applications
@@ -1560,6 +2000,269 @@ function RecruitmentBoard({ teamId }: { teamId: string }) {
                             )}
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={bulkUpdateDialogOpen}
+                onOpenChange={setBulkUpdateDialogOpen}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Bulk stage update</DialogTitle>
+                        <DialogDescription>
+                            Move up to 100 selected applications and send each
+                            applicant the existing email for the selected
+                            stage. Applications that fail validation will be
+                            recorded and skipped.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="bulk-update-stage">
+                                New application stage
+                            </Label>
+                            <Select
+                                value={bulkTargetStage}
+                                onValueChange={setBulkTargetStage}
+                            >
+                                <SelectTrigger id="bulk-update-stage">
+                                    <SelectValue placeholder="Choose a stage" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Interview">
+                                        Interview
+                                    </SelectItem>
+                                    <SelectItem value="Rejected">
+                                        Rejected
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {bulkTargetStage === "Interview" && (
+                            <>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="bulk-interview-link">
+                                        Interview scheduling link
+                                    </Label>
+                                    <Input
+                                        id="bulk-interview-link"
+                                        type="url"
+                                        value={bulkInterviewLink}
+                                        onChange={(event) =>
+                                            setBulkInterviewLink(
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="https://..."
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    <Label htmlFor="bulk-interview-guidelines">
+                                        Interview guidelines
+                                    </Label>
+                                    <Textarea
+                                        id="bulk-interview-guidelines"
+                                        value={bulkInterviewGuidelines}
+                                        onChange={(event) =>
+                                            setBulkInterviewGuidelines(
+                                                event.target.value,
+                                            )
+                                        }
+                                        maxLength={500}
+                                        placeholder="50-500 characters"
+                                    />
+                                    <span className="text-xs text-muted-foreground">
+                                        {bulkInterviewGuidelines.length}/500
+                                    </span>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setBulkUpdateDialogOpen(false)}
+                            disabled={isSubmittingBulkUpdate}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={submitBulkApplicationUpdate}
+                            disabled={
+                                isSubmittingBulkUpdate ||
+                                selectedApplicationIds.length === 0 ||
+                                selectedApplicationIds.length > 100 ||
+                                !bulkTargetStage ||
+                                (bulkTargetStage === "Interview" &&
+                                    (!bulkInterviewLink.trim() ||
+                                        bulkInterviewGuidelines.trim().length <
+                                            50 ||
+                                        bulkInterviewGuidelines.trim().length >
+                                            500))
+                            }
+                        >
+                            {isSubmittingBulkUpdate ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Queuing...
+                                </>
+                            ) : (
+                                `Queue update for ${selectedApplicationIds.length} applicants`
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={activeBulkUpdateId !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setActiveBulkUpdateId(null);
+                        setActiveBulkUpdate(null);
+                    }
+                }}
+            >
+                <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Bulk update progress</DialogTitle>
+                        <DialogDescription>
+                            {activeBulkUpdate
+                                ? `${activeBulkUpdate.targetStage} · ${activeBulkUpdate.status} · started ${new Date(activeBulkUpdate.createdAt).toLocaleString()}`
+                                : bulkUpdateLoadError
+                                  ? `Could not load batch status: ${bulkUpdateLoadError}`
+                                  : "Loading saved batch results..."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {activeBulkUpdate ? (
+                        <>
+                            <div className="flex flex-wrap gap-3 text-sm">
+                                <span>
+                                    Sent:{" "}
+                                    {
+                                        activeBulkUpdate.recipients.filter(
+                                            (recipient) =>
+                                                recipient.status === "sent",
+                                        ).length
+                                    }
+                                </span>
+                                <span>
+                                    Pending:{" "}
+                                    {
+                                        activeBulkUpdate.recipients.filter(
+                                            (recipient) =>
+                                                [
+                                                    "pending",
+                                                    "processing",
+                                                ].includes(recipient.status),
+                                        ).length
+                                    }
+                                </span>
+                                <span>
+                                    Failed:{" "}
+                                    {
+                                        activeBulkUpdate.recipients.filter(
+                                            (recipient) =>
+                                                recipient.status === "failed",
+                                        ).length
+                                    }
+                                </span>
+                                <span>
+                                    Invalid:{" "}
+                                    {
+                                        activeBulkUpdate.recipients.filter(
+                                            (recipient) =>
+                                                recipient.status ===
+                                                "validation_failed",
+                                        ).length
+                                    }
+                                </span>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                {activeBulkUpdate.recipients.map(
+                                    (recipient) => (
+                                        <div
+                                            key={recipient.applicationId}
+                                            className="rounded-md border p-3"
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="truncate font-medium">
+                                                        {recipient.applicantName}
+                                                    </p>
+                                                    {recipient.email && (
+                                                        <p className="truncate text-xs text-muted-foreground">
+                                                            {recipient.email}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <Badge variant="outline">
+                                                    {recipient.status.replace(
+                                                        /_/g,
+                                                        " ",
+                                                    )}
+                                                </Badge>
+                                            </div>
+                                            {recipient.error && (
+                                                <p className="mt-1 text-xs text-destructive">
+                                                    {recipient.error}
+                                                </p>
+                                            )}
+                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                Attempts: {recipient.attempts}
+                                                {recipient.sentAt
+                                                    ? ` · Sent ${new Date(recipient.sentAt).toLocaleString()}`
+                                                    : ""}
+                                            </p>
+                                        </div>
+                                    ),
+                                )}
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() =>
+                                        retryBulkApplicationUpdate(
+                                            activeBulkUpdate.jobId,
+                                        )
+                                    }
+                                    disabled={
+                                        !activeBulkUpdate.recipients.some(
+                                            (recipient) =>
+                                                recipient.status === "failed" &&
+                                                [
+                                                    "email",
+                                                    "queue",
+                                                ].includes(
+                                                    recipient.failurePhase ??
+                                                        "",
+                                                ),
+                                        )
+                                    }
+                                >
+                                    Retry eligible failures
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setActiveBulkUpdateId(null);
+                                        setActiveBulkUpdate(null);
+                                    }}
+                                >
+                                    Close
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    ) : bulkUpdateLoadError ? (
+                        <p className="text-sm text-destructive">
+                            {bulkUpdateLoadError}
+                        </p>
+                    ) : (
+                        <div className="flex items-center justify-center p-8">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
 
