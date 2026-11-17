@@ -22,34 +22,50 @@ from Database.DatabaseErrors.DatabaseError import (
 class TestIncrementPointsHandler:
     def test_success_confirms_the_update(self, monkeypatch):
         say = Mock()
-        helper = Mock(return_value=True)
         message = {"text": "people <@U1>"}
-        monkeypatch.setattr(bot.PointDist, "increment_points_helper", helper)
+        monkeypatch.setattr(
+            bot,
+            "award_points",
+            lambda user_ids, name_for: [User(slack_user_id="U1", slack_user_name="ada", points=10)],
+        )
 
         bot.increment_points(message, say)
 
-        helper.assert_called_once_with(message)
-        say.assert_called_once_with("points updated!")
+        say.assert_called_once_with("points updated for ada")
+
+    def test_passes_parsed_ids_to_award_points(self, monkeypatch):
+        say = Mock()
+        seen = {}
+
+        def award(user_ids, name_for):
+            seen["user_ids"] = user_ids
+            seen["name_for"] = name_for
+            return []
+
+        monkeypatch.setattr(bot, "award_points", award)
+
+        bot.increment_points({"text": "people <@U1> <@U2>"}, say)
+
+        assert seen["user_ids"] == ["U1", "U2"]
+        assert seen["name_for"] is bot.display_name
+        say.assert_called_once_with("points updated for ")
 
     def test_missing_user_is_reported(self, monkeypatch):
         say = Mock()
+        monkeypatch.setattr(bot, "award_points", Mock(side_effect=UserNotFoundException()))
 
-        def helper(_message):
-            raise UserNotFoundException()
+        with pytest.raises(UserNotFoundException):
+            bot.increment_points({"text": "people <@U9>"}, say)
 
-        monkeypatch.setattr(bot.PointDist, "increment_points_helper", helper)
-
-        bot.increment_points({"text": "people <@U9>"}, say)
-
-        say.assert_called_once_with("User not found: User not found")
+        say.assert_not_called()
 
     def test_other_database_errors_propagate(self, monkeypatch):
         say = Mock()
-
-        def helper(_message):
-            raise DatabaseException(code="500", message="Internal server error")
-
-        monkeypatch.setattr(bot.PointDist, "increment_points_helper", helper)
+        monkeypatch.setattr(
+            bot,
+            "award_points",
+            Mock(side_effect=DatabaseException(code="500", message="Internal server error")),
+        )
 
         with pytest.raises(DatabaseException):
             bot.increment_points({"text": "people <@U1>"}, say)
@@ -58,7 +74,7 @@ class TestIncrementPointsHandler:
 
     def test_say_failures_propagate(self, monkeypatch):
         say = Mock(side_effect=RuntimeError("slack down"))
-        monkeypatch.setattr(bot.PointDist, "increment_points_helper", Mock(return_value=True))
+        monkeypatch.setattr(bot, "award_points", lambda user_ids, name_for: [])
 
         with pytest.raises(RuntimeError, match="slack down"):
             bot.increment_points({"text": "people <@U1>"}, say)
@@ -67,7 +83,12 @@ class TestIncrementPointsHandler:
 class TestAddUserHandler:
     def test_success_lists_added_names(self, monkeypatch):
         say = Mock()
-        monkeypatch.setattr(bot.PointDist, "add_user_through_message", lambda message: ["ada", "grace"])
+        monkeypatch.setattr(bot, "display_name", lambda slack_user_id: {"U1": "ada", "U2": "grace"}[slack_user_id])
+        monkeypatch.setattr(
+            bot,
+            "register_user",
+            lambda slack_user_id, slack_user_name: User(slack_user_id=slack_user_id, slack_user_name=slack_user_name),
+        )
 
         bot.add_user({"text": "add <@U1> <@U2>"}, say)
 
@@ -75,31 +96,28 @@ class TestAddUserHandler:
 
     def test_no_mentions_still_replies(self, monkeypatch):
         say = Mock()
-        monkeypatch.setattr(bot.PointDist, "add_user_through_message", lambda message: [])
+        register = Mock()
+        monkeypatch.setattr(bot, "register_user", register)
 
         bot.add_user({"text": "add"}, say)
 
+        register.assert_not_called()
         say.assert_called_once_with("users  added to the competition!")
 
     def test_duplicate_user_is_reported(self, monkeypatch):
         say = Mock()
+        monkeypatch.setattr(bot, "display_name", lambda slack_user_id: "ada")
+        monkeypatch.setattr(bot, "register_user", Mock(side_effect=UserAlreadyExistsException()))
 
-        def add_users(_message):
-            raise UserAlreadyExistsException()
+        with pytest.raises(UserAlreadyExistsException):
+            bot.add_user({"text": "add <@U1>"}, say)
 
-        monkeypatch.setattr(bot.PointDist, "add_user_through_message", add_users)
-
-        bot.add_user({"text": "add <@U1>"}, say)
-
-        say.assert_called_once_with("Could not add users: 409 - User already exists")
+        say.assert_not_called()
 
     def test_user_not_found_is_not_caught(self, monkeypatch):
         say = Mock()
-
-        def add_users(_message):
-            raise UserNotFoundException()
-
-        monkeypatch.setattr(bot.PointDist, "add_user_through_message", add_users)
+        monkeypatch.setattr(bot, "display_name", lambda slack_user_id: "ada")
+        monkeypatch.setattr(bot, "register_user", Mock(side_effect=UserNotFoundException()))
 
         with pytest.raises(UserNotFoundException):
             bot.add_user({"text": "add <@U9>"}, say)
@@ -110,25 +128,24 @@ class TestAddUserHandler:
 class TestMemberJoinedHandler:
     def test_success_adds_the_joining_user(self, monkeypatch):
         say = Mock()
-        add_user = Mock()
-        monkeypatch.setattr(bot.PointDist, "add_user", add_user)
+        monkeypatch.setattr(bot, "display_name", lambda slack_user_id: "ada")
+        register = Mock(return_value=User(slack_user_id="U42", slack_user_name="ada"))
+        monkeypatch.setattr(bot, "register_user", register)
 
         bot.member_joined_channel({"user": "U42"}, say)
 
-        add_user.assert_called_once_with("U42")
-        say.assert_called_once_with("user U42 joined the competition!")
+        register.assert_called_once_with("U42", "ada")
+        say.assert_called_once_with("user ada joined the competition!")
 
     def test_duplicate_join_is_reported(self, monkeypatch):
         say = Mock()
+        monkeypatch.setattr(bot, "display_name", lambda slack_user_id: "ada")
+        monkeypatch.setattr(bot, "register_user", Mock(side_effect=UserAlreadyExistsException()))
 
-        def add_user(_user):
-            raise UserAlreadyExistsException()
+        with pytest.raises(UserAlreadyExistsException):
+            bot.member_joined_channel({"user": "U42"}, say)
 
-        monkeypatch.setattr(bot.PointDist, "add_user", add_user)
-
-        bot.member_joined_channel({"user": "U42"}, say)
-
-        say.assert_called_once_with("Could not add user: 409 - User already exists")
+        say.assert_not_called()
 
     def test_missing_user_field_propagates(self):
         say = Mock()
@@ -142,11 +159,14 @@ class TestMemberJoinedHandler:
 class TestLeaderboardHandler:
     def test_formats_ranked_users(self, monkeypatch):
         say = Mock()
-        leaders = [
-            User(slack_user_id="U1", slack_user_name="ada", points=30),
-            User(slack_user_id="U2", slack_user_name="grace", points=10),
-        ]
-        monkeypatch.setattr(bot.PointDist, "get_top_five_users", lambda: leaders)
+        monkeypatch.setattr(
+            bot,
+            "top_users",
+            lambda: [
+                User(slack_user_id="U1", slack_user_name="ada", points=30),
+                User(slack_user_id="U2", slack_user_name="grace", points=10),
+            ],
+        )
 
         bot.leaderboard(say)
 
@@ -154,7 +174,7 @@ class TestLeaderboardHandler:
 
     def test_empty_leaderboard_replies_with_an_empty_message(self, monkeypatch):
         say = Mock()
-        monkeypatch.setattr(bot.PointDist, "get_top_five_users", lambda: [])
+        monkeypatch.setattr(bot, "top_users", lambda: [])
 
         bot.leaderboard(say)
 
@@ -162,11 +182,7 @@ class TestLeaderboardHandler:
 
     def test_blank_display_name_is_still_rendered(self, monkeypatch):
         say = Mock()
-        monkeypatch.setattr(
-            bot.PointDist,
-            "get_top_five_users",
-            lambda: [User(slack_user_id="U1", slack_user_name="", points=0)],
-        )
+        monkeypatch.setattr(bot, "top_users", lambda: [User(slack_user_id="U1", slack_user_name="", points=0)])
 
         bot.leaderboard(say)
 
@@ -174,19 +190,20 @@ class TestLeaderboardHandler:
 
     def test_database_failure_is_reported(self, monkeypatch):
         say = Mock()
+        monkeypatch.setattr(
+            bot,
+            "top_users",
+            Mock(side_effect=DatabaseException(code="500", message="Internal server error")),
+        )
 
-        def leaders():
-            raise DatabaseException(code="500", message="Internal server error")
+        with pytest.raises(DatabaseException):
+            bot.leaderboard(say)
 
-        monkeypatch.setattr(bot.PointDist, "get_top_five_users", leaders)
-
-        bot.leaderboard(say)
-
-        say.assert_called_once_with("Could not get leaderboard: 500 - Internal server error")
+        say.assert_not_called()
 
     def test_unexpected_errors_propagate(self, monkeypatch):
         say = Mock()
-        monkeypatch.setattr(bot.PointDist, "get_top_five_users", Mock(side_effect=RuntimeError("query failed")))
+        monkeypatch.setattr(bot, "top_users", Mock(side_effect=RuntimeError("query failed")))
 
         with pytest.raises(RuntimeError, match="query failed"):
             bot.leaderboard(say)

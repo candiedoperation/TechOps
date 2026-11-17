@@ -63,7 +63,7 @@ class TestExceptionDecorator:
         assert exc_info.value.code == "500"
         assert exc_info.value.message == "Internal server error"
         assert exc_info.value.__cause__.code == 23505
-        assert caplog.text == ""
+        assert "Raising DatabaseException" in caplog.text
 
     def test_foreign_key_violation_becomes_foreign_key_exception(self):
         with pytest.raises(ForeignKeyViolationException) as exc_info:
@@ -84,7 +84,7 @@ class TestExceptionDecorator:
         assert error.code == "500"
         assert error.message == "Internal server error"
         assert error.__cause__.code == "XX000"
-        assert caplog.text == ""
+        assert "Raising DatabaseException" in caplog.text
 
     def test_api_error_without_code_or_message_becomes_internal_error(self, caplog):
         with caplog.at_level(logging.ERROR):
@@ -94,15 +94,14 @@ class TestExceptionDecorator:
         assert type(exc_info.value) is DatabaseException
         assert exc_info.value.code == "500"
         assert exc_info.value.message == "Internal server error"
-        assert caplog.text == ""
+        assert "Raising DatabaseException" in caplog.text
 
-    def test_domain_exception_is_wrapped_as_an_internal_error(self):
-        with pytest.raises(DatabaseException) as exc_info:
+    def test_domain_exception_propagates(self):
+        with pytest.raises(UserNotFoundException) as exc_info:
             guarded("domain")
 
-        assert type(exc_info.value) is DatabaseException
-        assert exc_info.value.code == "500"
-        assert isinstance(exc_info.value.__cause__, UserNotFoundException)
+        assert exc_info.value.code == "404"
+        assert exc_info.value.message == "User not found"
 
     def test_missing_row_becomes_user_not_found(self):
         with pytest.raises(UserNotFoundException) as exc_info:

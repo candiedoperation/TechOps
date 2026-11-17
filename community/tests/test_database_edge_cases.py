@@ -1,11 +1,12 @@
 import logging
+from datetime import datetime
 from unittest.mock import Mock
 
 import pytest
 from postgrest.exceptions import APIError
 from pydantic import ValidationError
 
-import Database.Database as database
+import Repository.UserRepo as user_repo
 from BusinessLogic.models.UserModel import User
 from Database.DatabaseErrors.DatabaseError import (
     DatabaseException,
@@ -21,7 +22,7 @@ def install_query(monkeypatch, execute: Mock) -> Mock:
         getattr(query, method).return_value = query
     query.execute = execute
     table = Mock(return_value=query)
-    monkeypatch.setattr(database.supabase, "table", table)
+    monkeypatch.setattr(user_repo.supabase, "table", table)
     return query
 
 
@@ -41,7 +42,7 @@ class TestDatabaseEdgeCases:
         )
         user = User(slack_user_id="U1", slack_user_name="ada")
 
-        saved = database.add_user(user)
+        saved = user_repo.create_user(user)
 
         assert saved == User(slack_user_id="U1", slack_user_name="ada", points=0)
         query.insert.assert_called_once_with(user.model_dump())
@@ -50,7 +51,7 @@ class TestDatabaseEdgeCases:
         install_query(monkeypatch, Mock(side_effect=api_error("23505", details="Key already exists.")))
 
         with pytest.raises(UserAlreadyExistsException) as exc_info:
-            database.add_user(User(slack_user_id="U1", slack_user_name="ada"))
+            user_repo.create_user(User(slack_user_id="U1", slack_user_name="ada"))
 
         assert exc_info.value.code == "409"
         assert exc_info.value.message == "User already exists"
@@ -60,7 +61,7 @@ class TestDatabaseEdgeCases:
         install_query(monkeypatch, Mock(return_value=response([])))
 
         with pytest.raises(UserNotFoundException) as exc_info:
-            database.add_user(User(slack_user_id="U1", slack_user_name="ada"))
+            user_repo.create_user(User(slack_user_id="U1", slack_user_name="ada"))
 
         assert exc_info.value.code == "404"
         assert exc_info.value.message == "User not found"
@@ -72,7 +73,7 @@ class TestDatabaseEdgeCases:
             Mock(return_value=response([{"slack_user_id": "U1", "slack_user_name": "ada", "points": 10}])),
         )
 
-        found = database.get_user("U1")
+        found = user_repo.get_user("U1")
 
         assert found.points == 10
         query.eq.assert_called_once_with("slack_user_id", "U1")
@@ -82,7 +83,7 @@ class TestDatabaseEdgeCases:
         install_query(monkeypatch, Mock(return_value=response([])))
 
         with pytest.raises(UserNotFoundException) as exc_info:
-            database.get_user("missing")
+            user_repo.get_user("missing")
 
         assert exc_info.value.code == "404"
         assert exc_info.value.message == "User not found"
@@ -92,7 +93,7 @@ class TestDatabaseEdgeCases:
         install_query(monkeypatch, Mock(side_effect=api_error("23503")))
 
         with pytest.raises(ForeignKeyViolationException) as exc_info:
-            database.get_user("U9")
+            user_repo.get_user("U9")
 
         assert exc_info.value.code == "409"
         assert exc_info.value.message == "Foreign key violation"
@@ -104,10 +105,12 @@ class TestDatabaseEdgeCases:
             Mock(return_value=response([{"slack_user_id": "U1", "slack_user_name": "ada", "points": 20}])),
         )
 
-        updated = database.update_user("U1", 20)
+        updated = user_repo.update_points("U1", 20)
 
         assert updated.points == 20
-        query.update.assert_called_once_with({"points": 20})
+        payload = query.update.call_args.args[0]
+        assert payload["points"] == 20
+        assert isinstance(payload["updated_at"], datetime)
         query.eq.assert_called_once_with("slack_user_id", "U1")
 
     def test_update_user_maps_unknown_api_error(self, monkeypatch, caplog):
@@ -115,25 +118,25 @@ class TestDatabaseEdgeCases:
 
         with caplog.at_level(logging.ERROR):
             with pytest.raises(DatabaseException) as exc_info:
-                database.update_user("U1", 20)
+                user_repo.update_points("U1", 20)
 
         assert type(exc_info.value) is DatabaseException
         assert exc_info.value.code == "500"
         assert exc_info.value.message == "Internal server error"
         assert exc_info.value.__cause__.code == "08006"
-        assert caplog.text == ""
+        assert "Raising DatabaseException" in caplog.text
 
     def test_update_user_timeout_becomes_internal_error(self, monkeypatch):
         install_query(monkeypatch, Mock(side_effect=TimeoutError("timed out")))
 
         with pytest.raises(DatabaseException) as exc_info:
-            database.update_user("U1", 1)
+            user_repo.update_points("U1", 1)
 
         assert type(exc_info.value) is DatabaseException
         assert exc_info.value.code == "500"
         assert isinstance(exc_info.value.__cause__, TimeoutError)
 
-    def test_get_top_five_users_keeps_query_order(self, monkeypatch):
+    def test_get_top_keeps_query_order(self, monkeypatch):
         query = install_query(
             monkeypatch,
             Mock(
@@ -146,22 +149,22 @@ class TestDatabaseEdgeCases:
             ),
         )
 
-        leaders = database.get_top_five_users()
+        leaders = user_repo.get_top(5)
 
         assert [user.slack_user_name for user in leaders] == ["ada", "grace"]
         query.order.assert_called_once_with("points", desc=True)
         query.limit.assert_called_once_with(5)
 
-    def test_get_top_five_users_returns_empty_list(self, monkeypatch):
+    def test_get_top_returns_empty_list(self, monkeypatch):
         install_query(monkeypatch, Mock(return_value=response([])))
 
-        assert database.get_top_five_users() == []
+        assert user_repo.get_top(5) == []
 
-    def test_get_top_five_users_invalid_row_becomes_internal_error(self, monkeypatch):
+    def test_get_top_invalid_row_becomes_internal_error(self, monkeypatch):
         install_query(monkeypatch, Mock(return_value=response([{"slack_user_name": "ada", "points": 1}])))
 
         with pytest.raises(DatabaseException) as exc_info:
-            database.get_top_five_users()
+            user_repo.get_top(5)
 
         assert type(exc_info.value) is DatabaseException
         assert exc_info.value.code == "500"
@@ -173,7 +176,7 @@ class TestDatabaseEdgeCases:
             Mock(return_value=response([{"slack_user_id": "U1", "slack_user_name": "ada", "points": 4}])),
         )
 
-        deleted = database.delete_user("U1")
+        deleted = user_repo.delete_user("U1")
 
         assert deleted.slack_user_id == "U1"
         query.delete.assert_called_once_with()
@@ -183,7 +186,7 @@ class TestDatabaseEdgeCases:
         install_query(monkeypatch, Mock(return_value=response([])))
 
         with pytest.raises(UserNotFoundException) as exc_info:
-            database.delete_user("nobody")
+            user_repo.delete_user("nobody")
 
         assert exc_info.value.code == "404"
         assert exc_info.value.message == "User not found"

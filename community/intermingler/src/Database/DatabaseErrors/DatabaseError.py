@@ -63,6 +63,8 @@ def exception_decorator(func: Callable):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
+        except DatabaseException:
+            raise
         except Exception as e:
             handle_database_error(e)
 
