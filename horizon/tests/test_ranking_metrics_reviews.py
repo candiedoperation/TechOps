@@ -47,9 +47,9 @@ PROJECT = ProjectContext(
 )
 
 
-def roster_row(pk, roles):
+def roster_row(pk, roles, project="p1"):
     return ProjectMemberRow(
-        project_pk="p1",
+        project_pk=project,
         authentik_user_pk=pk,
         username=pk,
         display_name=pk,
@@ -104,25 +104,34 @@ def request(number, requested, requested_at, event_id, repo=API):
     return ReviewRequestRow(*repo, number, event_id, requested, requested, at(*requested_at))
 
 
+def commit(number, author, run="run-api", repo=API):
+    return PullRequestCommitRow(*repo, number, f"sha-{number}-{author}", author, run)
+
+
 PULL_REQUESTS = [
     pr(12, "a"),
     pr(15, "a"),
     pr(20, "a"),
-    pr(18, "b"),                                   # B's own PR
-    pr(30, "a", merged_at=("2026-10-10",)),        # commits by a and b
-    pr(31, "b", merged_at=("2026-10-12",)),        # only b's commits
-    pr(32, "a"),                                   # not merged, commits by a and b
+    pr(18, "b"),                                     # B's own PR
+    pr(8, "b", created="2026-08-15"),                # opened before W
+    pr(30, "a", merged_at=("2026-10-10",)),          # commits by a and b
+    pr(31, "b", merged_at=("2026-10-12",)),          # only b's commits
+    pr(32, "a"),                                     # not merged, commits by a and b
+    pr(33, "a", merged_at=("2026-11-09",)),          # merged after E
+    pr(34, "a", created="2026-08-10", merged_at=("2026-08-20",)),  # merged before W
     pr(40, "pm"),
 ]
 
 REVIEWS = [
     review(12, "b", "APPROVED", ("2026-11-02", 16)),
     review(15, "b", "COMMENT", ("2026-11-05", 9)),
-    review(20, "b", "PENDING", None),              # never counts
-    review(20, "b", "APPROVED", ("2026-11-09", 9)),  # after E: still unanswered at E
+    review(20, "b", "PENDING", None),                # never counts
+    review(20, "b", "APPROVED", ("2026-11-09", 9)),  # after E: unanswered at E
     review(18, "b", "APPROVED", ("2026-11-03", 12)),  # a self-review
     review(12, "t", "APPROVED", ("2026-11-03", 11)),
+    review(8, "t", "APPROVED", ("2026-09-10",)),     # reviewed in W, opened before
     review(40, "t", "APPROVED", ("2026-11-03", 11)),  # a PM's PR
+    review(40, "a", "REQUEST_CHANGES", ("2026-11-04",)),
 ]
 
 REQUESTS = [
@@ -133,15 +142,15 @@ REQUESTS = [
 ]
 
 COMMITS = [
-    PullRequestCommitRow(*API, 30, "s1", "a", "run-api"),
-    PullRequestCommitRow(*API, 30, "s2", "b", "run-api"),
-    PullRequestCommitRow(*API, 31, "s3", "b", "run-api"),
-    PullRequestCommitRow(*API, 31, "s4", "c", "run-old"),  # older run: ignored
-    PullRequestCommitRow(*API, 32, "s5", "a", "run-api"),
-    PullRequestCommitRow(*API, 32, "s6", "b", "run-api"),
+    commit(30, "a"), commit(30, "b"),
+    commit(31, "b"), commit(31, "c", run="run-old"),  # older run: ignored
+    commit(32, "a"), commit(32, "b"),
+    commit(33, "a"), commit(33, "b"),
+    commit(34, "a"), commit(34, "b"),
 ]
 
 DATA = ReviewData.build(PULL_REQUESTS, REVIEWS, REQUESTS, COMMITS, SOURCE_RUNS)
+WINDOW = review_window(WINDOW_START, SEMESTER_END, AS_OF)
 
 
 def metrics(person, *, data=DATA, project=PROJECT, as_of=AS_OF, roster=ROSTER):
@@ -165,20 +174,23 @@ def test_the_worked_turnaround_example_is_30_hours():
 
 def test_an_even_number_of_requests_averages_the_middle_two():
     data = ReviewData.build(PULL_REQUESTS, REVIEWS, REQUESTS[:2], COMMITS, SOURCE_RUNS)
-    window = review_window(WINDOW_START, SEMESTER_END, AS_OF)
 
-    assert review_turnaround_hours("b", PROJECT, data, window).raw_value == 27
+    assert review_turnaround_hours("b", PROJECT, data, WINDOW).raw_value == 27
 
 
 def test_a_re_request_after_a_review_is_a_new_request():
-    requests = [*REQUESTS[:1], request(12, "b", ("2026-11-08", 12), 9)]
-    data = ReviewData.build(PULL_REQUESTS, REVIEWS, requests, COMMITS, SOURCE_RUNS)
-    window = review_window(WINDOW_START, SEMESTER_END, AS_OF)
+    reviews = [*REVIEWS, review(12, "b", "COMMENT", ("2026-11-04", 13))]
+    requests = [REQUESTS[0], request(12, "b", ("2026-11-04", 9), 9)]
+    data = ReviewData.build(PULL_REQUESTS, reviews, requests, COMMITS, SOURCE_RUNS)
 
-    value = review_turnaround_hours("b", PROJECT, data, window)
+    value = review_turnaround_hours("b", PROJECT, data, WINDOW)
 
-    # 6 h for the first request; the re-request waits 6 h until E.
-    assert [wait["hours"] for wait in value.evidence["requests"]] == [6, 6]
+    # The first request is answered by the 11-02 review (6 h); the re-request
+    # is answered by the next review after it, not the earlier one (4 h).
+    assert [(wait["hours"], wait["answered"]) for wait in value.evidence["requests"]] == [
+        (6, True), (4, True),
+    ]
+    assert value.raw_value == 5
 
 
 def test_no_review_requests_is_missing():
@@ -191,17 +203,43 @@ def test_no_review_requests_is_missing():
 def test_prs_reviewed_counts_teammates_prs_with_a_submitted_review():
     value = metrics(member("b"))["prs_reviewed"]
 
-    # #12 and #15. #20 only has a PENDING review in W, and #18 is b's own.
+    # #12 and #15. #20's reviews are PENDING or after E (each tested below),
+    # and #18 is b's own.
     assert value.raw_value == 2
     assert value.evidence["pull_requests"] == ["SpaceApp/api#12", "SpaceApp/api#15"]
 
 
-def test_self_reviews_and_pending_reviews_do_not_count():
-    own = pr(18, "b")
+def test_prs_reviewed_includes_teammates_in_any_role():
+    # a's only review is REQUEST_CHANGES on the PM's PR; it still counts.
+    assert metrics(member("a"))["prs_reviewed"].evidence["pull_requests"] == ["SpaceApp/api#40"]
 
-    assert not is_counting_review(REVIEWS[4], own)
-    assert not is_counting_review(REVIEWS[2], pr(20, "a"))
-    assert is_counting_review(REVIEWS[0], pr(12, "a"))
+
+def test_a_pending_review_does_not_count():
+    data = ReviewData.build([pr(20, "a")], [review(20, "b", "PENDING", None)], [], [], SOURCE_RUNS)
+
+    assert metrics(member("b"), data=data)["prs_reviewed"].raw_value == 0
+
+
+def test_a_review_after_e_does_not_count():
+    data = ReviewData.build(
+        [pr(20, "a")], [review(20, "b", "APPROVED", ("2026-11-09", 9))], [], [], SOURCE_RUNS
+    )
+
+    assert metrics(member("b"), data=data)["prs_reviewed"].raw_value == 0
+
+
+@pytest.mark.parametrize("state", ["APPROVED", "REQUEST_CHANGES", "COMMENT"])
+def test_every_submitted_state_counts(state):
+    assert is_counting_review(review(12, "b", state, ("2026-11-02",)), pr(12, "a"))
+
+
+@pytest.mark.parametrize("state", ["PENDING", "REQUEST_REVIEW"])
+def test_other_states_do_not_count(state):
+    assert not is_counting_review(review(12, "b", state, ("2026-11-02",)), pr(12, "a"))
+
+
+def test_a_self_review_does_not_count():
+    assert not is_counting_review(review(18, "b", "APPROVED", ("2026-11-03",)), pr(18, "b"))
 
 
 def test_logins_are_compared_case_insensitively_when_a_pk_is_missing():
@@ -216,11 +254,11 @@ def test_logins_are_compared_case_insensitively_when_a_pk_is_missing():
 def test_collaborative_prs_need_two_contributors_and_a_merge_in_the_window():
     values_a, values_b = metrics(member("a")), metrics(member("b"))
 
-    # #30 has commits by a and b. #31 has only b (c's commit is from an older
-    # run). #32 is not merged.
-    assert values_a["collaborative_prs"].raw_value == 1
-    assert values_b["collaborative_prs"].raw_value == 1
+    # Only #30 counts. #31 has only b (c's commit is from an older run), #32 is
+    # not merged, #33 merged after E and #34 before W start.
+    assert values_a["collaborative_prs"].evidence["pull_requests"] == ["SpaceApp/api#30"]
     assert values_b["collaborative_prs"].evidence["pull_requests"] == ["SpaceApp/api#30"]
+    assert values_b["collaborative_prs"].raw_value == 1
 
 
 def test_tech_lead_rows_follow_the_rubric():
@@ -231,14 +269,21 @@ def test_tech_lead_rows_follow_the_rubric():
         "review_turnaround_hours": "review_unblocking",
         "review_spread": "review_unblocking",
     }
-    # t reviewed a's #12; the PM's #40 is not an engineer's PR.
-    assert values["team_prs_reviewed"].raw_value == 1
 
 
-def test_review_spread_ignores_engineers_who_opened_no_prs():
+def test_team_prs_reviewed_counts_engineers_prs_reviewed_in_the_window():
+    value = metrics(member("t", "tech_lead"))["team_prs_reviewed"]
+
+    # a's #12, and b's #8 (opened before W but reviewed inside it). The PM's
+    # #40 is not an engineer's PR.
+    assert value.evidence["pull_requests"] == ["SpaceApp/api#8", "SpaceApp/api#12"]
+
+
+def test_review_spread_counts_only_prs_opened_in_the_window():
     value = metrics(member("t", "tech_lead"))["review_spread"]
 
-    # a and b opened PRs in W, and t reviewed one of a's; e opened none.
+    # a and b opened PRs in W; t reviewed one of a's. t's review of b's #8 does
+    # not count here because #8 was opened before W. e opened no PRs.
     assert value.raw_value == 0.5
     assert value.evidence == {"engineers_with_prs": ["a", "b"], "engineers_reviewed": ["a"]}
 
@@ -248,6 +293,7 @@ def test_review_spread_without_engineer_prs_is_missing():
 
     value = metrics(member("t", "tech_lead"), data=data)["review_spread"]
 
+    assert value.raw_value is None
     assert value.missing_reason == "no_engineer_prs"
 
 
@@ -262,19 +308,73 @@ def test_a_project_without_repositories_is_missing_not_zero():
 
     values = metrics(member("b"), project=empty)
 
-    assert {value.missing_reason for value in values.values()} == {"no_project_repositories"}
+    assert {(value.raw_value, value.missing_reason) for value in values.values()} == {
+        (None, "no_project_repositories")
+    }
 
 
-def test_events_outside_the_project_or_window_are_ignored():
-    elsewhere = pr(12, "a", repo=OTHER)
+@pytest.mark.parametrize("role", ["engineer", "tech_lead"])
+def test_an_as_of_before_the_window_is_missing_not_zero(role):
+    values = metrics(member("b" if role == "engineer" else "t", role), as_of=at("2026-08-30"))
+
+    assert {(value.raw_value, value.missing_reason) for value in values.values()} == {
+        (None, "window_not_started")
+    }
+
+
+def test_events_outside_the_project_are_ignored():
     data = ReviewData.build(
-        [elsewhere, pr(60, "a", created="2026-08-01")],
-        [review(12, "b", "APPROVED", ("2026-11-02", 16), repo=OTHER),
-         review(60, "b", "APPROVED", ("2026-08-15",))],  # before W start
-        [], [], SOURCE_RUNS,
+        [pr(12, "a", repo=OTHER), pr(13, "a", repo=OTHER, merged_at=("2026-10-10",))],
+        [review(12, "b", "APPROVED", ("2026-11-02", 16), repo=OTHER)],
+        [request(12, "b", ("2026-11-02", 10), 1, repo=OTHER)],
+        [commit(13, "a", repo=OTHER), commit(13, "b", repo=OTHER)],
+        {**SOURCE_RUNS, "Elsewhere/x": "run-x"},
     )
 
-    assert metrics(member("b"), data=data)["prs_reviewed"].raw_value == 0
+    values = metrics(member("b"), data=data)
+
+    assert values["prs_reviewed"].raw_value == 0
+    assert values["review_turnaround_hours"].missing_reason == "no_review_requests"
+    assert values["collaborative_prs"].raw_value == 0
+
+
+def test_events_before_the_window_are_ignored():
+    data = ReviewData.build(
+        [pr(60, "a", created="2026-08-01")],
+        [review(60, "b", "APPROVED", ("2026-08-15",))],
+        [request(60, "b", ("2026-08-14",), 1)],
+        [], SOURCE_RUNS,
+    )
+
+    values = metrics(member("b"), data=data)
+
+    assert values["prs_reviewed"].raw_value == 0
+    assert values["review_turnaround_hours"].missing_reason == "no_review_requests"
+
+
+def test_each_member_gets_their_own_projects_teammates():
+    q = ("Other2", "q")
+    p2 = ProjectContext("p2", (q,), {"Other2/q": "run-q"}, SEMESTER_END, frozenset({"y", "z"}))
+    data = ReviewData.build(
+        [*PULL_REQUESTS, pr(70, "y", repo=q), pr(71, "a", repo=q)],
+        [*REVIEWS, review(70, "z", "APPROVED", ("2026-11-02",), repo=q),
+         review(71, "z", "APPROVED", ("2026-11-02",), repo=q)],
+        REQUESTS, COMMITS, {**SOURCE_RUNS, "Other2/q": "run-q"},
+    )
+    roster = [*ROSTER, roster_row("y", ["engineer"], "p2"), roster_row("z", ["engineer"], "p2")]
+    members = [member("a"), member("z", project_pk="p2", comparison_group="project:p2:engineer")]
+
+    values = compute_run_review_metrics(
+        members, {"p1": PROJECT, "p2": p2}, roster, AS_OF, RUBRIC, data
+    )
+    reviewed = {
+        value.authentik_user_pk: value.evidence["pull_requests"]
+        for value in values
+        if value.metric_key == "prs_reviewed"
+    }
+
+    # a is not z's teammate, so z's review of a's #71 does not count.
+    assert reviewed == {"a": ["SpaceApp/api#40"], "z": ["Other2/q#70"]}
 
 
 def test_a_whole_run_writes_json_evidence_for_every_row():

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
@@ -15,7 +16,7 @@ AS_OF = datetime(2026, 11, 20, 12, tzinfo=NY)
 RUBRIC = load_rubric("v1").rubric
 
 
-def member(pk, role="engineer"):
+def member(pk, role="engineer", excluded_buckets=()):
     return RankedMember(
         authentik_user_pk=pk,
         project_pk="p1",
@@ -27,6 +28,7 @@ def member(pk, role="engineer"):
         tenure_semesters=1,
         window_start=date(2026, 8, 31),
         window_end=date(2026, 11, 20),
+        excluded_buckets=excluded_buckets,
     )
 
 
@@ -65,9 +67,13 @@ ANSWERS = [
 TABLES = RatingTables.build(ANSWERS, AS_OF)
 
 
-def metrics(person):
-    values = compute_member_rating_metrics(person, RUBRIC.roles[person.role], TABLES)
+def metrics_for(person, tables):
+    values = compute_member_rating_metrics(person, RUBRIC.roles[person.role], tables)
     return {value.metric_key: value for value in values}
+
+
+def metrics(person):
+    return metrics_for(person, TABLES)
 
 
 def test_the_worked_rating_example_averages_round_means():
@@ -114,9 +120,37 @@ def test_a_single_respondent_is_enough_for_an_engineer():
     assert {value.metric_key: value.raw_value for value in values}["eng_design"] == 3
 
 
-def test_a_whole_run_writes_eight_rating_keys_at_most():
+def test_self_ratings_and_unsubmitted_answers_do_not_count():
+    rows = [
+        answer("eng_design", "oct", "c", "c", 3),  # c rating themself
+        replace(answer("eng_design", "oct", "t2", "c", 3), submitted_at=None),
+        answer("eng_design", "oct", "t", "c", 1),
+    ]
+
+    value = metrics_for(member("c"), RatingTables.build(rows, AS_OF))["eng_design"]
+
+    assert value.raw_value == 1
+    assert value.evidence["respondent_count"] == 1
+
+
+def test_an_excluded_review_bucket_keeps_the_rating_rows():
+    excluded = member("c", excluded_buckets=("review_collaboration",))
+
+    assert metrics(excluded)["eng_design"].raw_value == 2.25
+
+
+def test_a_whole_run_writes_each_roles_rating_rows_with_their_buckets():
     values = compute_run_rating_metrics(
         [member("c"), member("l", "tech_lead")], AS_OF, RUBRIC, ANSWERS
     )
 
-    assert len(values) == 4 + 4
+    assert {(value.authentik_user_pk, value.metric_key, value.bucket_key) for value in values} == {
+        ("c", "eng_timeliness", "peer_ratings"),
+        ("c", "eng_proactiveness", "peer_ratings"),
+        ("c", "eng_design", "peer_ratings"),
+        ("c", "eng_collaboration", "peer_ratings"),
+        ("l", "lead_proactiveness", "leadership_ratings"),
+        ("l", "lead_design", "leadership_ratings"),
+        ("l", "lead_stakeholder", "leadership_ratings"),
+        ("l", "lead_guidance", "leadership_ratings"),
+    }

@@ -102,12 +102,16 @@ class RatingTables:
 
     @classmethod
     def build(cls, answers: Iterable[SurveyAnswerRow], as_of: datetime) -> RatingTables:
-        """Answers submitted after as_of are left out, as for the other latest-state sources."""
+        """Only submitted answers count, and only those submitted by as_of, as for
+        the other latest-state sources. Nobody's rating of themselves counts.
+        """
 
         counted = [
             answer
             for answer in answers
-            if answer.submitted_at is None or answer.submitted_at <= as_of
+            if answer.submitted_at is not None
+            and answer.submitted_at <= as_of
+            and answer.respondent_pk != answer.ratee_pk
         ]
         return cls(means=_semester_rating_means(counted), rounds=round_means(counted))
 

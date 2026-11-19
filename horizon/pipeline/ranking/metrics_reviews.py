@@ -14,12 +14,18 @@ from datetime import date, datetime, time
 from statistics import median
 
 from .members import CLUB_TIMEZONE, ProjectMemberRow, RankedMember
-from .metrics_code import Measurement, MetricValue, ProjectContext, slug
+from .metrics_code import (
+    NO_PROJECT_REPOSITORIES,
+    WINDOW_NOT_STARTED,
+    Measurement,
+    MetricValue,
+    ProjectContext,
+    slug,
+)
 from .rubric import RoleRubric, Rubric
 
 NO_REVIEW_REQUESTS = "no_review_requests"
 NO_ENGINEER_PRS = "no_engineer_prs"
-NO_PROJECT_REPOSITORIES = "no_project_repositories"
 
 COUNTING_STATES = frozenset({"APPROVED", "REQUEST_CHANGES", "COMMENT"})
 
@@ -100,6 +106,10 @@ class PullRequestCommitRow:
 class ReviewWindow:
     start: datetime  # W start: midnight on window_start in New York
     end: datetime  # E: min(as_of, the last instant of the window end)
+
+    @property
+    def started(self) -> bool:
+        return self.end >= self.start
 
     def contains(self, moment: datetime | None) -> bool:
         return moment is not None and self.start <= moment <= self.end
@@ -328,6 +338,12 @@ def compute_member_review_metrics(
     def measure(metric_key: str) -> Measurement:
         if not project.repositories:
             return Measurement(None, NO_PROJECT_REPOSITORIES, {})
+        if not window.started:
+            # An as_of before window_start leaves nothing to count; a 0 would
+            # read as "reviewed nothing".
+            return Measurement(
+                None, WINDOW_NOT_STARTED, {"window_start": member.window_start.isoformat()}
+            )
         if metric_key == "prs_reviewed":
             return prs_reviewed_by(pk, teammates, project, data, window)
         if metric_key == "team_prs_reviewed":
