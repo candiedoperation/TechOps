@@ -17,36 +17,27 @@
 */
 
 export class ResourceAccessError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-  ) {
-    super(message);
-    this.name = "ResourceAccessError";
-    Object.setPrototypeOf(this, ResourceAccessError.prototype);
-  }
+    constructor(public status: number, public message: string) {
+        super(message);
+        this.name = "ResourceAccessError";
+        Object.setPrototypeOf(this, ResourceAccessError.prototype);
+    }
 }
 
 export class CustomValidationError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-  ) {
-    super(message);
-    this.name = "CustomValidationError";
-    Object.setPrototypeOf(this, CustomValidationError.prototype);
-  }
+    constructor(public status: number, public message: string) {
+        super(message);
+        this.name = "CustomValidationError";
+        Object.setPrototypeOf(this, CustomValidationError.prototype);
+    }
 }
 
 export class SharedResourcesError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-  ) {
-    super(message);
-    this.name = "SharedResourcesError";
-    Object.setPrototypeOf(this, SharedResourcesError.prototype);
-  }
+    constructor(public status: number, public message: string) {
+        super(message);
+        this.name = "SharedResourcesError";
+        Object.setPrototypeOf(this, SharedResourcesError.prototype);
+    }
 }
 /**
  * Renders an unknown thrown value as something a human can read.
@@ -56,15 +47,15 @@ export class SharedResourcesError extends Error {
  * contents erased. Errors keep their message; anything else is serialised.
  */
 export function describeUnknownError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  if (typeof e === "string") return e;
-  if (e === null || e === undefined) return "";
-  try {
-    const serialized = JSON.stringify(e);
-    /* JSON.stringify returns undefined for functions and symbols. */
-    return serialized ?? Object.prototype.toString.call(e);
-  } catch {
-    /* Circular references, or a throwing toJSON. */
-    return Object.prototype.toString.call(e);
-  }
+    if (e instanceof Error) return e.message;
+    if (typeof e === "string") return e;
+    if (e === null || e === undefined) return "";
+    try {
+        const serialized = JSON.stringify(e);
+        /* JSON.stringify returns undefined for functions and symbols. */
+        return serialized ?? Object.prototype.toString.call(e);
+    } catch {
+        /* Circular references, or a throwing toJSON. */
+        return Object.prototype.toString.call(e);
+    }
 }

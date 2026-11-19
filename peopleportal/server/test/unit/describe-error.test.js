@@ -9,10 +9,7 @@ const test = require("node:test");
 const { describeUnknownError } = require("../../dist/utils/errors.js");
 
 test("an Error is rendered as its message", () => {
-  assert.equal(
-    describeUnknownError(new Error("Gitea returned 502")),
-    "Gitea returned 502",
-  );
+  assert.equal(describeUnknownError(new Error("Gitea returned 502")), "Gitea returned 502");
   assert.equal(describeUnknownError(new TypeError("bad input")), "bad input");
 });
 
@@ -43,18 +40,11 @@ test("a value JSON cannot represent still yields a string", () => {
   for (const value of [() => {}, Symbol("x"), 42n]) {
     const result = describeUnknownError(value);
     assert.equal(typeof result, "string");
-    assert.ok(
-      result.length > 0,
-      `${String(value)} produced an empty description`,
-    );
+    assert.ok(result.length > 0, `${String(value)} produced an empty description`);
   }
 });
 
 test("an object with a throwing toJSON does not take the caller down", () => {
-  const hostile = {
-    toJSON() {
-      throw new Error("nope");
-    },
-  };
+  const hostile = { toJSON() { throw new Error("nope"); } };
   assert.doesNotThrow(() => describeUnknownError(hostile));
 });

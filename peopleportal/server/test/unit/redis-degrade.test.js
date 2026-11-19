@@ -46,10 +46,7 @@ test("init() settles rather than hanging boot when Redis is unreachable", async 
 
     /* The bug this guards: an unbounded reconnect loop never settles, so
        startup() never proceeds to Mongo. Any bounded value passes. */
-    assert.ok(
-      Date.now() - startedAt < 15_000,
-      "init() must give up and let boot continue",
-    );
+    assert.ok(Date.now() - startedAt < 15_000, "init() must give up and let boot continue");
   });
 });
 
@@ -64,10 +61,7 @@ test("reads and writes against an unreachable Redis are fast misses, not errors"
 
     /* disableOfflineQueue is what makes this instant. Without it the commands
        queue until reconnection and the request hangs instead of missing. */
-    assert.ok(
-      Date.now() - startedAt < 5_000,
-      "cache operations must not stall a request",
-    );
+    assert.ok(Date.now() - startedAt < 5_000, "cache operations must not stall a request");
   });
 });
 

@@ -17,46 +17,45 @@
 */
 
 import { Controller, Get, Route, Tags, SuccessResponse, Security } from "tsoa";
-import fs from "fs";
-import path from "path";
+import fs from 'fs';
+import path from 'path';
 import { getGPLv3License } from "../utils/strings";
 
 interface PlatformLicenseResponse {
-  licenseText: string;
-  dependencies: { name: string; version: string }[];
+    licenseText: string;
+    dependencies: { name: string; version: string }[];
 }
 
 @Route("/api/platform")
 export class PlatformController extends Controller {
-  /**
-   * Retrieves the platform license text and list of backend dependencies.
-   */
-  @Get("license")
-  @Tags("Platform Info")
-  @SuccessResponse(200)
-  @Security("oidc")
-  public async getPlatformLicense(): Promise<PlatformLicenseResponse> {
-    const packageJsonPath = path.join(process.cwd(), "package.json");
-    let dependencies: { name: string; version: string }[] = [];
-    try {
-      if (fs.existsSync(packageJsonPath)) {
-        const packageJson = JSON.parse(
-          fs.readFileSync(packageJsonPath, "utf-8"),
-        );
-        if (packageJson.dependencies) {
-          dependencies = Object.keys(packageJson.dependencies).map((key) => ({
-            name: key,
-            version: packageJson.dependencies[key],
-          }));
-        }
-      }
-    } catch (e) {
-      console.error("Failed to read package.json", e);
-    }
 
-    return {
-      licenseText: getGPLv3License(),
-      dependencies,
-    };
-  }
+    /**
+     * Retrieves the platform license text and list of backend dependencies.
+     */
+    @Get("license")
+    @Tags("Platform Info")
+    @SuccessResponse(200)
+    @Security("oidc")
+    public async getPlatformLicense(): Promise<PlatformLicenseResponse> {
+        const packageJsonPath = path.join(process.cwd(), 'package.json');
+        let dependencies: { name: string; version: string }[] = [];
+        try {
+            if (fs.existsSync(packageJsonPath)) {
+                const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+                if (packageJson.dependencies) {
+                    dependencies = Object.keys(packageJson.dependencies).map(key => ({
+                        name: key,
+                        version: packageJson.dependencies[key]
+                    }));
+                }
+            }
+        } catch (e) {
+            console.error("Failed to read package.json", e);
+        }
+
+        return {
+            licenseText: getGPLv3License(),
+            dependencies
+        };
+    }
 }

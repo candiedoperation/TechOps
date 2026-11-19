@@ -1,28 +1,28 @@
-"use client";
+"use client"
 
 import {
   type InitialConfigType,
   LexicalComposer,
-} from "@lexical/react/LexicalComposer";
-import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
-import { type EditorState, type SerializedEditorState } from "lexical";
+} from "@lexical/react/LexicalComposer"
+import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin"
+import { type EditorState, type SerializedEditorState } from "lexical"
 
-import { editorTheme } from "@/components/editor/themes/editor-theme";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { editorTheme } from "@/components/editor/themes/editor-theme"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
-import { nodes } from "./nodes";
-import { Plugins } from "./plugins";
+import { nodes } from "./nodes"
+import { Plugins } from "./plugins"
 
 const editorConfig: InitialConfigType = {
   namespace: "Editor",
   theme: editorTheme,
   nodes,
   onError: (error: Error) => {
-    console.error(error);
+    console.error(error)
   },
-};
+}
 
-import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
+import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown"
 
 export function Editor({
   editorState,
@@ -30,10 +30,10 @@ export function Editor({
   onChange,
   onSerializedChange,
 }: {
-  editorState?: EditorState;
-  editorSerializedState?: SerializedEditorState;
-  onChange?: (markdown: string) => void;
-  onSerializedChange?: (editorSerializedState: SerializedEditorState) => void;
+  editorState?: EditorState
+  editorSerializedState?: SerializedEditorState
+  onChange?: (markdown: string) => void
+  onSerializedChange?: (editorSerializedState: SerializedEditorState) => void
 }) {
   return (
     <div className="bg-background overflow-hidden rounded-lg border shadow">
@@ -53,14 +53,14 @@ export function Editor({
             ignoreSelectionChange={true}
             onChange={(editorState) => {
               editorState.read(() => {
-                const markdown = $convertToMarkdownString(TRANSFORMERS);
-                onChange?.(markdown);
-              });
-              onSerializedChange?.(editorState.toJSON());
+                const markdown = $convertToMarkdownString(TRANSFORMERS)
+                onChange?.(markdown)
+              })
+              onSerializedChange?.(editorState.toJSON())
             }}
           />
         </TooltipProvider>
       </LexicalComposer>
     </div>
-  );
+  )
 }

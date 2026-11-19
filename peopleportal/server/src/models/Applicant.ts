@@ -28,33 +28,30 @@ export interface IApplicant extends Document {
   updatedAt: Date;
 }
 
-const ApplicantSchema = new Schema<IApplicant>(
-  {
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-      lowercase: true,
-      trim: true,
-      validate: {
-        validator: (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-        message: "Invalid email format",
-      },
-    },
-    fullName: { type: String, required: true, trim: true },
-    profile: {
-      type: Map,
-      of: String,
-      required: true,
-      default: new Map(),
-    },
-    applicationIds: [{ type: Schema.Types.ObjectId, ref: "Application" }],
+const ApplicantSchema = new Schema<IApplicant>({
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+    lowercase: true,
+    trim: true,
+    validate: {
+      validator: (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+      message: 'Invalid email format'
+    }
   },
-  { timestamps: true },
-);
+  fullName: { type: String, required: true, trim: true },
+  profile: {
+    type: Map,
+    of: String,
+    required: true,
+    default: new Map()
+  },
+  applicationIds: [{ type: Schema.Types.ObjectId, ref: 'Application' }]
+}, { timestamps: true });
 
-export const Applicant = model<IApplicant>("Applicant", ApplicantSchema);
+export const Applicant = model<IApplicant>('Applicant', ApplicantSchema);
 
 export interface ApplicantProfile {
   resumeUrl: string;
@@ -64,3 +61,4 @@ export interface ApplicantProfile {
   githubUrl?: string;
   [key: string]: string | undefined;
 }
+

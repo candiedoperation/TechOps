@@ -24,53 +24,49 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 
 /* Date picker backed by a "yyyy-MM-dd" string to preserve the API wire format */
 export function DatePicker({
-  id,
-  value,
-  onChange,
-  disabledBefore,
-  disabledAfter,
+    id,
+    value,
+    onChange,
+    disabledBefore,
+    disabledAfter,
 }: {
-  id?: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabledBefore?: string;
-  disabledAfter?: string;
+    id?: string
+    value: string
+    onChange: (value: string) => void
+    disabledBefore?: string
+    disabledAfter?: string
 }) {
-  const selected = value ? parse(value, "yyyy-MM-dd", new Date()) : undefined;
-  const minDate = disabledBefore
-    ? parse(disabledBefore, "yyyy-MM-dd", new Date())
-    : undefined;
-  const maxDate = disabledAfter
-    ? parse(disabledAfter, "yyyy-MM-dd", new Date())
-    : undefined;
-  const disabled = [
-    ...(minDate ? [{ before: minDate }] : []),
-    ...(maxDate ? [{ after: maxDate }] : []),
-  ];
+    const selected = value ? parse(value, "yyyy-MM-dd", new Date()) : undefined
+    const minDate = disabledBefore ? parse(disabledBefore, "yyyy-MM-dd", new Date()) : undefined
+    const maxDate = disabledAfter ? parse(disabledAfter, "yyyy-MM-dd", new Date()) : undefined
+    const disabled = [
+        ...(minDate ? [{ before: minDate }] : []),
+        ...(maxDate ? [{ after: maxDate }] : []),
+    ]
 
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          id={id}
-          type="button"
-          variant="outline"
-          data-empty={!selected}
-          className="w-full justify-start text-left font-normal data-[empty=true]:text-muted-foreground"
-        >
-          <CalendarIcon />
-          {selected ? format(selected, "PPP") : <span>Pick a date</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={selected}
-          onSelect={(date) => onChange(date ? format(date, "yyyy-MM-dd") : "")}
-          disabled={disabled.length ? disabled : undefined}
-          autoFocus
-        />
-      </PopoverContent>
-    </Popover>
-  );
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button
+                    id={id}
+                    type="button"
+                    variant="outline"
+                    data-empty={!selected}
+                    className="w-full justify-start text-left font-normal data-[empty=true]:text-muted-foreground"
+                >
+                    <CalendarIcon />
+                    {selected ? format(selected, "PPP") : <span>Pick a date</span>}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                    mode="single"
+                    selected={selected}
+                    onSelect={(date) => onChange(date ? format(date, "yyyy-MM-dd") : "")}
+                    disabled={disabled.length ? disabled : undefined}
+                    autoFocus
+                />
+            </PopoverContent>
+        </Popover>
+    )
 }

@@ -68,41 +68,25 @@ test("a stranger cannot delete someone else's review", async () => {
   const controller = new OrgController();
 
   await assert.rejects(
-    () =>
-      controller.deleteReview(
-        sessionFor(STRANGER_PK),
-        SUBJECT_PK,
-        String(review._id),
-      ),
+    () => controller.deleteReview(sessionFor(STRANGER_PK), SUBJECT_PK, String(review._id)),
     (e) => {
       /* 404 rather than 403, so the endpoint never confirms the review exists. */
       assert.equal(e.status, 404);
       return true;
     },
-    "an unrelated authenticated user must not be able to delete a review",
+    "an unrelated authenticated user must not be able to delete a review"
   );
 
-  assert.ok(
-    await UserReview.findById(review._id),
-    "the review must still exist",
-  );
+  assert.ok(await UserReview.findById(review._id), "the review must still exist");
 });
 
 test("the author can delete their own review", async () => {
   const review = await seedReview();
   const controller = new OrgController();
 
-  await controller.deleteReview(
-    sessionFor(AUTHOR_PK),
-    SUBJECT_PK,
-    String(review._id),
-  );
+  await controller.deleteReview(sessionFor(AUTHOR_PK), SUBJECT_PK, String(review._id));
 
-  assert.equal(
-    await UserReview.findById(review._id),
-    null,
-    "the review should be gone",
-  );
+  assert.equal(await UserReview.findById(review._id), null, "the review should be gone");
 });
 
 test("a superuser can delete another person's review", async () => {
@@ -112,7 +96,7 @@ test("a superuser can delete another person's review", async () => {
   await controller.deleteReview(
     sessionFor(STRANGER_PK, { superuser: true }),
     SUBJECT_PK,
-    String(review._id),
+    String(review._id)
   );
 
   assert.equal(await UserReview.findById(review._id), null);
@@ -123,18 +107,13 @@ test("a mismatched personId is refused, and refused as a 404", async () => {
   const controller = new OrgController();
 
   await assert.rejects(
-    () =>
-      controller.deleteReview(
-        sessionFor(AUTHOR_PK),
-        999999,
-        String(review._id),
-      ),
+    () => controller.deleteReview(sessionFor(AUTHOR_PK), 999999, String(review._id)),
     (e) => {
       /* Was a 400 "User ID does not match", which leaked existence to anyone
          probing ids. Every rejection on this route now looks identical. */
       assert.equal(e.status, 404);
       return true;
-    },
+    }
   );
 
   assert.ok(await UserReview.findById(review._id));
@@ -145,12 +124,7 @@ test("deleting a review that does not exist is a 404", async () => {
   const absent = new mongoose.Types.ObjectId();
 
   await assert.rejects(
-    () =>
-      controller.deleteReview(
-        sessionFor(AUTHOR_PK),
-        SUBJECT_PK,
-        String(absent),
-      ),
-    (e) => e.status === 404,
+    () => controller.deleteReview(sessionFor(AUTHOR_PK), SUBJECT_PK, String(absent)),
+    (e) => e.status === 404
   );
 });

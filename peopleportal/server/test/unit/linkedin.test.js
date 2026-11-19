@@ -76,11 +76,7 @@ test("treats blank input as clearing the field, not as invalid", () => {
 
 test("rejects input that is not a URL at all", () => {
   for (const input of ["ada-lovelace", "not a url", "https://", "http://"]) {
-    assert.equal(
-      normalizeLinkedInProfileUrl(input),
-      null,
-      `for ${JSON.stringify(input)}`,
-    );
+    assert.equal(normalizeLinkedInProfileUrl(input), null, `for ${JSON.stringify(input)}`);
   }
 });
 
@@ -89,35 +85,24 @@ test("accepts a scheme-less profile by assuming https, never http", () => {
      address bar still works, and downgrading to http is not reachable. */
   assert.equal(
     normalizeLinkedInProfileUrl("www.linkedin.com/in/ada-lovelace"),
-    "https://www.linkedin.com/in/ada-lovelace",
+    "https://www.linkedin.com/in/ada-lovelace"
   );
   assert.equal(
     normalizeLinkedInProfileUrl("linkedin.com/in/ada-lovelace"),
-    "https://www.linkedin.com/in/ada-lovelace",
+    "https://www.linkedin.com/in/ada-lovelace"
   );
   /* The prepend must not rescue a lookalike host. */
-  assert.equal(
-    normalizeLinkedInProfileUrl("linkedin.com.evil.example/in/ada"),
-    null,
-  );
+  assert.equal(normalizeLinkedInProfileUrl("linkedin.com.evil.example/in/ada"), null);
 });
 
 test("rejects absurdly long input before parsing it", () => {
-  assert.equal(
-    normalizeLinkedInProfileUrl(
-      "https://www.linkedin.com/in/" + "a".repeat(400),
-    ),
-    null,
-  );
+  assert.equal(normalizeLinkedInProfileUrl("https://www.linkedin.com/in/" + "a".repeat(400)), null);
 });
 
 test("a protocol-relative URL still resolves against the real host", () => {
   /* "//linkedin.com/in/ada" is valid protocol-relative input; the host check
      still applies, so this is accepted rather than being a bypass. */
-  assert.equal(
-    normalizeLinkedInProfileUrl("//linkedin.com/in/ada"),
-    "https://www.linkedin.com/in/ada",
-  );
+  assert.equal(normalizeLinkedInProfileUrl("//linkedin.com/in/ada"), "https://www.linkedin.com/in/ada");
   assert.equal(normalizeLinkedInProfileUrl("//evil.example/in/ada"), null);
 });
 

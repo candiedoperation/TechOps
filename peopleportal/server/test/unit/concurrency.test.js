@@ -20,25 +20,18 @@ test("results come back in input order, not completion order", async () => {
     return ms;
   });
 
-  assert.deepEqual(
-    results.map((r) => r.value),
-    items,
-  );
+  assert.deepEqual(results.map((r) => r.value), items);
 });
 
 test("never runs more than the limit at once", async () => {
   let inFlight = 0;
   let peak = 0;
 
-  await mapWithConcurrency(
-    Array.from({ length: 20 }, (_, i) => i),
-    4,
-    async () => {
-      peak = Math.max(peak, ++inFlight);
-      await wait(5);
-      inFlight--;
-    },
-  );
+  await mapWithConcurrency(Array.from({ length: 20 }, (_, i) => i), 4, async () => {
+    peak = Math.max(peak, ++inFlight);
+    await wait(5);
+    inFlight--;
+  });
 
   assert.equal(peak, 4, `expected at most 4 concurrent, saw ${peak}`);
 });
@@ -52,10 +45,7 @@ test("a rejection is settled, not thrown, and does not lose its siblings", async
   /* The caller decides what a failure means. For Authentik that is the
      difference between "this group is gone" and "the directory is down", so
      the rejection must arrive as data rather than unwinding the batch. */
-  assert.deepEqual(
-    results.map((r) => r.status),
-    ["fulfilled", "rejected", "fulfilled"],
-  );
+  assert.deepEqual(results.map((r) => r.status), ["fulfilled", "rejected", "fulfilled"]);
   assert.equal(results[0].value, 10);
   assert.equal(results[2].value, 30);
   assert.equal(results[1].reason.message, "boom");
@@ -63,9 +53,7 @@ test("a rejection is settled, not thrown, and does not lose its siblings", async
 
 test("an empty list does no work and returns nothing", async () => {
   let called = 0;
-  const results = await mapWithConcurrency([], 5, async () => {
-    called++;
-  });
+  const results = await mapWithConcurrency([], 5, async () => { called++; });
 
   assert.deepEqual(results, []);
   assert.equal(called, 0);
@@ -74,16 +62,9 @@ test("an empty list does no work and returns nothing", async () => {
 test("a limit larger than the list, or below one, still runs every item exactly once", async () => {
   for (const limit of [999, 0, -1]) {
     const seen = [];
-    const results = await mapWithConcurrency([1, 2, 3], limit, async (n) => {
-      seen.push(n);
-      return n;
-    });
+    const results = await mapWithConcurrency([1, 2, 3], limit, async (n) => { seen.push(n); return n; });
 
-    assert.deepEqual(
-      seen.sort(),
-      [1, 2, 3],
-      `limit ${limit} skipped or repeated an item`,
-    );
+    assert.deepEqual(seen.sort(), [1, 2, 3], `limit ${limit} skipped or repeated an item`);
     assert.equal(results.length, 3);
   }
 });

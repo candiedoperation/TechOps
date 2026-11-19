@@ -16,44 +16,38 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Schema, model, Document } from "mongoose";
+import { Schema, model, Document } from 'mongoose';
 
 export interface ITeamMeeting extends Document {
-  teamPk: string;
-  /** Groups all occurrences generated from one create request */
-  seriesId: string;
-  name: string;
-  description: string;
-  start: Date;
-  end: Date;
-  /** Authentik user PK of the person who created the meeting */
-  createdBy: number;
-  /**
-   * When true, every team member sees this meeting on the calendar even if
-   * they are not invited. When false, non-managers only see it if they are
-   * invited (directly or via a subteam) or the meeting has no invite list
-   * at all (assumed general audience).
-   */
-  visibleToAll: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+    teamPk: string;
+    /** Groups all occurrences generated from one create request */
+    seriesId: string;
+    name: string;
+    description: string;
+    start: Date;
+    end: Date;
+    /** Authentik user PK of the person who created the meeting */
+    createdBy: number;
+    /**
+     * When true, every team member sees this meeting on the calendar even if
+     * they are not invited. When false, non-managers only see it if they are
+     * invited (directly or via a subteam) or the meeting has no invite list
+     * at all (assumed general audience).
+     */
+    visibleToAll: boolean;
+    createdAt: Date;
+    updatedAt: Date;
 }
 
-const TeamMeetingSchema = new Schema<ITeamMeeting>(
-  {
-    teamPk: { type: String, required: true, index: true },
-    seriesId: { type: String, required: true, index: true },
-    name: { type: String, required: true },
-    description: { type: String, default: "" },
-    start: { type: Date, required: true },
-    end: { type: Date, required: true },
-    createdBy: { type: Number, required: true },
+const TeamMeetingSchema = new Schema<ITeamMeeting>({
+    teamPk:      { type: String, required: true, index: true },
+    seriesId:    { type: String, required: true, index: true },
+    name:        { type: String, required: true },
+    description: { type: String, default: '' },
+    start:       { type: Date, required: true },
+    end:         { type: Date, required: true },
+    createdBy:   { type: Number, required: true },
     visibleToAll: { type: Boolean, default: false },
-  },
-  { timestamps: true },
-);
+}, { timestamps: true });
 
-export const TeamMeeting = model<ITeamMeeting>(
-  "TeamMeeting",
-  TeamMeetingSchema,
-);
+export const TeamMeeting = model<ITeamMeeting>('TeamMeeting', TeamMeetingSchema);

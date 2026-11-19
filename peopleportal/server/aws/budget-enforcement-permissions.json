@@ -4,7 +4,10 @@
     {
       "Sid": "ApplyAndRemoveTheDenyAllScp",
       "Effect": "Allow",
-      "Action": ["organizations:AttachPolicy", "organizations:DetachPolicy"],
+      "Action": [
+        "organizations:AttachPolicy",
+        "organizations:DetachPolicy"
+      ],
       "Resource": "*"
     }
   ]

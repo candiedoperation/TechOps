@@ -25,16 +25,14 @@ test("eventsAuthVerify does not mutate the scopes array it is given", async () =
   assert.deepEqual(
     routeScopes,
     ["NoExecOverride", "su:exclusive"],
-    "the caller's array must be untouched between requests",
+    "the caller's array must be untouched between requests"
   );
 });
 
 test("eventsAuthVerify leaves a scopes array without the marker alone", async () => {
   const { eventsAuthVerify } = require("../../dist/auth.js");
   const routeScopes = Object.freeze(["su:exclusive"]);
-  await assert.rejects(() =>
-    eventsAuthVerify({ session: {} }, routeScopes, true),
-  );
+  await assert.rejects(() => eventsAuthVerify({ session: {} }, routeScopes, true));
   assert.deepEqual(routeScopes, ["su:exclusive"]);
 });
 
@@ -50,11 +48,7 @@ test("avatar cache does not serve a URL signed for a different key", async () =>
   /* Without S3 credentials both fail closed to "", which still proves the
      lookup is not returning a stale hit for a changed key. */
   if (first !== "" && second !== "") {
-    assert.notEqual(
-      first,
-      second,
-      "a changed avatarKey must not hit the cache",
-    );
+    assert.notEqual(first, second, "a changed avatarKey must not hit the cache");
     assert.match(second, /replacement\.png/);
   }
 
@@ -87,17 +81,13 @@ function withCheckEnabled(t) {
   const savedFlag = process.env.PHOTO_CHECK_ENABLED;
   const originalFetch = globalThis.fetch;
   process.env.PHOTO_CHECK_ENABLED = "true";
-  delete require.cache[
-    require.resolve("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js")
-  ];
+  delete require.cache[require.resolve("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js")];
   const client = require("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js");
   t.after(() => {
     globalThis.fetch = originalFetch;
     if (savedFlag === undefined) delete process.env.PHOTO_CHECK_ENABLED;
     else process.env.PHOTO_CHECK_ENABLED = savedFlag;
-    delete require.cache[
-      require.resolve("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js")
-    ];
+    delete require.cache[require.resolve("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js")];
   });
   return client;
 }
@@ -105,43 +95,28 @@ function withCheckEnabled(t) {
 test("the check is off unless PHOTO_CHECK_ENABLED is set", async () => {
   const savedFlag = process.env.PHOTO_CHECK_ENABLED;
   delete process.env.PHOTO_CHECK_ENABLED;
-  delete require.cache[
-    require.resolve("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js")
-  ];
+  delete require.cache[require.resolve("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js")];
   const client = require("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js");
 
   let called = false;
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => {
-    called = true;
-    throw new Error("should not be reached");
-  };
+  globalThis.fetch = async () => { called = true; throw new Error("should not be reached"); };
 
   const result = await client.checkPhotoHasFace(new Uint8Array([1]));
   assert.equal(result.passed, true);
   assert.equal(result.reason, "check_disabled");
-  assert.equal(
-    called,
-    false,
-    "a disabled check must not call the sidecar at all",
-  );
+  assert.equal(called, false, "a disabled check must not call the sidecar at all");
 
   globalThis.fetch = originalFetch;
   if (savedFlag === undefined) delete process.env.PHOTO_CHECK_ENABLED;
   else process.env.PHOTO_CHECK_ENABLED = savedFlag;
-  delete require.cache[
-    require.resolve("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js")
-  ];
+  delete require.cache[require.resolve("../../dist/clients/PhotoCheckClient/PhotoCheckClient.js")];
 });
 
 test("photo check treats a malformed payload as undecided, not as a pass", async (t) => {
   const client = withCheckEnabled(t);
 
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({ nonsense: true }),
-  });
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({ nonsense: true }) });
   const result = await client.checkPhotoHasFace(new Uint8Array([1, 2, 3]));
   assert.equal(result.reason, "malformed_response");
   assert.equal(typeof result.passed, "boolean");
@@ -150,9 +125,7 @@ test("photo check treats a malformed payload as undecided, not as a pass", async
 test("photo check reports an unreachable service as service_unavailable", async (t) => {
   const client = withCheckEnabled(t);
 
-  globalThis.fetch = async () => {
-    throw new Error("ECONNREFUSED");
-  };
+  globalThis.fetch = async () => { throw new Error("ECONNREFUSED"); };
   const result = await client.checkPhotoHasFace(new Uint8Array([1]));
   assert.equal(result.reason, "service_unavailable");
 });
@@ -161,13 +134,8 @@ test("photo check passes an explicit rejection straight through", async (t) => {
   const client = withCheckEnabled(t);
 
   globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({
-      passed: false,
-      reason: "multiple_faces_detected",
-      count: 2,
-    }),
+    ok: true, status: 200,
+    json: async () => ({ passed: false, reason: "multiple_faces_detected", count: 2 }),
   });
   const result = await client.checkPhotoHasFace(new Uint8Array([1]));
   assert.equal(result.passed, false);
@@ -179,8 +147,7 @@ test("photo check passes an explicit acceptance straight through", async (t) => 
   const client = withCheckEnabled(t);
 
   globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
+    ok: true, status: 200,
     json: async () => ({ passed: true, reason: "ok", count: 1 }),
   });
   const result = await client.checkPhotoHasFace(new Uint8Array([1]));

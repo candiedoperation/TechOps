@@ -22,69 +22,60 @@ export const SupportedMarketingChannels = ["email", "slack", "discord"];
 export const SupportedScopes = ["public", "exec", "internal"];
 
 export interface IEvent extends Document {
-  eventName: string;
-  eventDescription: string;
-  creator: number;
-  startTime: Date;
-  endTime: Date;
-  location: string;
-  public: boolean;
-  scope: string;
-  marketingChannels: string[];
+    eventName: string;
+    eventDescription: string;
+    creator: number;
+    startTime: Date;
+    endTime: Date;
+    location: string;
+    public: boolean;
+    scope: string;
+    marketingChannels: string[];
 }
 
-const EventSchema = new Schema<IEvent>(
-  {
+const EventSchema = new Schema<IEvent>({
     eventName: {
-      type: String,
-      required: true,
+        type: String,
+        required: true
     },
     eventDescription: {
-      type: String,
-      required: true,
+        type: String,
+        required: true
     },
     creator: {
-      type: Number,
-      required: true,
+        type: Number,
+        required: true
     },
     startTime: {
-      type: Date,
-      required: true,
+        type: Date,
+        required: true
     },
     endTime: {
-      type: Date,
-      required: true,
+        type: Date,
+        required: true
     },
     location: {
-      type: String,
-      required: true,
+        type: String,
+        required: true
     },
-    scope: {
-      // "public" | "exec" | "internal"
-      type: String,
-      required: true,
-      validate: {
-        validator: (scope) => SupportedScopes.includes(scope),
-        message: `scope must be one of ${SupportedScopes}`,
-      },
+    scope: {               // "public" | "exec" | "internal"
+        type: String,
+        required: true,
+        validate: {
+            validator: scope => SupportedScopes.includes(scope),
+            message: `scope must be one of ${SupportedScopes}`
+        }
     },
     marketingChannels: {
-      type: [String],
-      required: true,
-      validate: {
-        validator: function (channels: string[]) {
-          return (
-            channels &&
-            channels.every((channel) =>
-              SupportedMarketingChannels.includes(channel),
-            )
-          );
-        },
-        message: `marketingChannels must be a string[] with only values from ${SupportedMarketingChannels}`,
-      },
+        type: [String],
+        required: true,
+        validate: {
+            validator: function(channels: string[]) {
+                return channels && channels.every(channel => SupportedMarketingChannels.includes(channel));
+            },
+            message: `marketingChannels must be a string[] with only values from ${SupportedMarketingChannels}`
+        }
     },
-  },
-  { timestamps: true },
-);
+}, {timestamps: true});
 
-export const Event = model<IEvent>("Event", EventSchema);
+export const Event = model<IEvent>('Event', EventSchema);     

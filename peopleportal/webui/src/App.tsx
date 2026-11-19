@@ -16,18 +16,18 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { Route, Routes } from "react-router-dom";
-import { UserOnboarding } from "./pages/UserOnboarding";
-import { Toaster } from "sonner";
-import { CorpDashboard } from "./pages/CorpDashboard";
-import { ThemeProvider } from "./components/fabric/ThemeProvider";
-import { ATSDashboard } from "./pages/ATSDashboard";
+import { Route, Routes } from 'react-router-dom'
+import { UserOnboarding } from './pages/UserOnboarding'
+import { Toaster } from 'sonner'
+import { CorpDashboard } from './pages/CorpDashboard'
+import { ThemeProvider } from './components/fabric/ThemeProvider'
+import { ATSDashboard } from './pages/ATSDashboard'
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="ppf-ui-theme">
+    <ThemeProvider defaultTheme='system' storageKey='ppf-ui-theme'>
       <div className="flex flex-col h-full w-full">
-        <Toaster richColors position="top-right" />
+        <Toaster richColors position='top-right' />
         <Routes>
           <Route path="/*" element={<CorpDashboard />} />
           <Route path="/onboard/:onboardId/*" element={<UserOnboarding />} />
@@ -35,7 +35,7 @@ function App() {
         </Routes>
       </div>
     </ThemeProvider>
-  );
+  )
 }
 
-export default App;
+export default App

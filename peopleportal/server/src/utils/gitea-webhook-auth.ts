@@ -9,7 +9,7 @@ export function getGiteaWebhookAuthorizationHeader(): string {
 
   if (!secret || secret.length < MIN_GITEA_WEBHOOK_SECRET_LENGTH) {
     throw new Error(
-      `PEOPLEPORTAL_GITEA_WEBHOOK_SECRET must be at least ${MIN_GITEA_WEBHOOK_SECRET_LENGTH} characters long`,
+      `PEOPLEPORTAL_GITEA_WEBHOOK_SECRET must be at least ${MIN_GITEA_WEBHOOK_SECRET_LENGTH} characters long`
     );
   }
 
@@ -31,17 +31,10 @@ export function isGiteaWebhookAuthorized(request: Request): boolean {
   const expected = Buffer.from(expectedAuthorization, "utf8");
   const supplied = Buffer.from(suppliedAuthorization, "utf8");
 
-  return (
-    expected.length === supplied.length &&
-    crypto.timingSafeEqual(expected, supplied)
-  );
+  return expected.length === supplied.length && crypto.timingSafeEqual(expected, supplied);
 }
 
-export function authenticateGiteaWebhook(
-  request: Request,
-  response: Response,
-  next: NextFunction,
-) {
+export function authenticateGiteaWebhook(request: Request, response: Response, next: NextFunction) {
   if (!isGiteaWebhookAuthorized(request)) {
     return response.status(401).send("Unauthorized");
   }

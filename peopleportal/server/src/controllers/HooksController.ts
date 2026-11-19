@@ -16,31 +16,20 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import {
-  Route,
-  Controller,
-  Get,
-  SuccessResponse,
-  Post,
-  Body,
-  Tags,
-} from "tsoa";
-import {
-  GiteaHookCommitTrigger,
-  GiteaHookRepositoryTrigger,
-} from "../clients/GiteaClient/models";
+import { Route, Controller, Get, SuccessResponse, Post, Body, Tags } from "tsoa";
+import { GiteaHookCommitTrigger, GiteaHookRepositoryTrigger } from "../clients/GiteaClient/models";
 import { GiteaClient } from "../clients/GiteaClient";
 import { AuthentikClient } from "../clients/AuthentikClient";
 
 @Route("/api/webhook")
 export class HooksController extends Controller {
-  private readonly giteaClient: GiteaClient;
-  private readonly authentikClient: AuthentikClient;
+  private readonly giteaClient: GiteaClient
+  private readonly authentikClient: AuthentikClient
 
   constructor() {
-    super();
-    this.giteaClient = new GiteaClient();
-    this.authentikClient = new AuthentikClient();
+    super()
+    this.giteaClient = new GiteaClient()
+    this.authentikClient = new AuthentikClient()
   }
 
   @Post("git/repoevent")
@@ -49,19 +38,17 @@ export class HooksController extends Controller {
   async processGitRepoEventHook(@Body() repoEvent: GiteaHookRepositoryTrigger) {
     switch (repoEvent.action) {
       case "created":
-        return this.handleRepoCreation(repoEvent);
+        return this.handleRepoCreation(repoEvent)
 
       default:
-        return "OK";
+        return "OK"
     }
   }
 
   @Post("git/commitevent")
   @Tags("Git Web Hooks")
   @SuccessResponse(200)
-  async processGitMainCommitEventHook(
-    @Body() commitEvent: GiteaHookCommitTrigger,
-  ) {
+  async processGitMainCommitEventHook(@Body() commitEvent: GiteaHookCommitTrigger) {
     if (
       commitEvent.ref !== GiteaClient.GIT_REF_MAINBRANCH ||
       commitEvent.before !== GiteaClient.GIT_NULL_COMMITID
@@ -72,27 +59,20 @@ export class HooksController extends Controller {
 
     try {
       const ownerName = commitEvent.repository.owner.username;
-      const repository = await this.giteaClient.getRepository(
-        ownerName,
-        commitEvent.repository.name,
-      );
-      if (
-        repository.id !== commitEvent.repository.id ||
-        repository.owner.username !== ownerName
-      ) {
+      const repository = await this.giteaClient.getRepository(ownerName, commitEvent.repository.name);
+      if (repository.id !== commitEvent.repository.id ||
+          repository.owner.username !== ownerName) {
         throw new Error("Repository does not match webhook event");
       }
 
-      const teamPk = await this.authentikClient.getGroupPkFromName(ownerName);
-      const teamInfo = await this.authentikClient.getGroupInfo(teamPk);
+      const teamPk = await this.authentikClient.getGroupPkFromName(ownerName)
+      const teamInfo = await this.authentikClient.getGroupInfo(teamPk)
 
       /* Apply Branch Protections now that main exists */
-      await this.giteaClient.handleBranchProtectionSync(teamInfo, [repository]);
+      await this.giteaClient.handleBranchProtectionSync(teamInfo, [repository])
     } catch (e: any) {
       /* Potential Group Not Found Error! We're good, not mission critical. */
-      console.error(
-        `Failed applying branch protection for ${commitEvent.repository.full_name}: ${e.message}`,
-      );
+      console.error(`Failed applying branch protection for ${commitEvent.repository.full_name}: ${e.message}`);
     }
 
     return "OK";
@@ -109,24 +89,17 @@ export class HooksController extends Controller {
       await this.authentikClient.getGroupPkFromName(organizationName);
       const repository = await this.giteaClient.getRepository(
         organizationName,
-        repoEvent.repository.name,
+        repoEvent.repository.name
       );
-      if (
-        repository.id !== repoEvent.repository.id ||
-        repository.owner.username !== organizationName
-      ) {
+      if (repository.id !== repoEvent.repository.id ||
+          repository.owner.username !== organizationName) {
         throw new Error("Repository does not match webhook event");
       }
 
-      await this.giteaClient.handleRepoProvisioning({
-        ...repoEvent,
-        repository,
-      });
+      await this.giteaClient.handleRepoProvisioning({ ...repoEvent, repository });
     } catch (e: any) {
       /* Processing failed; leave the repository untouched for an authorized operator to review. */
-      console.error(
-        `Failed provisioning repository ${repoEvent.repository.full_name}: ${e.message}`,
-      );
+      console.error(`Failed provisioning repository ${repoEvent.repository.full_name}: ${e.message}`);
       return "OK (Actions Failed)";
     }
   }

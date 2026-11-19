@@ -24,21 +24,9 @@ test("a wrapped value round-trips through JSON, as Redis stores it", () => {
 test("an entry is fresh until the soft TTL and stale after it", () => {
   const envelope = wrapCacheValue([], 0);
 
-  assert.equal(
-    isCacheStale(envelope, 300, 299_000),
-    false,
-    "just inside the TTL is fresh",
-  );
-  assert.equal(
-    isCacheStale(envelope, 300, 300_000),
-    false,
-    "exactly at the TTL is not yet stale",
-  );
-  assert.equal(
-    isCacheStale(envelope, 300, 300_001),
-    true,
-    "one millisecond past is stale",
-  );
+  assert.equal(isCacheStale(envelope, 300, 299_000), false, "just inside the TTL is fresh");
+  assert.equal(isCacheStale(envelope, 300, 300_000), false, "exactly at the TTL is not yet stale");
+  assert.equal(isCacheStale(envelope, 300, 300_001), true, "one millisecond past is stale");
 });
 
 test("a cachedAt in the future counts as fresh rather than triggering a refresh storm", () => {
@@ -52,20 +40,12 @@ test("anything that is not an envelope is rejected rather than read as one", () 
   /* The bare-array format this replaced is the case that matters: reading it
      as an envelope would hand callers `undefined` and render an empty roster
      as though no team were recruiting. */
-  assert.equal(
-    isCacheEnvelope([{ pk: "a" }]),
-    false,
-    "the previous bare-array format",
-  );
+  assert.equal(isCacheEnvelope([{ pk: "a" }]), false, "the previous bare-array format");
   assert.equal(isCacheEnvelope(null), false);
   assert.equal(isCacheEnvelope(undefined), false);
   assert.equal(isCacheEnvelope("string"), false);
   assert.equal(isCacheEnvelope({ value: [] }), false, "missing cachedAt");
-  assert.equal(
-    isCacheEnvelope({ cachedAt: "no", value: [] }),
-    false,
-    "cachedAt must be a number",
-  );
+  assert.equal(isCacheEnvelope({ cachedAt: "no" , value: [] }), false, "cachedAt must be a number");
   assert.equal(isCacheEnvelope({ cachedAt: 1 }), false, "missing value");
 });
 

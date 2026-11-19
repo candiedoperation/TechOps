@@ -16,43 +16,17 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config";
-import {
-  CalendarView,
-  type CalendarEvent,
-} from "@/components/blocks/CalendarView";
-import {
-  NewMeetingDialog,
-  type MeetingDraft,
-  type RosterMember,
-  type SubteamOption,
-} from "@/components/fragments/NewMeetingDialog";
-import { AttendanceDialog } from "@/components/fragments/AttendanceDialog";
-import {
-  RecurrenceScopeDialog,
-  type RecurrenceScope,
-} from "@/components/fragments/RecurrenceScopeDialog";
-import { Button } from "@/components/ui/button";
-import {
-  addDays,
-  clamp,
-  format,
-  isAfter,
-  isBefore,
-  parse,
-  startOfDay,
-  startOfWeek,
-} from "date-fns";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PlusIcon,
-  UsersIcon,
-  XIcon,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { toast } from "sonner";
+import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config"
+import { CalendarView, type CalendarEvent } from "@/components/blocks/CalendarView"
+import { NewMeetingDialog, type MeetingDraft, type RosterMember, type SubteamOption } from "@/components/fragments/NewMeetingDialog"
+import { AttendanceDialog } from "@/components/fragments/AttendanceDialog"
+import { RecurrenceScopeDialog, type RecurrenceScope } from "@/components/fragments/RecurrenceScopeDialog"
+import { Button } from "@/components/ui/button"
+import { addDays, clamp, format, isAfter, isBefore, parse, startOfDay, startOfWeek } from "date-fns"
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, UsersIcon, XIcon } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useParams } from "react-router-dom"
+import { toast } from "sonner"
 
 type Meeting = CalendarEvent & {
   _id: string;
@@ -68,10 +42,7 @@ type PendingRecurringAction =
   | { action: "edit"; meeting: Meeting; edit: PendingEdit }
   | { action: "delete"; meeting: Meeting };
 
-type RawMeeting = Omit<Meeting, "start" | "end"> & {
-  start: string;
-  end: string;
-};
+type RawMeeting = Omit<Meeting, "start" | "end"> & { start: string; end: string };
 
 const parseMeeting = (raw: RawMeeting): Meeting => ({
   ...raw,
@@ -83,8 +54,7 @@ const parseMeeting = (raw: RawMeeting): Meeting => ({
 const mondayOf = (date: Date) => startOfWeek(date, { weekStartsOn: 1 });
 
 /* Parse a "yyyy-MM-dd" wire date as local midnight; undefined when absent. */
-const parseDay = (value?: string) =>
-  value ? parse(value, "yyyy-MM-dd", new Date()) : undefined;
+const parseDay = (value?: string) => (value ? parse(value, "yyyy-MM-dd", new Date()) : undefined);
 
 export const TeamMeetings = () => {
   const { teamId } = useParams<{ teamId: string }>();
@@ -95,66 +65,47 @@ export const TeamMeetings = () => {
   const [maxDate, setMaxDate] = useState<Date | undefined>();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [draftSlot, setDraftSlot] = useState<
-    { start: Date; end: Date } | undefined
-  >();
+  const [draftSlot, setDraftSlot] = useState<{ start: Date; end: Date } | undefined>();
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
   const [roster, setRoster] = useState<RosterMember[]>([]);
   const [subteams, setSubteams] = useState<SubteamOption[]>([]);
   const [canManage, setCanManage] = useState(false);
-  const [attendanceMeeting, setAttendanceMeeting] = useState<Meeting | null>(
-    null,
-  );
+  const [attendanceMeeting, setAttendanceMeeting] = useState<Meeting | null>(null);
 
-  const [pendingAction, setPendingAction] =
-    useState<PendingRecurringAction | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingRecurringAction | null>(null);
 
   const meetingsUrl = `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${teamId}/meetings`;
 
   /* The 5 weekday columns the calendar renders, derived from the scrubbed week. */
-  const days = useMemo(
-    () => Array.from({ length: 5 }, (_, i) => addDays(weekStart, i)),
-    [weekStart],
-  );
+  const days = useMemo(() => Array.from({ length: 5 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const monthLabel = format(addDays(weekStart, 2), "MMMM yyyy");
 
   const teamStartWeek = minDate ? mondayOf(minDate) : null;
   const maxWeek = maxDate ? mondayOf(maxDate) : null;
   /* Never navigate into past weeks: floor at the later of this week and the team start. */
-  const minWeek =
-    teamStartWeek && teamStartWeek.getTime() > mondayOf(new Date()).getTime()
-      ? teamStartWeek
-      : mondayOf(new Date());
+  const minWeek = teamStartWeek && teamStartWeek.getTime() > mondayOf(new Date()).getTime()
+    ? teamStartWeek
+    : mondayOf(new Date());
   const canGoPrev = weekStart.getTime() > minWeek.getTime();
   const canGoNext = !maxWeek || weekStart.getTime() < maxWeek.getTime();
-  const shiftWeek = (deltaDays: number) =>
-    setWeekStart((prev) => {
-      const next = addDays(prev, deltaDays);
-      return clamp(next, {
-        start: minWeek,
-        end:
-          maxWeek && maxWeek.getTime() > minWeek.getTime() ? maxWeek : minWeek,
-      });
-    });
+  const shiftWeek = (deltaDays: number) => setWeekStart((prev) => {
+    const next = addDays(prev, deltaDays);
+    return clamp(next, { start: minWeek, end: maxWeek && maxWeek.getTime() > minWeek.getTime() ? maxWeek : minWeek });
+  });
 
-  const isDateDisabled = useCallback(
-    (date: Date) => {
-      const day = startOfDay(date);
-      if (minDate && isBefore(day, startOfDay(minDate))) return true;
-      if (maxDate && isAfter(day, startOfDay(maxDate))) return true;
-      return false;
-    },
-    [minDate, maxDate],
-  );
+  const isDateDisabled = useCallback((date: Date) => {
+    const day = startOfDay(date);
+    if (minDate && isBefore(day, startOfDay(minDate))) return true;
+    if (maxDate && isAfter(day, startOfDay(maxDate))) return true;
+    return false;
+  }, [minDate, maxDate]);
 
   const fetchWeek = useCallback(() => {
     if (!teamId) return;
     setLoading(true);
     const from = weekStart.toISOString();
     const to = addDays(weekStart, 5).toISOString();
-    fetch(
-      `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${teamId}/meetings?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
-    )
+    fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${teamId}/meetings?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -178,74 +129,42 @@ export const TeamMeetings = () => {
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<{
-          team?: {
-            attributes?: { teamStartDate?: string; teamEndDate?: string };
-          };
-          subteams?: Array<{
-            pk: string;
-            name: string;
-            attributes?: {
-              friendlyName?: string;
-              flaggedForDeletion?: boolean;
-            };
-          }>;
+          team?: { attributes?: { teamStartDate?: string; teamEndDate?: string } };
+          subteams?: Array<{ pk: string; name: string; attributes?: { friendlyName?: string; flaggedForDeletion?: boolean } }>;
         }>;
       })
       .then(({ team, subteams: rawSubteams }) => {
-        setSubteams(
-          (rawSubteams ?? [])
-            .filter((s) => !s.attributes?.flaggedForDeletion)
-            .map((s) => ({
-              pk: s.pk,
-              name: s.attributes?.friendlyName ?? s.name,
-            })),
-        );
+        setSubteams((rawSubteams ?? [])
+          .filter((s) => !s.attributes?.flaggedForDeletion)
+          .map((s) => ({ pk: s.pk, name: s.attributes?.friendlyName ?? s.name })));
         const start = parseDay(team?.attributes?.teamStartDate);
         const end = parseDay(team?.attributes?.teamEndDate);
         setMinDate(start);
         setMaxDate(end);
         /* Snap the visible week into the team's lifespan if it falls outside */
-        setWeekStart((prev) =>
-          clamp(prev, {
-            start: start ? mondayOf(start) : prev,
-            end: end ? mondayOf(end) : prev,
-          }),
-        );
+        setWeekStart((prev) => clamp(prev, {
+          start: start ? mondayOf(start) : prev,
+          end: end ? mondayOf(end) : prev,
+        }));
       })
-      .catch(() => {
-        /* non-fatal: leave the calendar unbounded */
-      });
+      .catch(() => { /* non-fatal: leave the calendar unbounded */ });
   }, [teamId]);
 
   /* Load the team roster once so the create dialog can offer attendees. */
   useEffect(() => {
     if (!teamId) return;
-    fetch(
-      `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${teamId}/meetings/roster`,
-      { credentials: "include" },
-    )
-      .then((res) =>
-        res.ok ? (res.json() as Promise<RosterMember[]>) : Promise.reject(),
-      )
+    fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${teamId}/meetings/roster`, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() as Promise<RosterMember[]> : Promise.reject()))
       .then(setRoster)
-      .catch(() => {
-        /* non-fatal: dialog simply omits the attendee picker */
-      });
+      .catch(() => { /* non-fatal: dialog simply omits the attendee picker */ });
   }, [teamId]);
 
   /* Whether this user may manage meetings; gates the create/edit/delete controls.
      The backend enforces this regardless — this only hides controls that would 403. */
   useEffect(() => {
     if (!teamId) return;
-    fetch(
-      `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${teamId}/meetings/capabilities`,
-      { credentials: "include" },
-    )
-      .then((res) =>
-        res.ok
-          ? (res.json() as Promise<{ canManageMeetings: boolean }>)
-          : Promise.reject(),
-      )
+    fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/org/teams/${teamId}/meetings/capabilities`, { credentials: "include" })
+      .then((res) => (res.ok ? res.json() as Promise<{ canManageMeetings: boolean }> : Promise.reject()))
       .then((d) => setCanManage(d.canManageMeetings))
       .catch(() => setCanManage(false));
   }, [teamId]);
@@ -280,11 +199,7 @@ export const TeamMeetings = () => {
     setDialogOpen(true);
   };
 
-  const applyEdit = (
-    meeting: Meeting,
-    edit: PendingEdit,
-    scope: RecurrenceScope,
-  ) => {
+  const applyEdit = (meeting: Meeting, edit: PendingEdit, scope: RecurrenceScope) => {
     fetch(`${meetingsUrl}/${meeting._id}`, {
       method: "PATCH",
       credentials: "include",
@@ -319,10 +234,7 @@ export const TeamMeetings = () => {
   };
 
   const applyDelete = (meeting: Meeting, scope: RecurrenceScope) => {
-    fetch(`${meetingsUrl}/${meeting._id}?scope=${scope}`, {
-      method: "DELETE",
-      credentials: "include",
-    })
+    fetch(`${meetingsUrl}/${meeting._id}?scope=${scope}`, { method: "DELETE", credentials: "include" })
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -372,9 +284,7 @@ export const TeamMeetings = () => {
       {attendanceMeeting && teamId && (
         <AttendanceDialog
           open={attendanceMeeting !== null}
-          onOpenChange={(open) => {
-            if (!open) setAttendanceMeeting(null);
-          }}
+          onOpenChange={(open) => { if (!open) setAttendanceMeeting(null); }}
           teamId={teamId}
           meetingId={attendanceMeeting._id}
           meetingName={attendanceMeeting.name}
@@ -385,22 +295,15 @@ export const TeamMeetings = () => {
 
       <RecurrenceScopeDialog
         open={pendingAction !== null}
-        onOpenChange={(open) => {
-          if (!open) setPendingAction(null);
-        }}
+        onOpenChange={(open) => { if (!open) setPendingAction(null); }}
         action={pendingAction?.action ?? "edit"}
         onSelect={handleScopeSelect}
       />
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-3">
-          <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-balance">
-            Team Meetings
-          </h1>
-          <h4 className="text-xl text-muted-foreground">
-            Set your Team Meetings/Rep Meetings schedule, take attendance, and
-            keep meeting notes
-          </h4>
+          <h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight text-balance">Team Meetings</h1>
+          <h4 className="text-xl text-muted-foreground">Set your Team Meetings/Rep Meetings schedule, take attendance, and keep meeting notes</h4>
         </div>
         {canManage && (
           <Button className="shrink-0" onClick={() => openNewMeeting()}>
@@ -412,21 +315,11 @@ export const TeamMeetings = () => {
 
       <div className="flex-1">
         <div className="flex items-center justify-between pl-14 pr-1 pb-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!canGoPrev}
-            onClick={() => shiftWeek(-7)}
-          >
+          <Button variant="ghost" size="icon" disabled={!canGoPrev} onClick={() => shiftWeek(-7)}>
             <ChevronLeftIcon />
           </Button>
           <p className="text-sm font-medium select-none">{monthLabel}</p>
-          <Button
-            variant="ghost"
-            size="icon"
-            disabled={!canGoNext}
-            onClick={() => shiftWeek(7)}
-          >
+          <Button variant="ghost" size="icon" disabled={!canGoNext} onClick={() => shiftWeek(7)}>
             <ChevronRightIcon />
           </Button>
         </div>
@@ -435,15 +328,11 @@ export const TeamMeetings = () => {
           events={events}
           editable={canManage}
           isDateDisabled={isDateDisabled}
-          onNewEvent={
-            canManage ? (start, end) => openNewMeeting(start, end) : undefined
-          }
+          onNewEvent={canManage ? (start, end) => openNewMeeting(start, end) : undefined}
           options={{ start: 8, end: 21, snapMinutes: 15 }}
           previewComponent={({ event }) => (
             <div className="h-full w-full border-2 border-dashed border-primary bg-primary/20 text-sm p-1 overflow-hidden select-none rounded">
-              <p>
-                {format(event.start, "h:mm a")} - {format(event.end, "h:mm a")}
-              </p>
+              <p>{format(event.start, "h:mm a")} - {format(event.end, "h:mm a")}</p>
             </div>
           )}
           component={({ event }) => (
@@ -481,10 +370,8 @@ export const TeamMeetings = () => {
       </div>
 
       {loading && (
-        <p className="text-center text-sm text-muted-foreground">
-          Loading meetings…
-        </p>
+        <p className="text-center text-sm text-muted-foreground">Loading meetings…</p>
       )}
     </div>
-  );
-};
+  )
+}

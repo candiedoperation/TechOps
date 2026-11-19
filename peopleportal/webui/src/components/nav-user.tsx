@@ -16,9 +16,17 @@
   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react";
+import {
+  BadgeCheck,
+  ChevronsUpDown,
+  LogOut,
+} from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,46 +35,43 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config";
+} from "@/components/ui/sidebar"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
+import { PEOPLEPORTAL_SERVER_ENDPOINT } from "@/commons/config"
 
 export function NavUser({
   user,
 }: {
   user: {
-    pk: number;
-    name: string;
-    email: string;
-    avatar: string;
-    pk: number;
-  };
+    pk: number
+    name: string
+    email: string
+    avatar: string
+    pk: number
+  }
 }) {
-  const { isMobile } = useSidebar();
-  const navigate = useNavigate();
+  const { isMobile } = useSidebar()
+  const navigate = useNavigate()
 
   /* The applicant portal has logged out correctly since February; this menu
      shipped as unwired shadcn scaffolding, so the corp dashboard had no way
      out at all short of clearing cookies. Same call as ATSDashboard. */
   const handleLogout = async () => {
     try {
-      const response = await fetch(
-        `${PEOPLEPORTAL_SERVER_ENDPOINT}/api/auth/logout`,
-        {
-          method: "POST",
-          credentials: "include",
-        },
-      );
-      if (!response.ok) throw new Error(response.statusText);
+      const response = await fetch(`${PEOPLEPORTAL_SERVER_ENDPOINT}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      })
+      if (!response.ok) throw new Error(response.statusText)
 
-      toast.success("Logged out successfully");
+      toast.success("Logged out successfully")
 
       /* The server returns the provider's logout URL when the IdP supports
          RP-initiated logout. Following it ends the Authentik session too;
@@ -78,21 +83,21 @@ export function NavUser({
          A full navigation either way, not a client-side route change: the
          session is gone, so every cached page and fetch in memory is now
          stale. */
-      const { logoutUrl } = await response.json().catch(() => ({}));
-      window.location.href = logoutUrl ?? "/";
+      const { logoutUrl } = await response.json().catch(() => ({}))
+      window.location.href = logoutUrl ?? "/"
     } catch {
-      toast.error("Failed to log out. Please try again.");
+      toast.error("Failed to log out. Please try again.")
     }
-  };
+  }
 
   const getFallbackAvatar = () => {
     const nameArray = user.name.split(" ");
-    const initialsArray = [nameArray[0]];
+    const initialsArray = [nameArray[0]]
     if (nameArray.length > 1)
-      initialsArray.push(nameArray[nameArray.length - 1]);
+      initialsArray.push(nameArray[nameArray.length - 1])
 
-    return "".concat(...initialsArray.map((el) => el.charAt(0).toUpperCase()));
-  };
+    return "".concat(...initialsArray.map((el) => el.charAt(0).toUpperCase()))
+  }
 
   return (
     <SidebarMenu>
@@ -104,14 +109,8 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage
-                  src={user.avatar}
-                  alt={user.name}
-                  className="object-cover"
-                />
-                <AvatarFallback className="rounded-lg">
-                  {getFallbackAvatar()}
-                </AvatarFallback>
+                <AvatarImage src={user.avatar} alt={user.name} className="object-cover" />
+                <AvatarFallback className="rounded-lg">{getFallbackAvatar()}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -129,14 +128,8 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage
-                    src={user.avatar}
-                    alt={user.name}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="rounded-lg">
-                    {getFallbackAvatar()}
-                  </AvatarFallback>
+                  <AvatarImage src={user.avatar} alt={user.name} className="object-cover" />
+                  <AvatarFallback className="rounded-lg">{getFallbackAvatar()}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
@@ -149,9 +142,7 @@ export function NavUser({
               {/* Notifications was removed rather than left inert: there is no
                   route behind it, and a menu item that does nothing when
                   clicked is worse than one that is not offered. */}
-              <DropdownMenuItem
-                onClick={() => navigate(`/org/people/${user.pk}`)}
-              >
+              <DropdownMenuItem onClick={() => navigate(`/org/people/${user.pk}`)}>
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>
@@ -165,5 +156,5 @@ export function NavUser({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  );
+  )
 }

@@ -23,19 +23,14 @@ const team = (name, flagged = false) => ({ name, flaggedForDeletion: flagged });
    ExecutiveBoard as their root team. Only the second argument, the user's own
    groups, tells them apart. */
 const rootOf = (group) =>
-  group.startsWith("ExecutiveBoard")
-    ? [team("ExecutiveBoard")]
-    : group.startsWith("TechOps")
-      ? [team("TechOps")]
-      : [team(group)];
+  group.startsWith("ExecutiveBoard") ? [team("ExecutiveBoard")]
+  : group.startsWith("TechOps") ? [team("TechOps")]
+  : [team(group)];
 const authorityVia = (...groups) =>
   hasAdminAuthority(groups.flatMap(rootOf), groups);
 
 test("ExecutiveBoard confers authority", () => {
-  assert.equal(
-    hasAdminAuthority([team("ExecutiveBoard")], ["ExecutiveBoardMembers"]),
-    true,
-  );
+  assert.equal(hasAdminAuthority([team("ExecutiveBoard")], ["ExecutiveBoardMembers"]), true);
 });
 
 test("TechOps confers no authority", () => {
@@ -48,29 +43,17 @@ test("TechOps confers no authority", () => {
 
 test("an ordinary team confers nothing", () => {
   assert.equal(hasAdminAuthority([team("WebDevFALL2026")], []), false);
-  assert.equal(
-    hasAdminAuthority(
-      [team("MLBootcampFALL2026"), team("InfrastructureSPRING2026")],
-      [],
-    ),
-    false,
-  );
+  assert.equal(hasAdminAuthority([team("MLBootcampFALL2026"), team("InfrastructureSPRING2026")], []), false);
 });
 
 test("authority is granted by membership of any one admin team", () => {
   assert.equal(
-    hasAdminAuthority(
-      [team("WebDevFALL2026"), team("ExecutiveBoard")],
-      ["WebDevFALL2026", "ExecutiveBoardMembers"],
-    ),
-    true,
+    hasAdminAuthority([team("WebDevFALL2026"), team("ExecutiveBoard")], ["WebDevFALL2026", "ExecutiveBoardMembers"]),
+    true
   );
   assert.equal(
-    hasAdminAuthority(
-      [team("TechOps"), team("ExecutiveBoard")],
-      ["ExecutiveBoardMembers"],
-    ),
-    true,
+    hasAdminAuthority([team("TechOps"), team("ExecutiveBoard")], ["ExecutiveBoardMembers"]),
+    true
   );
 });
 
@@ -79,29 +62,19 @@ test("a team flagged for deletion confers nothing", () => {
   assert.equal(hasAdminAuthority([team("ExecutiveBoard", true)], []), false);
   /* One live admin team is still enough. */
   assert.equal(
-    hasAdminAuthority(
-      [team("TechOps", true), team("ExecutiveBoard")],
-      ["ExecutiveBoardMembers"],
-    ),
-    true,
+    hasAdminAuthority([team("TechOps", true), team("ExecutiveBoard")], ["ExecutiveBoardMembers"]),
+    true
   );
 });
 
 test("a subteam name as the ROOT team confers nothing", () => {
   /* Guards against a service subteam accidentally losing its parent: it would
      then arrive as its own root team, which must not be an admin root. */
-  assert.equal(
-    hasAdminAuthority([team("TechOpsMembers")], ["TechOpsMembers"]),
-    false,
-  );
-  assert.equal(
-    hasAdminAuthority(
-      [team("ExecutiveBoardMembers")],
-      ["ExecutiveBoardMembers"],
-    ),
-    false,
-  );
+  assert.equal(hasAdminAuthority([team("TechOpsMembers")], ["TechOpsMembers"]), false);
+  assert.equal(hasAdminAuthority([team("ExecutiveBoardMembers")], ["ExecutiveBoardMembers"]), false);
 });
+
+
 
 test("an empty team list confers nothing", () => {
   assert.equal(hasAdminAuthority([], []), false);
@@ -117,10 +90,7 @@ test("every admin team is a real provisioned service team", () => {
   /* An admin team that validateServiceExistance never creates would silently
      grant nothing, because nobody could be a member of it. */
   for (const name of ADMIN_AUTHORITY_TEAMS) {
-    assert.ok(
-      ENABLED_SERVICE_TEAMS[name],
-      `${name} must exist in ENABLED_SERVICE_TEAMS`,
-    );
+    assert.ok(ENABLED_SERVICE_TEAMS[name], `${name} must exist in ENABLED_SERVICE_TEAMS`);
   }
 });
 
@@ -131,9 +101,10 @@ test("TechOps mirrors ExecutiveBoard's shape", () => {
   assert.equal(ops.subteams.length, exec.subteams.length);
   assert.deepEqual(
     ops.subteams.map((s) => s.uniqueName),
-    ["TechOpsMembers", "TechOpsAlumni"],
+    ["TechOpsMembers", "TechOpsAlumni"]
   );
 });
+
 
 /* ── the alumni case ──────────────────────────────────────────────────────
    These are the tests that matter. Before the subteam set existed, every one
@@ -151,10 +122,7 @@ test("alumni do NOT hold authority, despite resolving to the same root team", ()
 });
 
 test("an alumnus who is also a current member keeps authority", () => {
-  assert.equal(
-    authorityVia("ExecutiveBoardAlumni", "ExecutiveBoardMembers"),
-    true,
-  );
+  assert.equal(authorityVia("ExecutiveBoardAlumni", "ExecutiveBoardMembers"), true);
 });
 
 test("direct membership of the root team itself still counts", () => {
@@ -168,29 +136,22 @@ test("an ordinary team member holds nothing", () => {
 
 test("the right root with the wrong groups grants nothing", () => {
   /* Defends the second half of the check on its own. */
-  assert.equal(
-    hasAdminAuthority([team("ExecutiveBoard")], ["WebDevFALL2026"]),
-    false,
-  );
+  assert.equal(hasAdminAuthority([team("ExecutiveBoard")], ["WebDevFALL2026"]), false);
   assert.equal(hasAdminAuthority([team("ExecutiveBoard")], []), false);
 });
 
 test("the right groups with a deleted root grant nothing", () => {
   /* And the first half. */
   assert.equal(
-    hasAdminAuthority(
-      [team("ExecutiveBoard", true)],
-      ["ExecutiveBoardMembers"],
-    ),
-    false,
+    hasAdminAuthority([team("ExecutiveBoard", true)], ["ExecutiveBoardMembers"]),
+    false
   );
 });
 
 test("every admin subteam belongs to an admin root team", () => {
   const declared = new Set();
   for (const rootName of ADMIN_AUTHORITY_TEAMS) {
-    for (const sub of ENABLED_SERVICE_TEAMS[rootName].subteams)
-      declared.add(sub.uniqueName);
+    for (const sub of ENABLED_SERVICE_TEAMS[rootName].subteams) declared.add(sub.uniqueName);
   }
   for (const sub of ADMIN_AUTHORITY_SUBTEAMS) {
     assert.ok(declared.has(sub), `${sub} must be a subteam of an admin team`);
