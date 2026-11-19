@@ -49,6 +49,7 @@ from .ranking import (
     code_and_tenure_metrics,
     ranked_members,
     ranking_run,
+    review_and_rating_metrics,
 )
 from .source import RepositoryConfig, authentik_users, gitea_repository
 
@@ -87,4 +88,5 @@ __all__ = [
     "ranked_members",
     "ranking_run",
     "code_and_tenure_metrics",
+    "review_and_rating_metrics",
 ]

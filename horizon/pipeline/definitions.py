@@ -35,6 +35,7 @@ from .assets import (
     code_and_tenure_metrics,
     ranked_members,
     ranking_run,
+    review_and_rating_metrics,
 )
 from .checks import (
     capture_is_non_empty,
@@ -79,6 +80,7 @@ defs = Definitions(
         ranking_run,
         ranked_members,
         code_and_tenure_metrics,
+        review_and_rating_metrics,
     ],
     asset_checks=[
         capture_is_non_empty,

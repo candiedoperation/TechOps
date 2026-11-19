@@ -29,6 +29,15 @@ from ..ranking.metrics_code import (
     build_project_contexts,
     compute_run_metrics,
 )
+from ..ranking.metrics_reviews import (
+    METRIC_KEYS as REVIEW_METRIC_KEYS,
+    ReviewData,
+    compute_run_review_metrics,
+)
+from ..ranking.metrics_survey import (
+    METRIC_KEYS as RATING_METRIC_KEYS,
+    compute_run_rating_metrics,
+)
 from ..ranking.rubric import LoadedRubric, load_rubric
 from ..ranking.sources import check_source_freshness
 from ..storage import PostgresResource
@@ -281,6 +290,89 @@ def code_and_tenure_metrics(
             description=(
                 "Input tables missing (T1.1 roster, T2.5 blame_commit_summary or "
                 f"T2.6 commit history): {error}"
+            )
+        ) from error
+
+    missing = Counter(value.missing_reason for value in values if value.missing_reason)
+    context.add_output_metadata(
+        {
+            "ranking_run_id": MetadataValue.text(run_id),
+            "persisted_rows": MetadataValue.int(rows),
+            "members": MetadataValue.int(len(members)),
+            "missing_by_reason": MetadataValue.json(dict(missing)),
+        }
+    )
+    return rows
+
+
+@asset(
+    group_name="08_ranking",
+    kinds={"postgres"},
+    description=(
+        "Computes pull request review, collaboration and survey rating metrics "
+        "for every ranked member of the run and writes them to metric_values. "
+        "PR events and survey answers are latest-state, so they are read as of "
+        "the run's as_of. Buckets the run excluded for a member get no rows."
+    ),
+    metadata={"table": "horizon_ranking.metric_values"},
+)
+def review_and_rating_metrics(
+    context: AssetExecutionContext,
+    ranking_run: RankingRun,
+    ranked_members: int,
+    postgres: PostgresResource,
+) -> int:
+    rubric = _run_rubric(ranking_run).rubric
+    run_id = ranking_run.ranking_run_id
+    season = (ranking_run.season_type, ranking_run.season_year)
+    try:
+        with postgres.connect() as connection:
+            members = store.read_ranked_members(connection, run_id)
+            source_runs = store.read_source_runs(connection, run_id)
+            semester_ends = {
+                project.project_pk: project.window_end
+                for project in store.read_season_projects(connection, *season)
+            }
+            projects = build_project_contexts(
+                members,
+                store.read_repositories_by_project(connection, *season),
+                source_runs,
+                semester_ends,
+            )
+            repositories = sorted(
+                {repo for project in projects.values() for repo in project.repositories}
+            )
+            data = ReviewData.build(
+                store.read_pull_requests(connection, repositories),
+                store.read_pr_reviews(connection, repositories),
+                store.read_pr_review_requests(connection, repositories),
+                store.read_pr_commits(connection, sorted(set(source_runs.values()))),
+                source_runs,
+            )
+            values = compute_run_review_metrics(
+                members,
+                projects,
+                store.read_season_members(connection, *season),
+                ranking_run.as_of,
+                rubric,
+                data,
+            ) + compute_run_rating_metrics(
+                members,
+                ranking_run.as_of,
+                rubric,
+                store.read_survey_answers(connection, *season),
+            )
+            rows = store.replace_metric_values(
+                connection,
+                run_id,
+                tuple(dict.fromkeys((*REVIEW_METRIC_KEYS, *RATING_METRIC_KEYS))),
+                values,
+            )
+    except psycopg.errors.UndefinedTable as error:
+        raise Failure(
+            description=(
+                "Input tables missing (T1.1 Gitea PR tables or T3.4 survey tables): "
+                f"{error}"
             )
         ) from error
 

@@ -3,8 +3,9 @@
 Every helper takes an open psycopg connection, so the caller owns the
 transaction. This is also the only module that names other tracks' tables:
 T1.1's roster (``projects``, ``project_members``, ``project_repositories``),
-T2.5's ``blame_commit_summary`` and T2.6's ``git_commits`` and
-``member_commit_activity``. If their columns change, the change stays here.
+T1.1's Gitea PR tables, T2.5's ``blame_commit_summary``, T2.6's
+``git_commits`` and ``member_commit_activity``, and T3.4's survey tables. If
+their columns change, the change stays here.
 """
 
 from __future__ import annotations
@@ -24,6 +25,13 @@ from .metrics_code import (
     MetricValue,
     Repository,
 )
+from .metrics_reviews import (
+    PullRequestCommitRow,
+    PullRequestRow,
+    ReviewRequestRow,
+    ReviewRow,
+)
+from .metrics_survey import SurveyAnswerRow
 from .rubric import LoadedRubric
 from .sources import CompleteRun
 
@@ -442,3 +450,85 @@ def replace_metric_values(
             ],
         )
     return len(values)
+
+
+def read_pull_requests(
+    connection: psycopg.Connection, repositories: Sequence[Repository]
+) -> list[PullRequestRow]:
+    rows = connection.execute(
+        """
+        SELECT p.organization, p.repository, p.number, p.author_login, p.author_pk,
+               p.merged, p.created_at, p.merged_at
+        FROM horizon_gt_features.gitea_pull_requests AS p
+        JOIN unnest(%s::text[], %s::text[]) AS r(organization, repository)
+            USING (organization, repository)
+        """,
+        _split_repositories(repositories),
+    ).fetchall()
+    return [PullRequestRow(*row) for row in rows]
+
+
+def read_pr_reviews(
+    connection: psycopg.Connection, repositories: Sequence[Repository]
+) -> list[ReviewRow]:
+    rows = connection.execute(
+        """
+        SELECT v.organization, v.repository, v.pr_number, v.review_id,
+               v.reviewer_login, v.reviewer_pk, v.state, v.submitted_at
+        FROM horizon_gt_features.gitea_pr_reviews AS v
+        JOIN unnest(%s::text[], %s::text[]) AS r(organization, repository)
+            USING (organization, repository)
+        """,
+        _split_repositories(repositories),
+    ).fetchall()
+    return [ReviewRow(*row) for row in rows]
+
+
+def read_pr_review_requests(
+    connection: psycopg.Connection, repositories: Sequence[Repository]
+) -> list[ReviewRequestRow]:
+    rows = connection.execute(
+        """
+        SELECT q.organization, q.repository, q.pr_number, q.event_id,
+               q.requested_login, q.requested_pk, q.requested_at
+        FROM horizon_gt_features.gitea_pr_review_requests AS q
+        JOIN unnest(%s::text[], %s::text[]) AS r(organization, repository)
+            USING (organization, repository)
+        """,
+        _split_repositories(repositories),
+    ).fetchall()
+    return [ReviewRequestRow(*row) for row in rows]
+
+
+def read_pr_commits(
+    connection: psycopg.Connection, run_ids: Sequence[str]
+) -> list[PullRequestCommitRow]:
+    rows = connection.execute(
+        """
+        SELECT organization, repository, pull_request_number, commit_sha,
+               authentik_user_pk, dagster_run_id
+        FROM horizon_gt_features.pr_linked_commit_messages
+        WHERE dagster_run_id = ANY(%s)
+        """,
+        (list(run_ids),),
+    ).fetchall()
+    return [PullRequestCommitRow(*row) for row in rows]
+
+
+def read_survey_answers(
+    connection: psycopg.Connection, season_type: str, season_year: int
+) -> list[SurveyAnswerRow]:
+    """Every answer in the season's survey rounds; as_of is applied by the caller."""
+
+    rows = connection.execute(
+        """
+        SELECT a.response_id, a.question_key, a.round_id, a.project_pk,
+               a.respondent_pk, a.respondent_role, a.ratee_pk, a.ratee_role,
+               a.value, a.submitted_at
+        FROM horizon_gt_features.survey_answers AS a
+        JOIN horizon_gt_features.survey_rounds AS r USING (round_id)
+        WHERE r.season_type = %s AND r.season_year = %s
+        """,
+        (season_type, season_year),
+    ).fetchall()
+    return [SurveyAnswerRow(*row) for row in rows]
