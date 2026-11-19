@@ -47,6 +47,7 @@ from .ranking import (
     RankingRun,
     RankingRunConfig,
     code_and_tenure_metrics,
+    delivery_metrics,
     ranked_members,
     ranking_run,
     review_and_rating_metrics,
@@ -89,4 +90,5 @@ __all__ = [
     "ranking_run",
     "code_and_tenure_metrics",
     "review_and_rating_metrics",
+    "delivery_metrics",
 ]

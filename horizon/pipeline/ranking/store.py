@@ -4,8 +4,8 @@ Every helper takes an open psycopg connection, so the caller owns the
 transaction. This is also the only module that names other tracks' tables:
 T1.1's roster (``projects``, ``project_members``, ``project_repositories``),
 T1.1's Gitea PR tables, T2.5's ``blame_commit_summary``, T2.6's
-``git_commits`` and ``member_commit_activity``, and T3.4's survey tables. If
-their columns change, the change stays here.
+``git_commits`` and ``member_commit_activity``, T3.4's survey tables, and
+T5.3/T5.4's SOW task tables. If their columns change, the change stays here.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from .metrics_code import (
     MetricValue,
     Repository,
 )
+from .metrics_delivery import TaskMatchRow, TaskOverrideRow, TaskStatusRow
 from .metrics_reviews import (
     PullRequestCommitRow,
     PullRequestRow,
@@ -532,3 +533,62 @@ def read_survey_answers(
         (season_type, season_year),
     ).fetchall()
     return [SurveyAnswerRow(*row) for row in rows]
+
+
+def read_project_run_id(connection: psycopg.Connection, ranking_run_id: str) -> str | None:
+    row = connection.execute(
+        "SELECT project_run_id FROM horizon_ranking.ranking_runs WHERE ranking_run_id = %s",
+        (ranking_run_id,),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError(f"Ranking run {ranking_run_id!r} does not exist.")
+    return row[0]
+
+
+def read_sow_task_status(
+    connection: psycopg.Connection, project_run_id: str, project_pks: Sequence[str]
+) -> list[TaskStatusRow]:
+    """The project run's task status, joined to the tasks of the breakdown it used."""
+
+    rows = connection.execute(
+        """
+        SELECT s.task_id::text AS task_id, t.project_pk, t.task_key, t.due_date,
+               s.completion, s.completion_value, s.owner_pks
+        FROM horizon_projects.sow_task_status AS s
+        JOIN horizon_projects.sow_tasks AS t USING (task_id)
+        WHERE s.run_id = %s AND t.project_pk = ANY(%s::text[])
+        """,
+        (project_run_id, list(project_pks)),
+    ).fetchall()
+    return [TaskStatusRow(*row) for row in rows]
+
+
+def read_sow_task_overrides(
+    connection: psycopg.Connection, project_run_id: str
+) -> list[TaskOverrideRow]:
+    """Every override of the run's tasks; as_of is applied by the caller."""
+
+    rows = connection.execute(
+        """
+        SELECT o.task_id::text AS task_id, o.completion, o.owner_pks, o.set_at
+        FROM horizon_projects.sow_task_overrides AS o
+        JOIN horizon_projects.sow_task_status AS s USING (task_id)
+        WHERE s.run_id = %s
+        """,
+        (project_run_id,),
+    ).fetchall()
+    return [TaskOverrideRow(*row) for row in rows]
+
+
+def read_sow_task_matches(
+    connection: psycopg.Connection, project_run_id: str
+) -> list[TaskMatchRow]:
+    rows = connection.execute(
+        """
+        SELECT m.task_id::text AS task_id, m.organization, m.repository, m.pr_number
+        FROM horizon_projects.sow_task_matches AS m
+        WHERE m.run_id = %s
+        """,
+        (project_run_id,),
+    ).fetchall()
+    return [TaskMatchRow(*row) for row in rows]

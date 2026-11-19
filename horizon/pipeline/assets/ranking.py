@@ -29,6 +29,10 @@ from ..ranking.metrics_code import (
     build_project_contexts,
     compute_run_metrics,
 )
+from ..ranking.metrics_delivery import (
+    METRIC_KEYS as DELIVERY_METRIC_KEYS,
+    compute_run_delivery_metrics,
+)
 from ..ranking.metrics_reviews import (
     METRIC_KEYS as REVIEW_METRIC_KEYS,
     ReviewData,
@@ -382,6 +386,76 @@ def review_and_rating_metrics(
             "ranking_run_id": MetadataValue.text(run_id),
             "persisted_rows": MetadataValue.int(rows),
             "members": MetadataValue.int(len(members)),
+            "missing_by_reason": MetadataValue.json(dict(missing)),
+        }
+    )
+    return rows
+
+
+@asset(
+    group_name="08_ranking",
+    kinds={"postgres"},
+    description=(
+        "Computes delivery against the SOW for every ranked member of the run and "
+        "writes it to metric_values: the mean completion of the due SOW tasks each "
+        "engineer owns, and of all the project's due tasks for tech leads. Task "
+        "status comes from the Track 5 project run recorded on the ranking run; "
+        "with no published project run, every row is NULL with reason no_sow."
+    ),
+    metadata={"table": "horizon_ranking.metric_values"},
+)
+def delivery_metrics(
+    context: AssetExecutionContext,
+    ranking_run: RankingRun,
+    ranked_members: int,
+    postgres: PostgresResource,
+) -> int:
+    rubric = _run_rubric(ranking_run).rubric
+    run_id = ranking_run.ranking_run_id
+    season = (ranking_run.season_type, ranking_run.season_year)
+    statuses, overrides, matches = [], [], []
+    try:
+        with postgres.connect() as connection:
+            members = store.read_ranked_members(connection, run_id)
+            project_run_id = store.read_project_run_id(connection, run_id)
+            semester_ends = {
+                project.project_pk: project.window_end
+                for project in store.read_season_projects(connection, *season)
+            }
+            if project_run_id is not None:
+                statuses = store.read_sow_task_status(
+                    connection,
+                    project_run_id,
+                    sorted({member.project_pk for member in members}),
+                )
+                overrides = store.read_sow_task_overrides(connection, project_run_id)
+                matches = store.read_sow_task_matches(connection, project_run_id)
+            values = compute_run_delivery_metrics(
+                members,
+                rubric,
+                ranking_run.as_of,
+                project_run_id,
+                semester_ends,
+                statuses,
+                overrides,
+                matches,
+            )
+            rows = store.replace_metric_values(
+                connection, run_id, DELIVERY_METRIC_KEYS, values
+            )
+    except psycopg.errors.UndefinedTable as error:
+        raise Failure(
+            description=f"Input tables missing (T5.3/T5.4 SOW task tables): {error}"
+        ) from error
+
+    missing = Counter(value.missing_reason for value in values if value.missing_reason)
+    context.add_output_metadata(
+        {
+            "ranking_run_id": MetadataValue.text(run_id),
+            "project_run_id": MetadataValue.text(project_run_id or ""),
+            "persisted_rows": MetadataValue.int(rows),
+            "members": MetadataValue.int(len(members)),
+            "sow_tasks": MetadataValue.int(len(statuses)),
             "missing_by_reason": MetadataValue.json(dict(missing)),
         }
     )
