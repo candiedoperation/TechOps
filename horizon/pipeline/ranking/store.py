@@ -1,20 +1,29 @@
 """SQL for the ranking calculation layer.
 
 Every helper takes an open psycopg connection, so the caller owns the
-transaction. This is also the only module that names T1.1's roster tables
-(``projects``, ``project_members``, ``project_repositories``); if their columns
-change, the change stays here.
+transaction. This is also the only module that names other tracks' tables:
+T1.1's roster (``projects``, ``project_members``, ``project_repositories``),
+T2.5's ``blame_commit_summary`` and T2.6's ``git_commits`` and
+``member_commit_activity``. If their columns change, the change stays here.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import date, datetime
 
 import psycopg
 from psycopg.types.json import Jsonb
 
 from .members import ProjectMemberRow, ProjectRow, RankedMember
+from .metrics_code import (
+    BlameCommitRow,
+    CommitActivityRow,
+    ContributionRow,
+    GitCommitRow,
+    MetricValue,
+    Repository,
+)
 from .rubric import LoadedRubric
 from .sources import CompleteRun
 
@@ -213,12 +222,10 @@ def fail_ranking_run(
     )
 
 
-def replace_ranked_members(
-    connection: psycopg.Connection,
-    ranking_run_id: str,
-    members: Sequence[RankedMember],
-) -> int:
-    """Replace a running run's member snapshot, including with an empty one."""
+def _lock_running_run(
+    connection: psycopg.Connection, ranking_run_id: str, action: str
+) -> None:
+    """Lock the run row; writing is only allowed while the run is running."""
 
     status = connection.execute(
         """
@@ -229,9 +236,19 @@ def replace_ranked_members(
     ).fetchone()
     if status is None or status[0] != "running":
         raise RuntimeError(
-            f"Cannot snapshot members for ranking run {ranking_run_id!r}: "
+            f"Cannot {action} for ranking run {ranking_run_id!r}: "
             "the run is missing or no longer running."
         )
+
+
+def replace_ranked_members(
+    connection: psycopg.Connection,
+    ranking_run_id: str,
+    members: Sequence[RankedMember],
+) -> int:
+    """Replace a running run's member snapshot, including with an empty one."""
+
+    _lock_running_run(connection, ranking_run_id, "snapshot members")
     connection.execute(
         "DELETE FROM horizon_ranking.ranked_members WHERE ranking_run_id = %s",
         (ranking_run_id,),
@@ -257,3 +274,171 @@ def replace_ranked_members(
             ],
         )
     return len(members)
+
+
+def read_source_runs(connection: psycopg.Connection, ranking_run_id: str) -> dict[str, str]:
+    row = connection.execute(
+        "SELECT source_runs FROM horizon_ranking.ranking_runs WHERE ranking_run_id = %s",
+        (ranking_run_id,),
+    ).fetchone()
+    if row is None:
+        raise RuntimeError(f"Ranking run {ranking_run_id!r} does not exist.")
+    return dict(row[0])
+
+
+def read_ranked_members(
+    connection: psycopg.Connection, ranking_run_id: str
+) -> list[RankedMember]:
+    rows = connection.execute(
+        """
+        SELECT authentik_user_pk, project_pk, role, display_name, role_title,
+               project_name, comparison_group, tenure_semesters, window_start,
+               window_end, excluded_buckets
+        FROM horizon_ranking.ranked_members
+        WHERE ranking_run_id = %s
+        ORDER BY project_pk, authentik_user_pk
+        """,
+        (ranking_run_id,),
+    ).fetchall()
+    return [RankedMember(*row[:10], excluded_buckets=tuple(row[10])) for row in rows]
+
+
+def read_repositories_by_project(
+    connection: psycopg.Connection, season_type: str, season_year: int
+) -> dict[str, list[Repository]]:
+    """R(P) for every non-archived project of the season."""
+
+    rows = connection.execute(
+        """
+        SELECT r.project_pk, r.organization, r.repository
+        FROM horizon_gt_features.project_repositories AS r
+        JOIN horizon_gt_features.projects AS p USING (project_pk)
+        WHERE p.season_type = %s AND p.season_year = %s AND NOT p.archived
+        ORDER BY r.project_pk, r.organization, r.repository
+        """,
+        (season_type, season_year),
+    ).fetchall()
+    repositories: dict[str, list[Repository]] = {}
+    for project_pk, organization, repository in rows:
+        repositories.setdefault(project_pk, []).append((organization, repository))
+    return repositories
+
+
+def read_engineering_contribution(
+    connection: psycopg.Connection, run_ids: Sequence[str]
+) -> list[ContributionRow]:
+    rows = connection.execute(
+        """
+        SELECT run_id, organization, repository, authentik_user_pk,
+               majority_owned_files, non_boundary_surviving_lines
+        FROM horizon_gt_features.engineering_contribution
+        WHERE run_id = ANY(%s) AND authentik_user_pk IS NOT NULL
+        """,
+        (list(run_ids),),
+    ).fetchall()
+    return [ContributionRow(*row) for row in rows]
+
+
+def read_blame_commit_summary(
+    connection: psycopg.Connection, run_ids: Sequence[str]
+) -> list[BlameCommitRow]:
+    """Eligible, resolved summary rows of the given runs (never blame_records)."""
+
+    rows = connection.execute(
+        """
+        SELECT run_id, organization, repository, blamed_file_path, commit_sha,
+               authentik_user_pk, eligible, line_count
+        FROM horizon_gt_features.blame_commit_summary
+        WHERE run_id = ANY(%s) AND eligible AND authentik_user_pk IS NOT NULL
+        """,
+        (list(run_ids),),
+    ).fetchall()
+    return [BlameCommitRow(*row) for row in rows]
+
+
+def read_member_commit_activity(
+    connection: psycopg.Connection, repositories: Sequence[Repository], as_of: datetime
+) -> list[CommitActivityRow]:
+    """Latest-state activity, so it is filtered by date rather than run id."""
+
+    rows = connection.execute(
+        """
+        SELECT a.organization, a.repository, a.commit_sha, a.authentik_user_pk,
+               a.credit, a.activity_at, a.source, a.eligible_lines_changed
+        FROM horizon_gt_features.member_commit_activity AS a
+        JOIN unnest(%s::text[], %s::text[]) AS r(organization, repository)
+            USING (organization, repository)
+        WHERE a.activity_at <= %s
+        """,
+        (*_split_repositories(repositories), as_of),
+    ).fetchall()
+    return [CommitActivityRow(*row) for row in rows]
+
+
+def read_git_commits(
+    connection: psycopg.Connection,
+    repositories: Sequence[Repository],
+    authored_from: date,
+) -> list[GitCommitRow]:
+    """Default-branch commits with a resolved author, from ``authored_from`` on."""
+
+    rows = connection.execute(
+        """
+        SELECT g.organization, g.repository, g.commit_sha, g.authentik_user_pk,
+               g.authored_at, g.eligible_lines_added, g.on_default_branch
+        FROM horizon_gt_features.git_commits AS g
+        JOIN unnest(%s::text[], %s::text[]) AS r(organization, repository)
+            USING (organization, repository)
+        WHERE g.on_default_branch AND g.authentik_user_pk IS NOT NULL
+          AND g.authored_at >= %s::date - interval '1 day'
+        """,
+        (*_split_repositories(repositories), authored_from),
+    ).fetchall()
+    return [GitCommitRow(*row) for row in rows]
+
+
+def _split_repositories(repositories: Sequence[Repository]) -> tuple[list[str], list[str]]:
+    return [org for org, _ in repositories], [repo for _, repo in repositories]
+
+
+def replace_metric_values(
+    connection: psycopg.Connection,
+    ranking_run_id: str,
+    metric_keys: Sequence[str],
+    values: Sequence[MetricValue],
+) -> int:
+    """Replace this step's metric rows for a running run.
+
+    Only ``metric_keys`` are deleted, so other Track 4 steps writing the same
+    run keep their rows.
+    """
+
+    stray = sorted({value.metric_key for value in values} - set(metric_keys))
+    if stray:
+        raise ValueError(f"metric keys outside this step: {stray}")
+    _lock_running_run(connection, ranking_run_id, "write metric values")
+    connection.execute(
+        """
+        DELETE FROM horizon_ranking.metric_values
+        WHERE ranking_run_id = %s AND metric_key = ANY(%s)
+        """,
+        (ranking_run_id, list(metric_keys)),
+    )
+    with connection.cursor() as cursor:
+        cursor.executemany(
+            """
+            INSERT INTO horizon_ranking.metric_values (
+                ranking_run_id, authentik_user_pk, project_pk, bucket_key,
+                metric_key, raw_value, missing_reason, evidence
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            [
+                (
+                    ranking_run_id, value.authentik_user_pk, value.project_pk,
+                    value.bucket_key, value.metric_key, value.raw_value,
+                    value.missing_reason, Jsonb(value.evidence),
+                )
+                for value in values
+            ],
+        )
+    return len(values)

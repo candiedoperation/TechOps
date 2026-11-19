@@ -43,7 +43,13 @@ from .persistence import (
     persist_member_repository_ownership,
     persist_pr_linked_commit_messages,
 )
-from .ranking import RankingRun, RankingRunConfig, ranked_members, ranking_run
+from .ranking import (
+    RankingRun,
+    RankingRunConfig,
+    code_and_tenure_metrics,
+    ranked_members,
+    ranking_run,
+)
 from .source import RepositoryConfig, authentik_users, gitea_repository
 
 __all__ = [
@@ -80,4 +86,5 @@ __all__ = [
     "pr_linked_commit_messages",
     "ranked_members",
     "ranking_run",
+    "code_and_tenure_metrics",
 ]

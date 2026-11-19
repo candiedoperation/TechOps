@@ -32,6 +32,7 @@ from .assets import (
     persist_member_pr_review_counts,
     persist_member_repository_ownership,
     persist_pr_linked_commit_messages,
+    code_and_tenure_metrics,
     ranked_members,
     ranking_run,
 )
@@ -77,6 +78,7 @@ defs = Definitions(
         pipeline_run_completed,
         ranking_run,
         ranked_members,
+        code_and_tenure_metrics,
     ],
     asset_checks=[
         capture_is_non_empty,

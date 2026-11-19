@@ -1,4 +1,5 @@
-"""Ranking runs: open a run with its source provenance, then snapshot who is ranked.
+"""Ranking runs: open a run with its source provenance, snapshot who is ranked,
+then compute their metrics.
 
 Every later Track 4 step writes rows keyed by the ``ranking_run_id`` these
 assets produce. A run is marked ``failed`` instead of scored when a project
@@ -23,7 +24,12 @@ from ..ranking.members import (
     resolve_role_mapping_version,
     select_ranked_members,
 )
-from ..ranking.rubric import load_rubric
+from ..ranking.metrics_code import (
+    METRIC_KEYS as CODE_METRIC_KEYS,
+    build_project_contexts,
+    compute_run_metrics,
+)
+from ..ranking.rubric import LoadedRubric, load_rubric
 from ..ranking.sources import check_source_freshness
 from ..storage import PostgresResource
 
@@ -53,6 +59,20 @@ class RankingRun:
     as_of: datetime
     rubric_version: str
     rubric_sha256: str
+
+
+def _run_rubric(ranking_run: RankingRun) -> LoadedRubric:
+    """The rubric the run stored, refusing a file that changed since."""
+
+    loaded = load_rubric(ranking_run.rubric_version)
+    if loaded.sha256 != ranking_run.rubric_sha256:
+        raise Failure(
+            description=(
+                f"rubric {loaded.version} changed during the run; "
+                "create a new version instead"
+            )
+        )
+    return loaded
 
 
 def _resolve_as_of(value: Optional[str]) -> datetime:
@@ -168,14 +188,7 @@ def ranked_members(
     ranking_run: RankingRun,
     postgres: PostgresResource,
 ) -> int:
-    loaded = load_rubric(ranking_run.rubric_version)
-    if loaded.sha256 != ranking_run.rubric_sha256:
-        raise Failure(
-            description=(
-                f"rubric {loaded.version} changed during the run; "
-                "create a new version instead"
-            )
-        )
+    loaded = _run_rubric(ranking_run)
     season = (ranking_run.season_type, ranking_run.season_year)
     with postgres.connect() as connection:
         projects = store.read_season_projects(connection, *season)
@@ -202,6 +215,82 @@ def ranked_members(
             "members_with_excluded_buckets": MetadataValue.int(
                 sum(1 for member in ranked if member.excluded_buckets)
             ),
+        }
+    )
+    return rows
+
+
+@asset(
+    group_name="08_ranking",
+    kinds={"postgres"},
+    description=(
+        "Computes code ownership, consistency and tenure metrics for every ranked "
+        "member of the run and writes them to metric_values. Blame metrics use "
+        "the run's source runs; commit activity is read as of the run's as_of. "
+        "Missing data is NULL with a reason, never 0."
+    ),
+    metadata={"table": "horizon_ranking.metric_values"},
+)
+def code_and_tenure_metrics(
+    context: AssetExecutionContext,
+    ranking_run: RankingRun,
+    ranked_members: int,
+    postgres: PostgresResource,
+) -> int:
+    rubric = _run_rubric(ranking_run).rubric
+    run_id = ranking_run.ranking_run_id
+    season = (ranking_run.season_type, ranking_run.season_year)
+    try:
+        with postgres.connect() as connection:
+            members = store.read_ranked_members(connection, run_id)
+            source_runs = store.read_source_runs(connection, run_id)
+            repositories = store.read_repositories_by_project(connection, *season)
+            semester_ends = {
+                project.project_pk: project.window_end
+                for project in store.read_season_projects(connection, *season)
+            }
+            projects = build_project_contexts(
+                members, repositories, source_runs, semester_ends
+            )
+            project_repositories = sorted(
+                {repo for project in projects.values() for repo in project.repositories}
+            )
+            run_ids = sorted(
+                {run for project in projects.values() for run in project.source_runs.values()}
+            )
+            earliest_start = min(
+                (member.window_start for member in members), default=ranking_run.as_of.date()
+            )
+            values = compute_run_metrics(
+                members,
+                projects,
+                ranking_run.as_of,
+                rubric,
+                contributions=store.read_engineering_contribution(connection, run_ids),
+                blame_rows=store.read_blame_commit_summary(connection, run_ids),
+                activity=store.read_member_commit_activity(
+                    connection, project_repositories, ranking_run.as_of
+                ),
+                commits=store.read_git_commits(
+                    connection, project_repositories, earliest_start
+                ),
+            )
+            rows = store.replace_metric_values(connection, run_id, CODE_METRIC_KEYS, values)
+    except psycopg.errors.UndefinedTable as error:
+        raise Failure(
+            description=(
+                "Input tables missing (T1.1 roster, T2.5 blame_commit_summary or "
+                f"T2.6 commit history): {error}"
+            )
+        ) from error
+
+    missing = Counter(value.missing_reason for value in values if value.missing_reason)
+    context.add_output_metadata(
+        {
+            "ranking_run_id": MetadataValue.text(run_id),
+            "persisted_rows": MetadataValue.int(rows),
+            "members": MetadataValue.int(len(members)),
+            "missing_by_reason": MetadataValue.json(dict(missing)),
         }
     )
     return rows
