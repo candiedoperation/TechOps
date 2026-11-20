@@ -24,6 +24,7 @@ from ..blame_parser import BlameRecord
 from .capture import BlameCapture
 from ..resources import AuthentikRoster, Repository
 from ..storage import PostgresResource
+from .projects import ProjectMetricRow
 
 _SCHEMA_NAME = "horizon_gt_features"
 
@@ -392,3 +393,21 @@ __all__ = [
     "persist_member_repository_ownership",
     "persist_pr_linked_commit_messages",
 ]
+
+
+@asset(
+    group_name="07_database",
+    kinds={"postgres"},
+    description="Stores T5.5 weekly flow metrics with the Dagster run id.",
+    metadata={"table": "horizon_projects.project_metrics"},
+)
+def persist_project_flow_metrics(
+    context: AssetExecutionContext,
+    feature_store_schema: str,
+    project_flow_metrics: list[ProjectMetricRow],
+    postgres: PostgresResource,
+) -> int:
+    _check_schema(feature_store_schema)
+    rows = postgres.write_project_metrics(context.run.run_id, project_flow_metrics)
+    context.add_output_metadata({"rows": MetadataValue.int(rows)})
+    return rows
