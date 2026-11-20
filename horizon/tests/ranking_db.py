@@ -61,30 +61,33 @@ def _member(user_pk):
     )
 
 
-def seed_worked_example(postgres, *, dagster_run_id="dagster-1", as_of=AS_OF, scale=1.0) -> RankingRun:
+def seed_worked_example(postgres, *, dagster_run_id="dagster-1", as_of=AS_OF, scale=1.0,
+                        rubric_version="v1") -> RankingRun:
     """A running ranking run with every engineer metric row of the worked example.
 
     ``scale`` multiplies code metrics so a second run scores differently.
     """
 
-    loaded = load_rubric("v1")
+    loaded = load_rubric(rubric_version)
     role = loaded.rubric.roles["engineer"]
     bucket_of = {metric.key: bucket.key for bucket in role.buckets for metric in bucket.metrics}
     with postgres.connect() as connection:
         store.upsert_rubric(connection, loaded)
         run_id = store.start_ranking_run(
             connection, dagster_run_id=dagster_run_id, season_type="FALL", season_year=2026,
-            as_of=as_of, rubric_version="v1", role_mapping_version="fixture",
+            as_of=as_of, rubric_version=rubric_version, role_mapping_version="fixture",
             project_run_id=None, source_runs={"org/api": "run-1"},
         )
         store.replace_ranked_members(connection, run_id, [_member(pk) for pk in FIXTURE["members"]])
         values = []
         for user_pk, metrics in FIXTURE["members"].items():
             for key, value in metrics.items():
+                if key not in bucket_of:
+                    continue
                 raw, reason = (value["raw"], value["reason"]) if isinstance(value, dict) else (value, None)
                 if raw is not None and bucket_of[key] == "code_ownership":
                     raw *= scale if user_pk == "D" else 1.0
                 values.append(MetricValue(user_pk, "proj-x", bucket_of[key], key, raw, reason,
                                           {"per_repository": {"org/api": 1}, "secret_email": "x@example.test"}))
         store.replace_metric_values(connection, run_id, list(bucket_of), values)
-    return RankingRun(run_id, "FALL", 2026, as_of, "v1", loaded.sha256)
+    return RankingRun(run_id, "FALL", 2026, as_of, rubric_version, loaded.sha256)
