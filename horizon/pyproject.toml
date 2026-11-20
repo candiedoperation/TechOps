@@ -22,6 +22,8 @@ test = [
 
 pipeline = [
   "psycopg[binary]>=3.2,<4.0",
+  # T4.6 ranking explanations; imported lazily, so tests run without it.
+  "anthropic>=0.40,<1.0",
 ]
 
 # Dagster is kept in its own extra so an image that only needs the library code
