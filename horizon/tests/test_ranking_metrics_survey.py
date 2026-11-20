@@ -32,16 +32,19 @@ def member(pk, role="engineer", excluded_buckets=()):
     )
 
 
-def answer(question, round_id, respondent, ratee, value, *, project="p1", day="2026-10-01"):
+def answer(question, round_id, respondent, ratee, value, *, project="p1", day="2026-10-01",
+           role=None):
+    # Default to a role T4.3 counts: tech leads rate engineers, engineers rate tech leads.
+    lead = question.startswith("lead_")
     return SurveyAnswerRow(
         response_id=f"{round_id}-{respondent}-{ratee}",
         question_key=question,
         round_id=round_id,
         project_pk=project,
         respondent_pk=respondent,
-        respondent_role="tech_lead",
+        respondent_role=role or ("engineer" if lead else "tech_lead"),
         ratee_pk=ratee,
-        ratee_role="engineer",
+        ratee_role="tech_lead" if lead else "engineer",
         value=value,
         submitted_at=datetime.fromisoformat(day).replace(tzinfo=NY),
     )
@@ -154,3 +157,26 @@ def test_a_whole_run_writes_each_roles_rating_rows_with_their_buckets():
         ("l", "lead_stakeholder", "leadership_ratings"),
         ("l", "lead_guidance", "leadership_ratings"),
     }
+
+
+def test_only_the_card_respondent_roles_count():
+    rows = [
+        answer("eng_design", "oct", "t", "c", 3),                      # tech lead -> engineer: counts
+        answer("eng_design", "oct", "e2", "c", 1, role="engineer"),    # engineer -> engineer: no
+        answer("lead_design", "oct", "e1", "l", 3),                    # engineer -> lead: counts
+        answer("lead_design", "oct", "pl", "l", 1, role="project_lead"),  # project lead: counts
+        answer("lead_design", "oct", "t2", "l", 3, role="tech_lead"),  # another lead: no
+        answer("lead_guidance", "oct", "e1", "l", 2),                  # engineer: counts
+        answer("lead_guidance", "oct", "e2", "l", 2),
+        answer("lead_guidance", "oct", "pl", "l", 3, role="project_lead"),  # guidance is engineers only
+        answer("lead_stakeholder", "oct", "e1", "l", 3, role=None),
+    ]
+    rows[-1] = SurveyAnswerRow(**{**rows[-1].__dict__, "respondent_role": None})  # unknown role: no
+    tables = RatingTables.build(rows, AS_OF)
+
+    engineer = {v.metric_key: v for v in compute_member_rating_metrics(member("c"), RUBRIC.roles["engineer"], tables)}
+    lead = {v.metric_key: v for v in compute_member_rating_metrics(member("l", "tech_lead"), RUBRIC.roles["tech_lead"], tables)}
+    assert engineer["eng_design"].raw_value == 3
+    assert lead["lead_design"].raw_value == 2  # (3 + 1) / 2, the other lead's 3 left out
+    assert lead["lead_guidance"].raw_value == 2 and lead["lead_guidance"].evidence["respondent_count"] == 2
+    assert lead["lead_stakeholder"].missing_reason == "no_ratings"
