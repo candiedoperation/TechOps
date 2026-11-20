@@ -11,6 +11,8 @@ dependencies = [
   "pydantic>=2.8,<3.0",
   "pydantic-settings>=2.4,<3.0",
   "httpx>=0.27,<1.0",
+  # Windows has no built-in time zone database; zoneinfo needs this for America/New_York.
+  "tzdata>=2024.1",
 ]
 
 [project.optional-dependencies]

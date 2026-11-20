@@ -356,3 +356,21 @@ CREATE INDEX IF NOT EXISTS pr_linked_commit_messages_run_idx
 CREATE INDEX IF NOT EXISTS pr_linked_commit_messages_member_idx
     ON horizon_gt_features.pr_linked_commit_messages (dagster_run_id, authentik_user_pk)
     WHERE authentik_user_pk IS NOT NULL;
+
+-- T5.5: weekly project metrics. T5.6 and T5.7 add their own metric_key values
+-- to the same table.
+CREATE SCHEMA IF NOT EXISTS horizon_projects;
+
+-- run_id is the Dagster run id. The spec makes it REFERENCES
+-- horizon_projects.project_runs, which T5.3 creates; add that foreign key once
+-- T5.3 lands.
+CREATE TABLE IF NOT EXISTS horizon_projects.project_metrics (
+    run_id TEXT NOT NULL,
+    project_pk TEXT NOT NULL,
+    week_start DATE NOT NULL,
+    metric_key TEXT NOT NULL,
+    value DOUBLE PRECISION,
+    missing_reason TEXT,
+    evidence JSONB NOT NULL DEFAULT '{}',
+    PRIMARY KEY (run_id, project_pk, week_start, metric_key)
+);
