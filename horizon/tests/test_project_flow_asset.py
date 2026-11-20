@@ -113,7 +113,7 @@ def test_writer_replaces_only_this_runs_flow_metrics(monkeypatch):
     store, log = _store_with_log(monkeypatch)
     rows = [ProjectMetricRow("p", date(2026, 11, 2), "prs_opened", 3.0, None, {"partial_week": True})]
 
-    assert store.write_project_metrics("run-1", rows) == 1
+    assert store.write_project_metrics("run-1", rows, FLOW_METRIC_KEYS) == 1
     (_, delete_sql, delete_params), (_, insert_sql, values) = log
     assert "DELETE FROM horizon_projects.project_metrics" in delete_sql
     assert delete_params == ("run-1", list(FLOW_METRIC_KEYS))
@@ -125,4 +125,12 @@ def test_writer_rejects_duplicate_rows(monkeypatch):
     row = ProjectMetricRow("p", date(2026, 11, 2), "prs_opened", 3.0, None, {})
 
     with pytest.raises(ValueError, match="duplicate"):
-        store.write_project_metrics("run-1", [row, row])
+        store.write_project_metrics("run-1", [row, row], FLOW_METRIC_KEYS)
+
+
+def test_writer_refuses_metric_keys_it_does_not_own(monkeypatch):
+    store, _ = _store_with_log(monkeypatch)
+    row = ProjectMetricRow("p", date(2026, 11, 2), "distinct_reviewers", 1.0, None, {})
+
+    with pytest.raises(ValueError, match="does not own"):
+        store.write_project_metrics("run-1", [row], FLOW_METRIC_KEYS)

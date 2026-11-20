@@ -16,7 +16,6 @@ from dagster import ConfigurableResource
 from .config import PipelineConfigError
 from .ownership import FileOwnership, MemberOwnership, MemberRepositoryOwnership
 from .pull_requests import MemberPRReviewCount, PRLinkedCommitMessage
-from .projects.metrics_flow import FLOW_METRIC_KEYS
 
 if TYPE_CHECKING:
     from .ownership import EligibleFileOwnership, EngineeringContribution
@@ -733,16 +732,21 @@ class PostgresResource(ConfigurableResource):
                     )
         return len(values)
 
-    def write_project_metrics(self, run_id: str, rows: Sequence[ProjectMetricRow]) -> int:
-        """Replace this run's T5.5 flow-metric rows in horizon_projects.project_metrics.
+    def write_project_metrics(
+        self, run_id: str, rows: Sequence[ProjectMetricRow], metric_keys: Sequence[str]
+    ) -> int:
+        """Replace this run's rows for ``metric_keys`` in horizon_projects.project_metrics.
 
-        Only the flow metric keys are deleted first, so T5.6/T5.7 rows written by
-        the same run are left alone.
+        Each task (T5.5, T5.6, T5.7) passes only the metric keys it owns, so
+        re-running one task never deletes another task's rows from the same run.
         """
 
         keys = {(row.project_pk, row.week_start, row.metric_key) for row in rows}
         if len(keys) != len(rows):
             raise ValueError("project metrics contain duplicate (project, week, metric) rows.")
+        unexpected = {row.metric_key for row in rows} - set(metric_keys)
+        if unexpected:
+            raise ValueError(f"rows use metric keys this writer does not own: {sorted(unexpected)}")
         values = [
             (
                 run_id,
@@ -760,7 +764,7 @@ class PostgresResource(ConfigurableResource):
                 cursor.execute(
                     "DELETE FROM horizon_projects.project_metrics "
                     "WHERE run_id = %s AND metric_key = ANY(%s)",
-                    (run_id, list(FLOW_METRIC_KEYS)),
+                    (run_id, list(metric_keys)),
                 )
                 if values:
                     cursor.executemany(

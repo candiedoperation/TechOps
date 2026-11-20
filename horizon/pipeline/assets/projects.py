@@ -1,6 +1,6 @@
 """Track 5 project-health assets.
 
-T5.5 for now reads FAKE DATA from a JSON fixture (see
+T5.5 and T5.6 for now read FAKE DATA from a JSON fixture (see
 pipeline/projects/flow_source.py), because the T1.1 PR tables do not exist yet.
 """
 
@@ -9,8 +9,9 @@ from datetime import date, datetime, timezone
 
 from dagster import AssetExecutionContext, Config, MetadataValue, asset
 
-from ..projects.flow_source import SAMPLE_FIXTURE, load_flow_source
+from ..projects.flow_source import SAMPLE_FIXTURE, FlowSource, load_flow_source
 from ..projects.metrics_flow import FlowMetric, project_flow_metrics as compute_flow_metrics
+from ..projects.metrics_review import project_review_metrics as compute_review_metrics
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,28 @@ class FlowMetricsConfig(Config):
 
     source_path: str = str(SAMPLE_FIXTURE)
     as_of: str | None = None  # ISO time; defaults to the fixture's as_of, then now
+
+
+class ReviewMetricsConfig(FlowMetricsConfig):
+    """Same inputs as T5.5."""
+
+
+def _source_and_as_of(config: FlowMetricsConfig) -> tuple[FlowSource, datetime]:
+    source = load_flow_source(config.source_path)
+    if config.as_of:
+        return source, datetime.fromisoformat(config.as_of)
+    return source, source.as_of or datetime.now(timezone.utc)
+
+
+def _output_metadata(context, config, as_of, source, rows) -> None:
+    context.add_output_metadata(
+        {
+            "source": MetadataValue.path(config.source_path),
+            "as_of": MetadataValue.text(as_of.isoformat()),
+            "projects": MetadataValue.int(len(source.projects)),
+            "rows": MetadataValue.int(len(rows)),
+        }
+    )
 
 
 def _row(project_pk: str, metric: FlowMetric) -> ProjectMetricRow:
@@ -54,22 +77,33 @@ def _row(project_pk: str, metric: FlowMetric) -> ProjectMetricRow:
 def project_flow_metrics(
     context: AssetExecutionContext, config: FlowMetricsConfig
 ) -> list[ProjectMetricRow]:
-    source = load_flow_source(config.source_path)
-    if config.as_of:
-        as_of = datetime.fromisoformat(config.as_of)
-    else:
-        as_of = source.as_of or datetime.now(timezone.utc)
+    source, as_of = _source_and_as_of(config)
     rows = [
         _row(project.project_pk, metric)
         for project in source.projects
         for metric in compute_flow_metrics(project.pull_requests, project.window_start, as_of)
     ]
-    context.add_output_metadata(
-        {
-            "source": MetadataValue.path(config.source_path),
-            "as_of": MetadataValue.text(as_of.isoformat()),
-            "projects": MetadataValue.int(len(source.projects)),
-            "rows": MetadataValue.int(len(rows)),
-        }
-    )
+    _output_metadata(context, config, as_of, source, rows)
+    return rows
+
+
+@asset(
+    group_name="08_project_metrics",
+    description=(
+        "T5.6 weekly review-quality metrics per project: share of merged PRs "
+        "without review, share of reviewed PRs with changes requested, reviews "
+        "per merged PR, distinct reviewers. Reads a JSON fixture until the T1.1 "
+        "PR tables exist."
+    ),
+)
+def project_review_metrics(
+    context: AssetExecutionContext, config: ReviewMetricsConfig
+) -> list[ProjectMetricRow]:
+    source, as_of = _source_and_as_of(config)
+    rows = [
+        _row(project.project_pk, metric)
+        for project in source.projects
+        for metric in compute_review_metrics(project.pull_requests, project.window_start, as_of)
+    ]
+    _output_metadata(context, config, as_of, source, rows)
     return rows

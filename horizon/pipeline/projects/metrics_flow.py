@@ -40,6 +40,7 @@ class Review:
     reviewer_login: str
     state: str
     submitted_at: datetime
+    reviewer_pk: str | None = None  # Authentik pk when the login resolves (T1.1)
 
 
 @dataclass(frozen=True)
@@ -124,15 +125,19 @@ def days_between(earlier: datetime, later: datetime) -> float:
     return elapsed_seconds(earlier, later) / SECONDS_PER_DAY
 
 
-def first_review_at(pr: PullRequest) -> datetime | None:
-    """Earliest counting review: a counted state, by someone other than the author."""
+def counting_reviews(pr: PullRequest) -> list[Review]:
+    """Reviews that count: a counted state, by someone other than the author."""
     author = pr.author_login.casefold()
-    times = [
-        review.submitted_at
+    return [
+        review
         for review in pr.reviews
         if review.state in COUNTING_REVIEW_STATES and review.reviewer_login.casefold() != author
     ]
-    return min(times, default=None)
+
+
+def first_review_at(pr: PullRequest) -> datetime | None:
+    """Earliest submitted_at among the counting reviews."""
+    return min((review.submitted_at for review in counting_reviews(pr)), default=None)
 
 
 def prs_opened(prs: list[PullRequest], start: datetime, end: datetime) -> int:
@@ -218,6 +223,11 @@ def flow_metrics_for_week(prs: list[PullRequest], week: Week, as_of: datetime) -
         median_time_to_first_review_hours(prs, week, as_of),
         median_time_to_merge_hours(prs, week),
     ]
+    return mark_partial_week(metrics, week)
+
+
+def mark_partial_week(metrics: list[FlowMetric], week: Week) -> list[FlowMetric]:
+    """Add evidence.partial_week = true to every metric of the current, unfinished week."""
     if not week.partial:
         return metrics
     return [

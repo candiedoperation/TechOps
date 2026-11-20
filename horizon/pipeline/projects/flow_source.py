@@ -1,4 +1,4 @@
-"""Load T5.5 input PRs from a JSON file shaped like the T1.1 tables.
+"""Load T5.5/T5.6 input PRs from a JSON file shaped like the T1.1 tables.
 
 This is the temporary stand-in for reading horizon_gt_features.gitea_pull_requests
 and gitea_pr_reviews, which T1.1 has not built yet. Each JSON row uses the T1.1
@@ -53,7 +53,7 @@ def parse_flow_source(payload: dict) -> FlowSource:
                 continue
             key = (row["organization"], row["repository"], int(row["pr_number"]))
             reviews_by_pr.setdefault(key, []).append(
-                Review(row["reviewer_login"], row["state"], submitted_at)
+                Review(row["reviewer_login"], row["state"], submitted_at, row.get("reviewer_pk"))
             )
         pull_requests = []
         for row in project.get("pull_requests", []):

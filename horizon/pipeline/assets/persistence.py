@@ -25,6 +25,8 @@ from .capture import BlameCapture
 from ..resources import AuthentikRoster, Repository
 from ..storage import PostgresResource
 from .projects import ProjectMetricRow
+from ..projects.metrics_flow import FLOW_METRIC_KEYS
+from ..projects.metrics_review import REVIEW_METRIC_KEYS
 
 _SCHEMA_NAME = "horizon_gt_features"
 
@@ -408,6 +410,28 @@ def persist_project_flow_metrics(
     postgres: PostgresResource,
 ) -> int:
     _check_schema(feature_store_schema)
-    rows = postgres.write_project_metrics(context.run.run_id, project_flow_metrics)
+    rows = postgres.write_project_metrics(
+        context.run.run_id, project_flow_metrics, FLOW_METRIC_KEYS
+    )
+    context.add_output_metadata({"rows": MetadataValue.int(rows)})
+    return rows
+
+
+@asset(
+    group_name="07_database",
+    kinds={"postgres"},
+    description="Stores T5.6 weekly review-quality metrics with the Dagster run id.",
+    metadata={"table": "horizon_projects.project_metrics"},
+)
+def persist_project_review_metrics(
+    context: AssetExecutionContext,
+    feature_store_schema: str,
+    project_review_metrics: list[ProjectMetricRow],
+    postgres: PostgresResource,
+) -> int:
+    _check_schema(feature_store_schema)
+    rows = postgres.write_project_metrics(
+        context.run.run_id, project_review_metrics, REVIEW_METRIC_KEYS
+    )
     context.add_output_metadata({"rows": MetadataValue.int(rows)})
     return rows

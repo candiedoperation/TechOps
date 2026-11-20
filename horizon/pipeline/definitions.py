@@ -33,7 +33,9 @@ from .assets import (
     persist_member_repository_ownership,
     persist_pr_linked_commit_messages,
     persist_project_flow_metrics,
+    persist_project_review_metrics,
     project_flow_metrics,
+    project_review_metrics,
 )
 from .checks import (
     capture_is_non_empty,
@@ -77,6 +79,8 @@ defs = Definitions(
         pipeline_run_completed,
         project_flow_metrics,
         persist_project_flow_metrics,
+        project_review_metrics,
+        persist_project_review_metrics,
     ],
     asset_checks=[
         capture_is_non_empty,
