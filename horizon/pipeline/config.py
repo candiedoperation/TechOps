@@ -87,6 +87,17 @@ class PipelineSettings(BaseSettings):
         ),
         description="Postgres URL for the Horizon ownership feature store.",
     )
+    anthropic_api_key: str | None = Field(
+        default=None,
+        repr=False,
+        validation_alias=AliasChoices("ANTHROPIC_API_KEY", "HORIZON_ANTHROPIC_API_KEY"),
+        description="Anthropic API key for T4.6 ranking explanations; unset means fallbacks only.",
+    )
+    anthropic_model: str = Field(
+        default="claude-sonnet-5-5",
+        validation_alias=AliasChoices("HORIZON_ANTHROPIC_MODEL"),
+        description="Model for T4.6 ranking explanations.",
+    )
 
     def require_gitea_url(self) -> str:
         return _required(self.gitea_url, "HORIZON_GITEA_URL")

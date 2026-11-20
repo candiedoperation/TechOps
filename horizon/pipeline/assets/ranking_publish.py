@@ -13,7 +13,7 @@ from .ranking import RankingRun, _run_rubric
     group_name="08_ranking",
     kinds={"postgres"},
     description=(
-        "Publishes a scored run in one transaction: replaces its leaderboard rows and "
+        "Publishes a scored, explained run in one transaction: replaces its leaderboard rows and "
         "member documents in horizon_api, moves the semester's ranking publication "
         "to it (keeping the old run as previous_run_id) and marks it published. On "
         "any error the run is marked failed and the previous publication stays."
@@ -23,10 +23,10 @@ from .ranking import RankingRun, _run_rubric
 def publish_ranking(
     context: AssetExecutionContext,
     ranking_run: RankingRun,
-    member_scores: int,
+    member_explanations: int,
     postgres: PostgresResource,
 ) -> int:
-    del member_scores
+    del member_explanations
     return _publish(context, ranking_run, postgres)
 
 

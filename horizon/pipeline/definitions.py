@@ -39,6 +39,7 @@ from .assets import (
     review_and_rating_metrics,
     member_scores,
     member_scores_integrity,
+    member_explanations,
     publish_ranking,
     publish_ranking_integrity,
 )
@@ -88,6 +89,7 @@ defs = Definitions(
         review_and_rating_metrics,
         delivery_metrics,
         member_scores,
+        member_explanations,
         publish_ranking,
     ],
     asset_checks=[
