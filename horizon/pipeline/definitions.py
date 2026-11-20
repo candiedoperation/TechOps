@@ -37,6 +37,8 @@ from .assets import (
     ranked_members,
     ranking_run,
     review_and_rating_metrics,
+    member_scores,
+    member_scores_integrity,
 )
 from .checks import (
     capture_is_non_empty,
@@ -83,6 +85,7 @@ defs = Definitions(
         code_and_tenure_metrics,
         review_and_rating_metrics,
         delivery_metrics,
+        member_scores,
     ],
     asset_checks=[
         capture_is_non_empty,
@@ -92,6 +95,7 @@ defs = Definitions(
         records_parse_completely,
         git_identity_mappings_need_review,
         pr_reviewers_resolve_or_need_review,
+        member_scores_integrity,
     ],
     resources=build_resources(),
 )

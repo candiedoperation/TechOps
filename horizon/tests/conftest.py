@@ -26,3 +26,6 @@ for _name in [
     del os.environ[_name]
 
 os.environ["HORIZON_ENV_FILE"] = ""
+
+# Shared Postgres fixtures for the Track 4 database tests (skipped without TEST_POSTGRES_URL).
+pytest_plugins = ["ranking_db"]
