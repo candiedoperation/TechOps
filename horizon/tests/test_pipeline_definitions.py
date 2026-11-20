@@ -40,6 +40,11 @@ ASSET_KEYS = {
     AssetKey("persist_engineering_contribution"),
     AssetKey("persist_member_pr_review_counts"),
     AssetKey("persist_pr_linked_commit_messages"),
+    AssetKey("ranking_run"),
+    AssetKey("ranked_members"),
+    AssetKey("code_and_tenure_metrics"),
+    AssetKey("review_and_rating_metrics"),
+    AssetKey("delivery_metrics"),
 }
 
 
@@ -69,6 +74,14 @@ def test_the_layers_depend_on_each_other_in_order():
     assert AssetKey("blame_records") in deps_of("member_ownership")
     assert AssetKey("gitea_pull_request_commits") in deps_of("identity_clusters")
     assert AssetKey("identity_clusters") in deps_of("pr_linked_commit_messages")
+    assert AssetKey("feature_store_schema") in deps_of("ranking_run")
+    assert AssetKey("ranking_run") in deps_of("ranked_members")
+    assert AssetKey("ranking_run") in deps_of("code_and_tenure_metrics")
+    assert AssetKey("ranked_members") in deps_of("code_and_tenure_metrics")
+    assert AssetKey("ranking_run") in deps_of("review_and_rating_metrics")
+    assert AssetKey("ranked_members") in deps_of("review_and_rating_metrics")
+    assert AssetKey("ranking_run") in deps_of("delivery_metrics")
+    assert AssetKey("ranked_members") in deps_of("delivery_metrics")
 
 
 def test_each_layer_is_its_own_group():
@@ -107,6 +120,11 @@ def test_each_layer_is_its_own_group():
         "persist_engineering_contribution": "07_database",
         "persist_member_pr_review_counts": "07_database",
         "persist_pr_linked_commit_messages": "07_database",
+        "ranking_run": "08_ranking",
+        "ranked_members": "08_ranking",
+        "code_and_tenure_metrics": "08_ranking",
+        "review_and_rating_metrics": "08_ranking",
+        "delivery_metrics": "08_ranking",
     }
 
 
