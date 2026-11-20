@@ -21,3 +21,7 @@ identity-aliases.json
 
 # Dagster instance state (run history, logs) for `nx run horizon-dag:serve`.
 .dagster/
+
+# Track 4 staging harness output and its generated database password.
+dev/t4-staging/out/
+dev/t4-staging/.pg-password
