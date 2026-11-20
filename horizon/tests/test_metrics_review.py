@@ -35,6 +35,7 @@ def test_spec_worked_example():
     assert week["reviews_per_merged_pr"].value == pytest.approx(0.5)
     assert week["changes_requested_share"].value == 0
     assert week["distinct_reviewers"].value == 1  # Carol's own comment does not count
+    assert week["merged_prs_approved_share"].value == pytest.approx(0.5)
 
 
 def test_self_review_is_excluded_case_insensitively():
@@ -53,7 +54,7 @@ def test_week_with_zero_merges_is_null_not_zero():
                      (Review("bob", "REQUEST_CHANGES", ny(2026, 11, 3, 9)),))
     week = by_key(project_review_metrics([pr], SPEC_WEEK, SPEC_AS_OF), SPEC_WEEK)
 
-    for key in ("merged_prs_without_review_share", "reviews_per_merged_pr"):
+    for key in ("merged_prs_without_review_share", "reviews_per_merged_pr", "merged_prs_approved_share"):
         assert week[key].value is None
         assert week[key].missing_reason == "no_merged_prs"
     assert week["changes_requested_share"].value == 1.0
@@ -100,7 +101,7 @@ def test_distinct_reviewers_prefers_pk_then_lowercase_login():
 def test_every_week_has_all_four_metrics_and_partial_flag():
     rows = project_review_metrics([PR_30], date(2026, 10, 19), SPEC_AS_OF)
 
-    assert len(rows) == 3 * 4
+    assert len(rows) == 3 * 5
     assert {row.metric_key for row in rows} == set(REVIEW_METRIC_KEYS)
     assert all(row.evidence.get("partial_week") for row in rows if row.week_start == SPEC_WEEK)
     assert not any(row.evidence.get("partial_week") for row in rows if row.week_start != SPEC_WEEK)
@@ -111,9 +112,30 @@ def test_asset_on_sample_fixture():
     spec_week = by_key(rows, SPEC_WEEK)
     first_week = by_key(rows, date(2026, 10, 19))
 
-    assert len(rows) == 3 * 4
+    assert len(rows) == 3 * 5
     assert spec_week["merged_prs_without_review_share"].value == pytest.approx(0.5)
     assert spec_week["distinct_reviewers"].value == 1
     # PR #28: bob requested changes, then approved, both before the merge.
     assert first_week["changes_requested_share"].value == 1.0
     assert first_week["reviews_per_merged_pr"].value == 2.0
+
+
+def test_approval_after_the_merge_does_not_count_as_approved():
+    # Spec "Done when": an approval submitted after the merge does not count.
+    late = PullRequest(1, "alice", ny(2026, 11, 2, 9), ny(2026, 11, 2, 12), ny(2026, 11, 2, 12),
+                       (Review("bob", "APPROVED", ny(2026, 11, 2, 13)),))
+    commented = PullRequest(2, "alice", ny(2026, 11, 2, 9), ny(2026, 11, 2, 12), ny(2026, 11, 2, 12),
+                            (Review("bob", "COMMENT", ny(2026, 11, 2, 10)),))  # reviewed, not approved
+    self_approved = PullRequest(3, "Alice", ny(2026, 11, 2, 9), ny(2026, 11, 2, 12), ny(2026, 11, 2, 12),
+                                (Review("alice", "APPROVED", ny(2026, 11, 2, 10)),))
+    approved = PullRequest(4, "alice", ny(2026, 11, 2, 9), ny(2026, 11, 2, 12), ny(2026, 11, 2, 12),
+                           (Review("bob", "APPROVED", ny(2026, 11, 2, 12)),))  # exactly at merge counts
+    week = by_key(
+        project_review_metrics([late, commented, self_approved, approved], SPEC_WEEK, SPEC_AS_OF),
+        SPEC_WEEK,
+    )
+
+    assert week["merged_prs_approved_share"].value == pytest.approx(1 / 4)
+    assert week["merged_prs_approved_share"].evidence == {
+        "merged": 4, "approved": 1, "partial_week": True,
+    }

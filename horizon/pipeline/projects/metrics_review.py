@@ -25,6 +25,7 @@ REVIEW_METRIC_KEYS = (
     "changes_requested_share",
     "reviews_per_merged_pr",
     "distinct_reviewers",
+    "merged_prs_approved_share",
 )
 
 
@@ -95,13 +96,25 @@ def distinct_reviewers(prs: list[PullRequest], week: Week) -> FlowMetric:
     return FlowMetric(week.week_start, "distinct_reviewers", float(len(identities)))
 
 
+def merged_prs_approved_share(prs: list[PullRequest], week: Week) -> FlowMetric:
+    """Share of this week's merged PRs with an APPROVED counting review before the merge."""
+    merged = merged_in_week(prs, week)
+    key = "merged_prs_approved_share"
+    if not merged:
+        return FlowMetric(week.week_start, key, None, "no_merged_prs")
+    approved = [pr for pr in merged if any(r.state == "APPROVED" for r in reviews_before_merge(pr))]
+    evidence = {"merged": len(merged), "approved": len(approved)}
+    return FlowMetric(week.week_start, key, len(approved) / len(merged), None, evidence)
+
+
 def review_metrics_for_week(prs: list[PullRequest], week: Week) -> list[FlowMetric]:
-    """All four T5.6 metrics for one week."""
+    """All five T5.6 metrics for one week."""
     metrics = [
         merged_prs_without_review_share(prs, week),
         changes_requested_share(prs, week),
         reviews_per_merged_pr(prs, week),
         distinct_reviewers(prs, week),
+        merged_prs_approved_share(prs, week),
     ]
     return mark_partial_week(metrics, week)
 
