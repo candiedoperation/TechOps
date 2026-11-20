@@ -1,0 +1,54 @@
+{
+  "description": "T4.5 worked example, adapted to rubric v1 after the T4.1 rubric review (verified_completion is the whole delivery bucket; longest_inactive_stretch replaces end_loading). Project X, 4 engineers, semester not finished.",
+  "rubric_version": "v1",
+  "role": "engineer",
+  "members": {
+    "A": {"files_majority_owned": 12, "non_boundary_lines": 1200, "surviving_commits": 40,
+          "verified_completion": 1.0, "active_week_ratio": 0.9, "longest_inactive_stretch": 7,
+          "prs_reviewed": 14, "review_turnaround_hours": 30, "collaborative_prs": 4,
+          "eng_timeliness": 3.0, "eng_proactiveness": 2.5, "eng_design": 3.0, "eng_collaboration": 3.0,
+          "tenure_semesters": 4},
+    "B": {"files_majority_owned": 5, "non_boundary_lines": 300, "surviving_commits": 22,
+          "verified_completion": 0.75, "active_week_ratio": 0.6, "longest_inactive_stretch": 14,
+          "prs_reviewed": 9, "review_turnaround_hours": 5, "collaborative_prs": 2,
+          "eng_timeliness": 2.5, "eng_proactiveness": 3.0, "eng_design": 2.5, "eng_collaboration": 3.0,
+          "tenure_semesters": 2},
+    "C": {"files_majority_owned": 5, "non_boundary_lines": 300, "surviving_commits": 15,
+          "verified_completion": 0.5, "active_week_ratio": 0.6, "longest_inactive_stretch": 14,
+          "prs_reviewed": 3, "review_turnaround_hours": 12, "collaborative_prs": 2,
+          "eng_timeliness": 2.0, "eng_proactiveness": 2.0, "eng_design": 2.5, "eng_collaboration": 2.0,
+          "tenure_semesters": 1},
+    "D": {"files_majority_owned": 1, "non_boundary_lines": 50, "surviving_commits": 6,
+          "verified_completion": {"raw": null, "reason": "no_owned_tasks"},
+          "active_week_ratio": 0.3, "longest_inactive_stretch": 28,
+          "prs_reviewed": 6, "review_turnaround_hours": {"raw": null, "reason": "no_review_requests"},
+          "collaborative_prs": 0,
+          "eng_timeliness": 2.0, "eng_proactiveness": 1.5, "eng_design": 2.0, "eng_collaboration": 2.0,
+          "tenure_semesters": 1}
+  },
+  "expected": {
+    "percentiles": {
+      "files_majority_owned": {"A": 100, "B": 50, "C": 50, "D": 0},
+      "verified_completion": {"A": 100, "B": 50, "C": 0, "D": null},
+      "longest_inactive_stretch": {"A": 100, "B": 50, "C": 50, "D": 0},
+      "review_turnaround_hours": {"A": 0, "B": 100, "C": 50, "D": null},
+      "eng_timeliness": {"A": 100, "B": 66.66666666666667, "C": 16.666666666666668, "D": 16.666666666666668}
+    },
+    "group_sizes": {"files_majority_owned": 4, "verified_completion": 3, "review_turnaround_hours": 3},
+    "buckets": {
+      "A": {"code_ownership": 100, "delivery": 100, "consistency": 100, "review_collaboration": 70, "peer_ratings": 87.5, "club_engagement": 100},
+      "B": {"code_ownership": 54.16666666666667, "delivery": 50, "consistency": 50, "review_collaboration": 71.66666666666667, "peer_ratings": 75, "club_engagement": 66.66666666666667},
+      "C": {"code_ownership": 45.833333333333336, "delivery": 0, "consistency": 50, "review_collaboration": 30, "peer_ratings": 29.166666666666668, "club_engagement": 16.666666666666668},
+      "D": {"code_ownership": 0, "delivery": null, "consistency": 0, "review_collaboration": 19.047619047619047, "peer_ratings": 8.333333333333334, "club_engagement": 16.666666666666668}
+    },
+    "bucket_coverage_d": {"delivery": 0, "review_collaboration": 0.7},
+    "coverage": {"A": 1.0, "B": 1.0, "C": 1.0, "D": 0.755},
+    "overall": {"A": 94.25, "B": 58.666666666666664, "C": 30.333333333333332, "D": 6.696428571428571},
+    "rank": {"A": 1, "B": 2, "C": 3, "D": 4},
+    "review_collaboration_off": {
+      "weights": {"code_ownership": 0.33, "delivery": 0.23, "consistency": 0.18, "peer_ratings": 0.13, "club_engagement": 0.13},
+      "overall": {"A": 98.375, "D": 4.220779220779221},
+      "coverage": {"D": 0.77}
+    }
+  }
+}
