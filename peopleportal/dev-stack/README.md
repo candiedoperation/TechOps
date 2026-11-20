@@ -23,6 +23,10 @@ cd ../..
 ./nx serve pplui
 ```
 
+Or do the same in one terminal: `./scripts/dev.sh` runs `up.sh --write-env`, then
+serves `pplserver` and `pplui` together. Ctrl-C stops the apps; the containers keep
+running until `docker compose stop`.
+
 Setup is noninteractive. It generates local credentials once, checks ports
 before starting containers, starts healthy services, bootstraps Authentik and
 Gitea, and runs `scripts/verify.sh`. Both up and verify print the selected ports.
