@@ -42,7 +42,9 @@ from .persistence import (
     persist_member_pr_review_counts,
     persist_member_repository_ownership,
     persist_pr_linked_commit_messages,
+    persist_project_flow_metrics,
 )
+from .projects import ProjectMetricRow, project_flow_metrics
 from .source import RepositoryConfig, authentik_users, gitea_repository
 
 __all__ = [
@@ -75,4 +77,7 @@ __all__ = [
     "persist_member_repository_ownership",
     "persist_pr_linked_commit_messages",
     "pr_linked_commit_messages",
+    "ProjectMetricRow",
+    "persist_project_flow_metrics",
+    "project_flow_metrics",
 ]

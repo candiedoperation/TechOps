@@ -16,6 +16,7 @@ from dagster import ConfigurableResource
 from .config import PipelineConfigError
 from .ownership import FileOwnership, MemberOwnership, MemberRepositoryOwnership
 from .pull_requests import MemberPRReviewCount, PRLinkedCommitMessage
+from .projects.metrics_flow import FLOW_METRIC_KEYS
 
 if TYPE_CHECKING:
     from .ownership import EligibleFileOwnership, EngineeringContribution
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from .blame_parser import BlameRecord
     from .assets.capture import BlameCapture
     from .resources import AuthentikRoster
+    from .assets.projects import ProjectMetricRow
 
 
 class PostgresResource(ConfigurableResource):
@@ -726,6 +728,51 @@ class PostgresResource(ConfigurableResource):
                             majority_owned_files = EXCLUDED.majority_owned_files,
                             surviving_commits = EXCLUDED.surviving_commits,
                             eligible_repository_files = EXCLUDED.eligible_repository_files
+                        """,
+                        values,
+                    )
+        return len(values)
+
+    def write_project_metrics(self, run_id: str, rows: Sequence[ProjectMetricRow]) -> int:
+        """Replace this run's T5.5 flow-metric rows in horizon_projects.project_metrics.
+
+        Only the flow metric keys are deleted first, so T5.6/T5.7 rows written by
+        the same run are left alone.
+        """
+
+        keys = {(row.project_pk, row.week_start, row.metric_key) for row in rows}
+        if len(keys) != len(rows):
+            raise ValueError("project metrics contain duplicate (project, week, metric) rows.")
+        values = [
+            (
+                run_id,
+                row.project_pk,
+                row.week_start,
+                row.metric_key,
+                row.value,
+                row.missing_reason,
+                Jsonb(row.evidence),
+            )
+            for row in rows
+        ]
+        with self.connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM horizon_projects.project_metrics "
+                    "WHERE run_id = %s AND metric_key = ANY(%s)",
+                    (run_id, list(FLOW_METRIC_KEYS)),
+                )
+                if values:
+                    cursor.executemany(
+                        """
+                        INSERT INTO horizon_projects.project_metrics (
+                            run_id, project_pk, week_start, metric_key,
+                            value, missing_reason, evidence
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (run_id, project_pk, week_start, metric_key) DO UPDATE SET
+                            value = EXCLUDED.value,
+                            missing_reason = EXCLUDED.missing_reason,
+                            evidence = EXCLUDED.evidence
                         """,
                         values,
                     )

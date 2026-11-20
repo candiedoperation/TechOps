@@ -40,6 +40,8 @@ ASSET_KEYS = {
     AssetKey("persist_engineering_contribution"),
     AssetKey("persist_member_pr_review_counts"),
     AssetKey("persist_pr_linked_commit_messages"),
+    AssetKey("project_flow_metrics"),
+    AssetKey("persist_project_flow_metrics"),
 }
 
 
@@ -107,6 +109,8 @@ def test_each_layer_is_its_own_group():
         "persist_engineering_contribution": "07_database",
         "persist_member_pr_review_counts": "07_database",
         "persist_pr_linked_commit_messages": "07_database",
+        "project_flow_metrics": "08_project_metrics",
+        "persist_project_flow_metrics": "07_database",
     }
 
 
@@ -143,6 +147,8 @@ def test_persistence_assets_depend_on_schema_setup_and_computed_rows():
         "persist_member_pr_review_counts": "member_pr_review_counts",
         "persist_pr_linked_commit_messages": "pr_linked_commit_messages",
     }
+    assert AssetKey("feature_store_schema") in deps_of("persist_project_flow_metrics")
+    assert AssetKey("project_flow_metrics") in deps_of("persist_project_flow_metrics")
     for persistence_asset, data_asset in persistence_assets.items():
         assert AssetKey("feature_store_schema") in deps_of(persistence_asset)
         assert AssetKey(data_asset) in deps_of(persistence_asset)

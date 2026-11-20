@@ -1,0 +1,23 @@
+{
+  "_comment": "FAKE DATA for T5.5 until T1.1 builds gitea_pull_requests and gitea_pr_reviews. Rows use the T1.1 column names. Week of 2026-11-02 is the worked example from the T5.5 spec.",
+  "as_of": "2026-11-08T23:59:00-05:00",
+  "projects": [
+    {
+      "project_pk": "demo-project",
+      "window_start": "2026-10-19",
+      "pull_requests": [
+        {"organization": "demo-org", "repository": "web", "number": 28, "author_login": "alice", "created_at": "2026-10-20T10:00:00-04:00", "merged_at": "2026-10-22T16:00:00-04:00", "closed_at": "2026-10-22T16:00:00-04:00"},
+        {"organization": "demo-org", "repository": "web", "number": 29, "author_login": "bob", "created_at": "2026-10-27T14:00:00-04:00", "merged_at": null, "closed_at": "2026-10-29T09:00:00-04:00"},
+        {"organization": "demo-org", "repository": "web", "number": 30, "author_login": "alice", "created_at": "2026-11-02T09:00:00-05:00", "merged_at": "2026-11-03T09:00:00-05:00", "closed_at": "2026-11-03T09:00:00-05:00"},
+        {"organization": "demo-org", "repository": "web", "number": 31, "author_login": "carol", "created_at": "2026-11-04T10:00:00-05:00", "merged_at": null, "closed_at": null},
+        {"organization": "demo-org", "repository": "web", "number": 32, "author_login": "dave", "created_at": "2026-11-05T12:00:00-05:00", "merged_at": "2026-11-05T13:00:00-05:00", "closed_at": "2026-11-05T13:00:00-05:00"}
+      ],
+      "reviews": [
+        {"organization": "demo-org", "repository": "web", "pr_number": 28, "reviewer_login": "bob", "state": "REQUEST_CHANGES", "submitted_at": "2026-10-21T11:00:00-04:00"},
+        {"organization": "demo-org", "repository": "web", "pr_number": 28, "reviewer_login": "bob", "state": "APPROVED", "submitted_at": "2026-10-22T15:00:00-04:00"},
+        {"organization": "demo-org", "repository": "web", "pr_number": 30, "reviewer_login": "bob", "state": "APPROVED", "submitted_at": "2026-11-02T15:00:00-05:00"},
+        {"organization": "demo-org", "repository": "web", "pr_number": 31, "reviewer_login": "Carol", "state": "COMMENT", "submitted_at": "2026-11-04T11:00:00-05:00"}
+      ]
+    }
+  ]
+}
