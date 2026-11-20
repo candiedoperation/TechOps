@@ -431,6 +431,8 @@ CREATE TABLE IF NOT EXISTS horizon_ranking.ranked_members (
     excluded_buckets TEXT[] NOT NULL DEFAULT '{}',
     PRIMARY KEY (ranking_run_id, authentik_user_pk, project_pk)
 );
+ALTER TABLE horizon_ranking.ranked_members
+    ADD COLUMN IF NOT EXISTS excluded_buckets TEXT[] NOT NULL DEFAULT '{}';
 
 -- Long format, one row per member per metric per run, so a new metric needs
 -- no migration. A missing value is NULL with a reason, never 0. percentile is
