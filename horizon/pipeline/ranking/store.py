@@ -570,7 +570,8 @@ def read_sow_task_overrides(
 
     rows = connection.execute(
         """
-        SELECT o.task_id::text AS task_id, o.completion, o.owner_pks, o.set_at
+        SELECT o.override_id::text AS override_id, o.task_id::text AS task_id,
+               o.completion, o.owner_pks, o.set_at
         FROM horizon_projects.sow_task_overrides AS o
         JOIN horizon_projects.sow_task_status AS s USING (task_id)
         WHERE s.run_id = %s

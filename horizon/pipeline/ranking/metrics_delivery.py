@@ -46,6 +46,7 @@ class TaskStatusRow:
 class TaskOverrideRow:
     """The columns of ``horizon_projects.sow_task_overrides`` read here."""
 
+    override_id: str
     task_id: str
     completion: str | None  # NULL keeps the status row's completion
     owner_pks: Sequence[str] | None  # NULL keeps the status row's owners
@@ -93,14 +94,18 @@ def apply_overrides(
     matches: Iterable[TaskMatchRow] = (),
 ) -> list[TaskState]:
     """Each task's state, with the latest override set at or before as_of replacing
-    the fields it sets."""
+    the fields it sets. Overrides set at the same moment (set_at defaults to
+    now(), so one transaction's rows tie) are ordered by override_id, so the
+    winner doesn't depend on row order."""
 
     latest: dict[str, TaskOverrideRow] = {}
     for override in overrides:
         if override.set_at > as_of:
             continue
         current = latest.get(override.task_id)
-        if current is None or override.set_at > current.set_at:
+        if current is None or (override.set_at, override.override_id) > (
+            current.set_at, current.override_id
+        ):
             latest[override.task_id] = override
 
     pull_requests: dict[str, set[str]] = defaultdict(set)

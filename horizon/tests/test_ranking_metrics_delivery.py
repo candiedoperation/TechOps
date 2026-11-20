@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 
 from pipeline.ranking.members import RankedMember
@@ -47,8 +47,9 @@ def status(key, due, completion, owners, *, project="p1"):
     )
 
 
-def override(key, set_at, *, completion=None, owners=None):
+def override(key, set_at, *, completion=None, owners=None, override_id=None):
     return TaskOverrideRow(
+        override_id=override_id or f"o-{key}-{set_at}",
         task_id=f"id-{key}",
         completion=completion,
         owner_pks=owners,
@@ -135,6 +136,32 @@ def test_the_latest_override_wins():
     assert values["B", "verified_completion"].raw_value == 1.0  # T2 done, T3 now done
 
 
+def test_partial_and_not_done_overrides_use_their_completion_values():
+    values = run(overrides=[
+        override("T1", "2026-11-07", completion="partial"),
+        override("T2", "2026-11-07", completion="not_done"),
+    ])
+
+    assert values["A", "verified_completion"].raw_value == 0.25  # (0.5 + 0) / 2
+    assert values["B", "verified_completion"].raw_value == 0.25  # (0 + 0.5) / 2
+
+
+def test_an_override_set_exactly_at_as_of_counts():
+    values = run(overrides=[override("T4", "2026-11-08T12:00", completion="done", owners=["C"])])
+
+    assert values["C", "verified_completion"].raw_value == 1.0
+
+
+def test_overrides_set_at_the_same_moment_have_a_fixed_winner():
+    tied = [
+        override("T3", "2026-11-07", completion="done", override_id="o-1"),
+        override("T3", "2026-11-07", completion="not_done", override_id="o-2"),
+    ]
+
+    for overrides in (tied, tied[::-1]):
+        assert run(overrides=overrides)["B", "verified_completion"].raw_value == 0.5  # (1 + 0) / 2
+
+
 def test_a_completion_only_override_keeps_the_owners():
     (task,) = apply_overrides(
         [status("T3", "2026-11-01", "partial", ["B"])],
@@ -150,6 +177,26 @@ def test_an_empty_owner_override_removes_every_owner():
     values = run(overrides=[override("T3", "2026-11-07", owners=[])])
 
     assert values["B", "verified_completion"].raw_value == 1.0  # only T2 left
+
+
+def test_a_task_due_today_counts_and_one_due_tomorrow_does_not():
+    values = run(statuses=[
+        status("D1", "2026-11-08", "done", ["A"]),
+        status("D2", "2026-11-09", "not_done", ["A"]),
+    ])
+
+    assert values["A", "verified_completion"].raw_value == 1.0
+    assert values["L", "team_verified_completion"].evidence["due_task_count"] == 1
+
+
+def test_today_is_the_club_date_not_the_utc_date():
+    # 03:00 UTC on 11-09 is still 22:00 on 11-08 in New York.
+    as_of = datetime(2026, 11, 9, 3, tzinfo=timezone.utc)
+
+    values = run(statuses=[status("D2", "2026-11-09", "done", ["A"])], as_of=as_of)
+
+    assert values["A", "verified_completion"].missing_reason == "no_owned_tasks"
+    assert values["L", "team_verified_completion"].missing_reason == "no_due_tasks"
 
 
 def test_a_task_without_a_due_date_counts_only_once_the_semester_ends():
@@ -181,7 +228,8 @@ def test_an_engineer_owning_no_due_tasks_has_no_value():
 
 
 def test_a_null_project_run_gives_no_sow_for_both_roles():
-    values = run(statuses=[], project_run_id=None)
+    # Real tasks, so only the missing project run can cause no_sow.
+    values = run(project_run_id=None)
 
     assert {value.missing_reason for value in values.values()} == {"no_sow"}
     assert all(value.raw_value is None for value in values.values())
