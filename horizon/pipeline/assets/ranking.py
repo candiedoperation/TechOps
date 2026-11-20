@@ -346,17 +346,19 @@ def review_and_rating_metrics(
             repositories = sorted(
                 {repo for project in projects.values() for repo in project.repositories}
             )
+            roster = store.read_season_members(connection, *season)
             data = ReviewData.build(
                 store.read_pull_requests(connection, repositories),
                 store.read_pr_reviews(connection, repositories),
                 store.read_pr_review_requests(connection, repositories),
                 store.read_pr_commits(connection, sorted(set(source_runs.values()))),
                 source_runs,
+                roster,
             )
             values = compute_run_review_metrics(
                 members,
                 projects,
-                store.read_season_members(connection, *season),
+                roster,
                 ranking_run.as_of,
                 rubric,
                 data,

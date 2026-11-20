@@ -44,6 +44,7 @@ class ProjectMemberRow:
     role_titles: dict[str, str]
     tenure_semesters: int
     role_mapping_version: str
+    email: str | None = None  # directory email; resolves Co-authored-by trailers (T4.3)
 
 
 @dataclass(frozen=True)

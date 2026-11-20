@@ -91,7 +91,8 @@ def read_season_members(
     rows = connection.execute(
         """
         SELECT m.project_pk, m.authentik_user_pk, m.username, m.display_name,
-               m.roles, m.role_titles, m.tenure_semesters, m.role_mapping_version
+               m.roles, m.role_titles, m.tenure_semesters, m.role_mapping_version,
+               m.email
         FROM horizon_gt_features.project_members AS m
         JOIN horizon_gt_features.projects AS p USING (project_pk)
         WHERE p.season_type = %s AND p.season_year = %s
@@ -108,6 +109,7 @@ def read_season_members(
             role_titles=dict(row[5]),
             tenure_semesters=row[6],
             role_mapping_version=row[7],
+            email=row[8],
         )
         for row in rows
     ]
@@ -507,7 +509,7 @@ def read_pr_commits(
     rows = connection.execute(
         """
         SELECT organization, repository, pull_request_number, commit_sha,
-               authentik_user_pk, dagster_run_id
+               authentik_user_pk, dagster_run_id, message
         FROM horizon_gt_features.pr_linked_commit_messages
         WHERE dagster_run_id = ANY(%s)
         """,
