@@ -504,3 +504,40 @@ CREATE TABLE IF NOT EXISTS horizon_api.publications (
     previous_run_id TEXT,
     PRIMARY KEY (domain, season_type, season_year)
 );
+
+-- T4.5 ranking read models, written only by publish_ranking in the same
+-- transaction that moves the ranking publication.
+CREATE TABLE IF NOT EXISTS horizon_api.ranking_leaderboard (
+    ranking_run_id UUID NOT NULL,
+    season_type TEXT NOT NULL,
+    season_year INT NOT NULL,
+    as_of TIMESTAMPTZ NOT NULL,
+    authentik_user_pk TEXT NOT NULL,
+    project_pk TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    project_name TEXT NOT NULL,
+    role TEXT NOT NULL,
+    comparison_group TEXT NOT NULL,
+    comparison_group_label TEXT NOT NULL,
+    status TEXT NOT NULL,
+    overall_score DOUBLE PRECISION,
+    coverage DOUBLE PRECISION NOT NULL,
+    rank_in_group INT,
+    ranked_in_group INT,
+    tenure_semesters INT NOT NULL,
+    bucket_scores JSONB NOT NULL,
+    PRIMARY KEY (ranking_run_id, authentik_user_pk, project_pk)
+);
+CREATE INDEX IF NOT EXISTS ranking_leaderboard_list
+    ON horizon_api.ranking_leaderboard (ranking_run_id, role, comparison_group, status, rank_in_group);
+CREATE INDEX IF NOT EXISTS ranking_leaderboard_member
+    ON horizon_api.ranking_leaderboard (authentik_user_pk, as_of DESC);
+
+-- One RankingDocument (pipeline/ranking/read_models.py) per member per run.
+CREATE TABLE IF NOT EXISTS horizon_api.ranking_member_detail (
+    ranking_run_id UUID NOT NULL,
+    authentik_user_pk TEXT NOT NULL,
+    project_pk TEXT NOT NULL,
+    document JSONB NOT NULL,
+    PRIMARY KEY (ranking_run_id, authentik_user_pk, project_pk)
+);
