@@ -45,6 +45,7 @@ ASSET_KEYS = {
     AssetKey("code_and_tenure_metrics"),
     AssetKey("review_and_rating_metrics"),
     AssetKey("delivery_metrics"),
+    AssetKey("member_scores"),
 }
 
 
@@ -82,6 +83,8 @@ def test_the_layers_depend_on_each_other_in_order():
     assert AssetKey("ranked_members") in deps_of("review_and_rating_metrics")
     assert AssetKey("ranking_run") in deps_of("delivery_metrics")
     assert AssetKey("ranked_members") in deps_of("delivery_metrics")
+    for metrics in ("code_and_tenure_metrics", "review_and_rating_metrics", "delivery_metrics"):
+        assert AssetKey(metrics) in deps_of("member_scores")
 
 
 def test_each_layer_is_its_own_group():
@@ -125,6 +128,7 @@ def test_each_layer_is_its_own_group():
         "code_and_tenure_metrics": "08_ranking",
         "review_and_rating_metrics": "08_ranking",
         "delivery_metrics": "08_ranking",
+        "member_scores": "08_ranking",
     }
 
 
@@ -139,6 +143,7 @@ def test_every_check_is_registered_against_its_asset():
         (AssetKey("authentik_users"), "roster_is_non_empty"),
         (AssetKey("identity_clusters"), "git_identity_mappings_need_review"),
         (AssetKey("member_pr_review_counts"), "pr_reviewers_resolve_or_need_review"),
+        (AssetKey("member_scores"), "member_scores_integrity"),
     }
 
 
