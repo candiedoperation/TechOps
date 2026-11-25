@@ -55,12 +55,26 @@ from .ranking import (
 from .ranking_explanations import member_explanations
 from .ranking_publish import publish_ranking, publish_ranking_integrity
 from .ranking_scores import member_scores, member_scores_integrity
+from .project_sources import (
+    ProjectSourcesConfig,
+    blame_run_requests,
+    gitea_pull_requests,
+    peopleportal_projects,
+    persist_project_sources,
+    project_repositories,
+)
 from .source import RepositoryConfig, authentik_users, gitea_repository
 
 __all__ = [
     "BlameCapture",
     "RankingRun",
     "RankingRunConfig",
+    "ProjectSourcesConfig",
+    "blame_run_requests",
+    "gitea_pull_requests",
+    "peopleportal_projects",
+    "persist_project_sources",
+    "project_repositories",
     "RepositoryConfig",
     "authentik_users",
     "blame_capture",

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dagster import Definitions
+from dagster import AssetSelection, Definitions, define_asset_job
 
 from .assets import (
     authentik_users,
@@ -42,6 +42,10 @@ from .assets import (
     member_explanations,
     publish_ranking,
     publish_ranking_integrity,
+    gitea_pull_requests,
+    peopleportal_projects,
+    persist_project_sources,
+    project_repositories,
 )
 from .checks import (
     capture_is_non_empty,
@@ -54,8 +58,38 @@ from .checks import (
 )
 from .resources import build_resources
 
+PROJECT_SOURCE_ASSETS = [
+    peopleportal_projects,
+    project_repositories,
+    gitea_pull_requests,
+    persist_project_sources,
+]
+
+# T1.1: season-wide project roster and PR source tables.
+ingest_project_sources = define_asset_job(
+    "ingest_project_sources",
+    selection=AssetSelection.assets(feature_store_schema, *PROJECT_SOURCE_ASSETS),
+    description="Projects, members, repositories and every PR/review/review request (T1.1).",
+)
+
+# The per-repository blame/ownership graph; blame_run_requests() targets it.
+blame_ownership = define_asset_job(
+    "blame_ownership",
+    selection=AssetSelection.groups(
+        "01_sources", "02_capture", "03_parse", "04_identity", "05_ownership",
+        "06_pr_metrics", "07_database",
+    )
+    - AssetSelection.assets(*PROJECT_SOURCE_ASSETS),
+    description="Blame, identity, ownership and PR metrics for one repository (config: org, repo).",
+)
+
 defs = Definitions(
+    jobs=[ingest_project_sources, blame_ownership],
     assets=[
+        peopleportal_projects,
+        project_repositories,
+        gitea_pull_requests,
+        persist_project_sources,
         gitea_repository,
         authentik_users,
         blame_capture,

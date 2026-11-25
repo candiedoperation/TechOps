@@ -48,6 +48,10 @@ ASSET_KEYS = {
     AssetKey("member_scores"),
     AssetKey("member_explanations"),
     AssetKey("publish_ranking"),
+    AssetKey("peopleportal_projects"),
+    AssetKey("project_repositories"),
+    AssetKey("gitea_pull_requests"),
+    AssetKey("persist_project_sources"),
 }
 
 
@@ -135,6 +139,10 @@ def test_each_layer_is_its_own_group():
         "member_scores": "08_ranking",
         "member_explanations": "08_ranking",
         "publish_ranking": "08_ranking",
+        "peopleportal_projects": "01_sources",
+        "project_repositories": "01_sources",
+        "gitea_pull_requests": "01_sources",
+        "persist_project_sources": "07_database",
     }
 
 
@@ -260,6 +268,35 @@ def test_definitions_expose_shared_resources():
         "workspace",
         "postgres",
     }
+
+
+def test_project_source_job_and_blame_job_are_separate():
+    repository = defs.get_repository_def()
+    ingest = repository.get_job("ingest_project_sources")
+    blame = repository.get_job("blame_ownership")
+    ingest_keys = {key.to_user_string() for key in ingest.asset_layer.selected_asset_keys}
+    blame_keys = {key.to_user_string() for key in blame.asset_layer.selected_asset_keys}
+    assert ingest_keys == {
+        "feature_store_schema",
+        "peopleportal_projects",
+        "project_repositories",
+        "gitea_pull_requests",
+        "persist_project_sources",
+    }
+    assert "gitea_repository" in blame_keys and "pipeline_run_completed" in blame_keys
+    assert not blame_keys & (ingest_keys - {"feature_store_schema"})
+
+
+def test_persist_project_sources_depends_on_all_three_sources():
+    assets_by_key = defs.get_repository_def().assets_defs_by_key
+    key = AssetKey("persist_project_sources")
+    deps = assets_by_key[key].asset_deps[key]
+    assert {
+        AssetKey("feature_store_schema"),
+        AssetKey("peopleportal_projects"),
+        AssetKey("project_repositories"),
+        AssetKey("gitea_pull_requests"),
+    } <= deps
 
 
 def test_resources_are_built_from_settings():
