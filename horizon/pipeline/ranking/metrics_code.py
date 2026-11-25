@@ -293,8 +293,12 @@ def longest_inactive_stretch(
     measured_until: date,
     activity: Iterable[CommitActivityRow],
 ) -> Measurement:
-    """Longest gap in days, counting the gap from window_start to the first
-    activity date but not the gap after the last one.
+    """Longest gap in days between activity dates, counting the gap from
+    window_start to the first activity date and the gap from the last one to
+    the end of the measured window (E).
+
+    The trailing gap counts because it is real inactivity: without it, a member
+    active only in the first weeks scored better than one who kept going.
     """
 
     if measured_until < window_start:
@@ -312,7 +316,7 @@ def longest_inactive_stretch(
         )
     longest, bounds = -1, (window_start, dates[0])
     previous = window_start
-    for day in dates:
+    for day in [*dates, measured_until]:
         if (day - previous).days > longest:
             longest, bounds = (day - previous).days, (previous, day)
         previous = day

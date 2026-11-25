@@ -148,7 +148,7 @@ def test_the_worked_example_for_an_engineer():
         "weeks_in_window": 10,
         "rows_by_source": {"default_branch": 4, "pr_branch": 1},
     }
-    # Gaps 2, 7, 21, 7, 28; the 4 days from 11-04 to E do not count.
+    # Gaps 2, 7, 21, 7, 28, then 4 days from 11-04 to E.
     assert values["longest_inactive_stretch"].raw_value == 28
     assert values["longest_inactive_stretch"].evidence["gap_start"] == "2026-10-07"
     assert values["longest_inactive_stretch"].evidence["gap_end"] == "2026-11-04"
@@ -236,13 +236,26 @@ def test_a_member_with_no_activity_is_inactive_for_the_whole_window():
     assert values["longest_inactive_stretch"].raw_value == (E - WINDOW_START).days == 69
 
 
-def test_the_gap_from_window_start_counts_and_the_trailing_gap_does_not():
+def test_the_gaps_from_window_start_and_to_E_both_count():
     rows = [activity("a", "2026-09-20")]
 
     value = metrics(member("a"), activity=rows)["longest_inactive_stretch"]
 
-    assert value.raw_value == 20  # not the 49 days from 09-20 to E
-    assert value.evidence["gap_start"] == "2026-08-31"
+    assert value.raw_value == 49  # from 09-20 to E, longer than the 20 from window_start
+    assert (value.evidence["gap_start"], value.evidence["gap_end"]) == ("2026-09-20", "2026-11-08")
+
+    early = metrics(member("a"), activity=[activity("a", "2026-11-01")])["longest_inactive_stretch"]
+    assert early.raw_value == 62 and early.evidence["gap_start"] == "2026-08-31"
+
+
+def test_stopping_early_no_longer_beats_keeping_going():
+    stopped = [activity("a", day) for day in ("2026-09-01", "2026-09-08")]
+    kept_going = [activity("a", day) for day in ("2026-09-01", "2026-09-29", "2026-10-27")]
+
+    def stretch(rows):
+        return metrics(member("a"), activity=rows)["longest_inactive_stretch"].raw_value
+
+    assert stretch(stopped) == 61 > stretch(kept_going) == 28
 
 
 def test_iso_weeks_use_new_york_dates():
