@@ -1,0 +1,10 @@
+# Default project windows per semester, used when People Portal reports no
+# teamStartDate/teamEndDate for a project (T1.1).
+#
+# PLACEHOLDERS: the exec board has not confirmed these dates yet. Change them
+# here (not in code) once they are confirmed.
+FALL:
+  2026:
+    start: 2026-08-31
+    end: 2026-12-11
+    placeholder: true
