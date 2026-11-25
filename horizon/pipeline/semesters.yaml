@@ -8,3 +8,8 @@ FALL:
     start: 2026-08-31
     end: 2026-12-11
     placeholder: true
+SPRING:
+  2026:
+    start: 2026-01-26
+    end: 2026-05-15
+    placeholder: true
