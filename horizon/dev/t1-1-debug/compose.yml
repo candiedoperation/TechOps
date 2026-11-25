@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: horizon_t1_1_test
+      POSTGRES_USER: horizon_t1_1
+      POSTGRES_PASSWORD: ${HORIZON_T1_1_DB_PASSWORD:?set a local-only password}
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - horizon-t1-1-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  horizon-t1-1-postgres:
