@@ -26,6 +26,26 @@ METRIC_KEYS = (*ENGINEER_RATING_METRICS, *LEAD_RATING_METRICS)
 
 RatingKey = tuple[str, str, str]  # (project_pk, ratee_pk, question_key)
 
+# Who rates what (T4.3, from T3.2's assignments): an engineer's ratings come
+# from their tech lead; a tech lead is rated by engineers and the project lead,
+# and lead_guidance by engineers only. Roles are T3.1's normalized names.
+RESPONDENT_ROLES = {
+    **{key: frozenset({"tech_lead"}) for key in ENGINEER_RATING_METRICS},
+    **{key: frozenset({"engineer", "project_lead"}) for key in LEAD_RATING_METRICS},
+    "lead_guidance": frozenset({"engineer"}),
+}
+
+
+def counts_respondent(answer: SurveyAnswerRow) -> bool:
+    """Whether the answer's respondent is one T4.3 counts for its question.
+
+    An answer with no respondent role is not counted. Questions outside the
+    rubric are not filtered.
+    """
+
+    allowed = RESPONDENT_ROLES.get(answer.question_key)
+    return allowed is None or answer.respondent_role in allowed
+
 
 @dataclass(frozen=True)
 class SurveyAnswerRow:
@@ -103,7 +123,8 @@ class RatingTables:
     @classmethod
     def build(cls, answers: Iterable[SurveyAnswerRow], as_of: datetime) -> RatingTables:
         """Only submitted answers count, and only those submitted by as_of, as for
-        the other latest-state sources. Nobody's rating of themselves counts.
+        the other latest-state sources. Nobody's rating of themselves counts, and
+        only respondents in the question's roles (``RESPONDENT_ROLES``) count.
         """
 
         counted = [
@@ -112,6 +133,7 @@ class RatingTables:
             if answer.submitted_at is not None
             and answer.submitted_at <= as_of
             and answer.respondent_pk != answer.ratee_pk
+            and counts_respondent(answer)
         ]
         return cls(means=_semester_rating_means(counted), rounds=round_means(counted))
 
