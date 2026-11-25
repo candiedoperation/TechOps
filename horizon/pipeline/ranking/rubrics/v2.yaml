@@ -1,0 +1,159 @@
+# Ranking rubric v2 (Fall 2026 pilot, surveys ignored for now).
+#
+# The same as v1 (after the T4.1 rubric review) without the survey buckets:
+# engineer "peer_ratings" (was 10) and tech lead "leadership_ratings" (was 25).
+# Their weight is spread over the remaining buckets in proportion, rounded to
+# whole percentages. No survey data exists yet, and with v1 the missing
+# ratings kept most members below min_coverage.
+#
+# review_collaboration keeps its team_setting, so a project that turns
+# engineers_review_prs off still splits that bucket's weight over the rest.
+#
+# When surveys are live, add the buckets back in a v3 file. Do not edit a
+# published version.
+
+version: v2
+
+rules:
+  min_coverage: 0.60
+  min_group_size: 2
+
+roles:
+  engineer:
+    comparison_group: project
+    buckets:
+      - key: code_ownership
+        label: Code ownership
+        weight: 33
+        metrics:
+          - key: files_majority_owned
+            label: Files majority-owned
+            unit: files
+            share: 40
+            direction: higher_is_better
+          - key: non_boundary_lines
+            label: Surviving lines of code
+            unit: lines
+            share: 35
+            direction: higher_is_better
+          - key: surviving_commits
+            label: Commits with surviving code
+            unit: commits
+            share: 25
+            direction: higher_is_better
+      - key: delivery
+        label: Delivery against the SOW
+        weight: 22
+        metrics:
+          - key: verified_completion
+            label: Verified task completion
+            unit: ratio
+            share: 100
+            direction: higher_is_better
+      - key: consistency
+        label: Consistency
+        weight: 17
+        metrics:
+          - key: active_week_ratio
+            label: Weeks with commits
+            unit: ratio
+            share: 60
+            direction: higher_is_better
+          - key: longest_inactive_stretch
+            label: Longest inactive stretch
+            unit: days
+            share: 40
+            direction: lower_is_better
+      - key: review_collaboration
+        label: Review and collaboration
+        weight: 17
+        team_setting: engineers_review_prs
+        metrics:
+          - key: prs_reviewed
+            label: Teammate PRs reviewed
+            unit: PRs
+            share: 40
+            direction: higher_is_better
+          - key: review_turnaround_hours
+            label: Median time to review once assigned
+            unit: hours
+            share: 30
+            direction: lower_is_better
+          - key: collaborative_prs
+            label: PRs with multiple contributors
+            unit: PRs
+            share: 30
+            direction: higher_is_better
+      - key: club_engagement
+        label: Club engagement
+        weight: 11
+        metrics:
+          - key: tenure_semesters
+            label: Semesters in AppDev
+            unit: semesters
+            share: 100
+            direction: higher_is_better
+
+  tech_lead:
+    comparison_group: club
+    buckets:
+      - key: team_delivery
+        label: Team delivery against the SOW
+        weight: 40
+        metrics:
+          - key: team_verified_completion
+            label: Team verified task completion
+            unit: ratio
+            share: 100
+            direction: higher_is_better
+      - key: review_unblocking
+        label: Review and unblocking
+        weight: 33
+        metrics:
+          - key: team_prs_reviewed
+            label: Team PRs reviewed
+            unit: PRs
+            share: 35
+            direction: higher_is_better
+          - key: review_turnaround_hours
+            label: Median time to review once assigned
+            unit: hours
+            share: 35
+            direction: lower_is_better
+          - key: review_spread
+            label: Engineers whose PRs were reviewed
+            unit: ratio
+            share: 30
+            direction: higher_is_better
+      - key: team_consistency
+        label: Team consistency
+        weight: 13
+        metrics:
+          - key: team_end_loading
+            label: Share of team code added in the final three weeks
+            unit: ratio
+            share: 100
+            direction: lower_is_better
+      - key: own_code
+        label: Own code
+        weight: 7
+        metrics:
+          - key: files_majority_owned
+            label: Files majority-owned
+            unit: files
+            share: 50
+            direction: higher_is_better
+          - key: non_boundary_lines
+            label: Surviving lines of code
+            unit: lines
+            share: 50
+            direction: higher_is_better
+      - key: club_engagement
+        label: Club engagement
+        weight: 7
+        metrics:
+          - key: tenure_semesters
+            label: Semesters in AppDev
+            unit: semesters
+            share: 100
+            direction: higher_is_better

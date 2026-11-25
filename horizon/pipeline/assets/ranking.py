@@ -61,7 +61,7 @@ class RankingRunConfig(Config):
     season_type: str
     season_year: int
     as_of: Optional[str] = None
-    rubric_version: str = "v1"
+    rubric_version: str = "v2"
 
 
 @dataclass(frozen=True)
