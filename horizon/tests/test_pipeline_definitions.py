@@ -159,7 +159,21 @@ def test_every_check_is_registered_against_its_asset():
         (AssetKey("member_pr_review_counts"), "pr_reviewers_resolve_or_need_review"),
         (AssetKey("member_scores"), "member_scores_integrity"),
         (AssetKey("publish_ranking"), "publish_ranking_integrity"),
+        (AssetKey("peopleportal_projects"), "projects_are_non_empty"),
+        (AssetKey("project_repositories"), "project_orgs_have_repositories"),
+        (AssetKey("gitea_pull_requests"), "pull_request_pages_are_complete"),
     }
+    source_check_names = {
+        "projects_are_non_empty",
+        "project_orgs_have_repositories",
+        "pull_request_pages_are_complete",
+    }
+    assert all(
+        spec.blocking
+        for check in checks.values()
+        for spec in check.check_specs
+        if spec.name in source_check_names
+    )
 
 
 def test_persistence_assets_depend_on_schema_setup_and_computed_rows():
