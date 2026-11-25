@@ -3,6 +3,7 @@ from datetime import timedelta
 import pytest
 from dagster import Failure
 
+from pipeline.assets.ranking_explanations import explain_run
 from pipeline.assets.ranking_publish import _publish
 from pipeline.assets.ranking_scores import _score_run
 from pipeline.ranking import publish, score_store
@@ -16,6 +17,7 @@ pytestmark = needs_postgres
 def _scored(postgres, dagster_run_id, as_of=AS_OF, scale=1.0):
     run = seed_worked_example(postgres, dagster_run_id=dagster_run_id, as_of=as_of, scale=scale)
     _score_run(FakeContext(), run, postgres)
+    explain_run(FakeContext(), run, postgres, None, "none")
     return run
 
 

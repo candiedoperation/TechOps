@@ -46,6 +46,7 @@ ASSET_KEYS = {
     AssetKey("review_and_rating_metrics"),
     AssetKey("delivery_metrics"),
     AssetKey("member_scores"),
+    AssetKey("member_explanations"),
     AssetKey("publish_ranking"),
 }
 
@@ -86,7 +87,8 @@ def test_the_layers_depend_on_each_other_in_order():
     assert AssetKey("ranked_members") in deps_of("delivery_metrics")
     for metrics in ("code_and_tenure_metrics", "review_and_rating_metrics", "delivery_metrics"):
         assert AssetKey(metrics) in deps_of("member_scores")
-    assert AssetKey("member_scores") in deps_of("publish_ranking")
+    assert AssetKey("member_scores") in deps_of("member_explanations")
+    assert AssetKey("member_explanations") in deps_of("publish_ranking")
 
 
 def test_each_layer_is_its_own_group():
@@ -131,6 +133,7 @@ def test_each_layer_is_its_own_group():
         "review_and_rating_metrics": "08_ranking",
         "delivery_metrics": "08_ranking",
         "member_scores": "08_ranking",
+        "member_explanations": "08_ranking",
         "publish_ranking": "08_ranking",
     }
 

@@ -475,6 +475,13 @@ CREATE TABLE IF NOT EXISTS horizon_ranking.member_scores (
 );
 CREATE INDEX IF NOT EXISTS member_scores_member_history
     ON horizon_ranking.member_scores (authentik_user_pk, ranking_run_id);
+-- T4.6: what produced member_scores.explanation. A later run whose member has
+-- the same input_sha256 and prompt_version copies the explanation.
+ALTER TABLE horizon_ranking.member_scores ADD COLUMN IF NOT EXISTS explanation_model TEXT;
+ALTER TABLE horizon_ranking.member_scores ADD COLUMN IF NOT EXISTS prompt_version TEXT;
+ALTER TABLE horizon_ranking.member_scores ADD COLUMN IF NOT EXISTS input_sha256 TEXT;
+CREATE INDEX IF NOT EXISTS member_scores_explanation_cache
+    ON horizon_ranking.member_scores (input_sha256, prompt_version);
 
 -- Written by the T4.6 CLI and the T6.7 API.
 CREATE TABLE IF NOT EXISTS horizon_ranking.calibration_notes (
