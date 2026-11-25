@@ -2,6 +2,10 @@
 
 from datetime import datetime, timezone
 
+import httpx
+
+from pipeline import resources as resources_module
+
 NOW = datetime(2026, 11, 14, tzinfo=timezone.utc)
 
 
@@ -41,3 +45,19 @@ def payload(projects=None, **overrides):
     }
     value.update(overrides)
     return value
+
+
+def page(items, total, page_number, next_page=None):
+    headers = {"X-Total-Count": str(total), "X-Page": str(page_number)}
+    if next_page:
+        headers["Link"] = f'<https://git.example/api/v1/x?page={next_page}>; rel="next"'
+    return httpx.Response(200, json=items, headers=headers)
+
+
+def use_transport(monkeypatch, handler):
+    real_client = httpx.Client
+
+    def client(**kwargs):
+        return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(resources_module.httpx, "Client", client)

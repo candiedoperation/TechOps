@@ -256,6 +256,7 @@ def test_definitions_expose_shared_resources():
     assert set(defs.resources) == {
         "gitea",
         "authentik",
+        "peopleportal",
         "workspace",
         "postgres",
     }
@@ -268,6 +269,10 @@ def test_resources_are_built_from_settings():
         HORIZON_AUTHENTIK_URL="https://auth.example.com",
         HORIZON_AUTHENTIK_API_TOKEN="auth-token-value",
         HORIZON_DATABASE_URL="postgresql://u@127.0.0.1:5433/db",
+        HORIZON_PEOPLEPORTAL_BASE_URL="https://pp.example.com",
+        HORIZON_PEOPLEPORTAL_SERVICE_TOKEN="pp-token",
+        HORIZON_SEASON_TYPE="FALL",
+        HORIZON_SEASON_YEAR="2026",
     )
 
     resources = build_resources(settings)
@@ -281,6 +286,9 @@ def test_resources_are_built_from_settings():
     assert resources["authentik"].base_url == "https://auth.example.com"
     assert resources["authentik"].api_token == "auth-token-value"
     assert resources["postgres"].database_url == "postgresql://u@127.0.0.1:5433/db"
+    assert resources["peopleportal"].base_url == "https://pp.example.com"
+    assert resources["peopleportal"].service_token == "pp-token"
+    assert (settings.season_type, settings.season_year) == ("FALL", 2026)
 
 
 def test_resources_build_even_when_nothing_is_configured():

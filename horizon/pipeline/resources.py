@@ -28,6 +28,11 @@ import httpx
 from dagster import ConfigurableResource
 
 from .config import PipelineConfigError, PipelineSettings, get_pipeline_settings
+from .project_sources import (
+    PeoplePortalPayloadError,
+    ProjectSources,
+    parse_project_sources,
+)
 from .storage import PostgresResource
 
 # The blame invocation, in one place because two things depend on it agreeing:
@@ -61,6 +66,10 @@ class GiteaError(RuntimeError):
 
 class AuthentikError(RuntimeError):
     """Authentik answered, but not with a complete People Portal roster."""
+
+
+class PeoplePortalError(RuntimeError):
+    """People Portal answered, but not with a usable projects payload."""
 
 
 class GitCommandError(RuntimeError):
@@ -788,6 +797,56 @@ class AuthentikClient(ConfigurableResource):
         return token
 
 
+class PeoplePortalClient(ConfigurableResource):
+    """People Portal's Horizon service API (T3.1): projects and members per semester."""
+
+    base_url: str | None = None
+    service_token: str | None = None
+    timeout_seconds: float = 30.0
+
+    def get_projects(self, season_type: str, season_year: int) -> ProjectSources:
+        """GET /api/horizon/projects and validate every project and member."""
+
+        base = (self.base_url or "").strip().rstrip("/")
+        if not base:
+            raise PipelineConfigError(
+                "HORIZON_PEOPLEPORTAL_BASE_URL is not set. Export it, or add it to "
+                "horizon/.env, before materializing peopleportal_projects."
+            )
+        token = (self.service_token or "").strip()
+        if not token:
+            raise PipelineConfigError(
+                "HORIZON_PEOPLEPORTAL_SERVICE_TOKEN is not set. It must match People "
+                "Portal's HORIZON_SERVICE_TOKEN."
+            )
+        url = f"{base}/api/horizon/projects"
+        try:
+            with httpx.Client(timeout=self.timeout_seconds, follow_redirects=False) as client:
+                response = client.get(
+                    url,
+                    params={"seasonType": season_type, "seasonYear": str(season_year)},
+                    headers={"Accept": "application/json", "Authorization": f"Bearer {token}"},
+                )
+        except httpx.HTTPError as exc:
+            raise PeoplePortalError(
+                f"People Portal projects request failed: {type(exc).__name__}."
+            ) from exc
+        if response.status_code >= 400:
+            raise PeoplePortalError(
+                f"GET {url} returned {response.status_code}. Check the URL and service token."
+            )
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise PeoplePortalError(f"GET {url} did not return JSON.") from exc
+        try:
+            return parse_project_sources(
+                payload, season_type, season_year, datetime.now(timezone.utc)
+            )
+        except PeoplePortalPayloadError as exc:
+            raise PeoplePortalError(str(exc)) from exc
+
+
 class GitWorkspace(ConfigurableResource):
     """Owns the lifecycle of the throwaway clone that blame runs against.
 
@@ -932,6 +991,10 @@ def build_resources(
         "authentik": AuthentikClient(
             base_url=resolved.authentik_url,
             api_token=resolved.authentik_api_token,
+        ),
+        "peopleportal": PeoplePortalClient(
+            base_url=resolved.peopleportal_base_url,
+            service_token=resolved.peopleportal_service_token,
         ),
         "workspace": GitWorkspace(),
         "postgres": PostgresResource(database_url=resolved.database_url),
