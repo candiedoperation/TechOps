@@ -391,6 +391,76 @@ def test_the_window_runs_from_midnight_to_the_earlier_of_as_of_and_the_end():
     window = review_window(WINDOW_START, SEMESTER_END, at("2026-12-20"))
 
     assert window.start == datetime(2026, 8, 31, tzinfo=NY)
-    assert window.end.date() == SEMESTER_END and window.end.hour == 23
+    # The window is kept in UTC (see _utc); in New York it ends late on the 11th.
+    end = window.end.astimezone(NY)
+    assert end.date() == SEMESTER_END and end.hour == 23
     with pytest.raises(ValueError, match="timezone-aware"):
         review_window(WINDOW_START, SEMESTER_END, datetime(2026, 11, 8))
+
+
+# Fixes on top of T4.3: daylight saving, Co-authored-by trailers, roster limit.
+
+
+def test_turnaround_across_the_daylight_saving_change_is_real_elapsed_time():
+    # Requested 10-10 15:05 EDT, reviewed 11-08 00:37 EST: 682.54 hours apart,
+    # though the wall clocks differ by 681.54. Both carry New York tzinfo, as
+    # psycopg returns them when the session TimeZone is America/New_York.
+    requested = datetime(2026, 10, 10, 15, 5, 20, tzinfo=NY)
+    reviewed = datetime(2026, 11, 8, 0, 37, 33, tzinfo=NY)
+    data = ReviewData.build(
+        [pr(8, "a")],
+        [ReviewRow(*API, 8, 1, "b", "b", "APPROVED", reviewed)],
+        [ReviewRequestRow(*API, 8, 1, "b", "b", requested)],
+        [],
+        SOURCE_RUNS,
+    )
+    value = metrics(member("b"), data=data, as_of=at("2026-11-20"))["review_turnaround_hours"]
+    assert value.raw_value == pytest.approx((reviewed.timestamp() - requested.timestamp()) / 3600)
+    assert value.raw_value == pytest.approx(682.5369444)
+
+
+def _trailer_commit(number, author, message):
+    return PullRequestCommitRow(*API, number, f"sha-{number}-{author}", author, "run-api", message)
+
+
+def _emails(*pairs):
+    return [replace(roster_row(pk, ["engineer"]), email=email) for pk, email in pairs]
+
+
+def test_a_co_authored_by_trailer_makes_a_pr_collaborative():
+    roster = _emails(("a", "a@club.test"), ("b", "B@Club.test"))
+    message = "Add login\n\nCo-authored-by: Bee <b@club.TEST>\nCO-AUTHORED-BY: Bot <bot@ci.test>\n"
+    data = ReviewData.build(
+        [pr(50, "a", merged_at=("2026-10-20",))], [], [], [_trailer_commit(50, "a", message)],
+        SOURCE_RUNS, roster,
+    )
+    for person in ("a", "b"):
+        value = metrics(member(person), data=data, roster=roster)["collaborative_prs"]
+        assert value.raw_value == 1 and value.evidence["pull_requests"] == ["SpaceApp/api#50"]
+
+
+def test_trailers_for_people_off_the_roster_or_in_other_runs_do_not_count():
+    roster = _emails(("a", "a@club.test"), ("b", "b@club.test"))
+    bot_only = "Fix\n\nCo-authored-by: Claude <noreply@anthropic.com>"
+    old_run = PullRequestCommitRow(*API, 51, "sha-old", "a", "run-old", "x\n\nCo-authored-by: B <b@club.test>")
+    data = ReviewData.build(
+        [pr(50, "a", merged_at=("2026-10-20",)), pr(51, "a", merged_at=("2026-10-21",))],
+        [], [], [_trailer_commit(50, "a", bot_only), old_run], SOURCE_RUNS, roster,
+    )
+    assert metrics(member("a"), data=data, roster=roster)["collaborative_prs"].raw_value == 0
+
+
+def test_contributors_are_limited_to_the_roster():
+    # x authored commits on the PR but is not on the season roster.
+    roster = _emails(("a", "a@club.test"))
+    data = ReviewData.build(
+        [pr(52, "a", merged_at=("2026-10-20",))], [], [],
+        [_trailer_commit(52, "a", ""), _trailer_commit(52, "x", "")], SOURCE_RUNS, roster,
+    )
+    assert metrics(member("a"), data=data, roster=roster)["collaborative_prs"].raw_value == 0
+    # Without a roster (no filter) x still counts, as before.
+    unfiltered = ReviewData.build(
+        [pr(52, "a", merged_at=("2026-10-20",))], [], [],
+        [_trailer_commit(52, "a", ""), _trailer_commit(52, "x", "")], SOURCE_RUNS,
+    )
+    assert metrics(member("a"), data=unfiltered)["collaborative_prs"].raw_value == 1

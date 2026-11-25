@@ -8,9 +8,10 @@ and requested reviewers arrive already resolved to Authentik pks by T1.1.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
-from dataclasses import dataclass
-from datetime import date, datetime, time
+from dataclasses import dataclass, field, replace
+from datetime import date, datetime, time, timezone
 from statistics import median
 
 from .members import CLUB_TIMEZONE, ProjectMemberRow, RankedMember
@@ -28,6 +29,22 @@ NO_REVIEW_REQUESTS = "no_review_requests"
 NO_ENGINEER_PRS = "no_engineer_prs"
 
 COUNTING_STATES = frozenset({"APPROVED", "REQUEST_CHANGES", "COMMENT"})
+
+# A Co-authored-by trailer line (T4.3): "Co-authored-by: Name <email>".
+CO_AUTHOR_TRAILER = re.compile(r"^co-authored-by:\s*(.*?)\s*<([^>]+)>\s*$", re.IGNORECASE | re.MULTILINE)
+
+
+def _utc(moment: datetime | None) -> datetime | None:
+    """The same instant in UTC.
+
+    Python compares and subtracts two datetimes that share a tzinfo by their
+    wall-clock fields, so across a daylight-saving change two New York times
+    are an hour off. psycopg returns New York datetimes whenever the database
+    session's TimeZone is America/New_York, so every timestamp is normalized
+    to UTC before it is compared or subtracted.
+    """
+
+    return None if moment is None else moment.astimezone(timezone.utc)
 
 # Every review metric this module writes, for either role.
 METRIC_KEYS = (
@@ -100,6 +117,7 @@ class PullRequestCommitRow:
     commit_sha: str
     authentik_user_pk: str | None
     dagster_run_id: str
+    message: str = ""
 
 
 @dataclass(frozen=True)
@@ -119,8 +137,8 @@ def review_window(window_start: date, window_end: date, as_of: datetime) -> Revi
     if as_of.tzinfo is None:
         raise ValueError("as_of must be timezone-aware")
     return ReviewWindow(
-        start=datetime.combine(window_start, time.min, CLUB_TIMEZONE),
-        end=min(as_of, datetime.combine(window_end, time.max, CLUB_TIMEZONE)),
+        start=_utc(datetime.combine(window_start, time.min, CLUB_TIMEZONE)),
+        end=_utc(min(as_of, datetime.combine(window_end, time.max, CLUB_TIMEZONE))),
     )
 
 
@@ -132,6 +150,10 @@ class ReviewData:
     reviews: Mapping[PullRequestKey, tuple[ReviewRow, ...]]
     requests: tuple[ReviewRequestRow, ...]
     commit_authors: Mapping[PullRequestKey, frozenset[str]]
+    # Roster members named in the PR's Co-authored-by trailers, by pk.
+    co_authors: Mapping[PullRequestKey, frozenset[str]] = field(default_factory=dict)
+    # Every pk on the season roster; None when no roster was given (no filter).
+    roster_pks: frozenset[str] | None = None
 
     @classmethod
     def build(
@@ -141,25 +163,49 @@ class ReviewData:
         requests: Iterable[ReviewRequestRow],
         commits: Iterable[PullRequestCommitRow],
         source_runs: Mapping[str, str],
+        roster: Sequence[ProjectMemberRow] | None = None,
     ) -> ReviewData:
-        """Commits count only from the run recorded for their repository."""
+        """Commits count only from the run recorded for their repository.
+
+        With a roster, trailer emails resolve to roster members by their
+        directory email (case-insensitive), and contributors are limited to
+        roster pks, as T4.3 specifies.
+        """
 
         by_pr: dict[PullRequestKey, list[ReviewRow]] = {}
         for review in reviews:
+            review = replace(review, submitted_at=_utc(review.submitted_at))
             by_pr.setdefault((review.organization, review.repository, review.pr_number), []).append(
                 review
             )
+        by_email = {
+            row.email.strip().casefold(): row.authentik_user_pk
+            for row in roster or ()
+            if row.email and row.email.strip()
+        }
         authors: dict[PullRequestKey, set[str]] = {}
+        co_authors: dict[PullRequestKey, set[str]] = {}
         for commit in commits:
             repository = (commit.organization, commit.repository)
-            if commit.authentik_user_pk and source_runs.get(slug(repository)) == commit.dagster_run_id:
-                key = (*repository, commit.pull_request_number)
+            if source_runs.get(slug(repository)) != commit.dagster_run_id:
+                continue
+            key = (*repository, commit.pull_request_number)
+            if commit.authentik_user_pk:
                 authors.setdefault(key, set()).add(commit.authentik_user_pk)
+            for _name, email in CO_AUTHOR_TRAILER.findall(commit.message or ""):
+                pk = by_email.get(email.strip().casefold())
+                if pk:
+                    co_authors.setdefault(key, set()).add(pk)
         return cls(
-            pull_requests={pr.key: pr for pr in pull_requests},
+            pull_requests={
+                pr.key: replace(pr, created_at=_utc(pr.created_at), merged_at=_utc(pr.merged_at))
+                for pr in pull_requests
+            },
             reviews={key: tuple(rows) for key, rows in by_pr.items()},
-            requests=tuple(requests),
+            requests=tuple(replace(request, requested_at=_utc(request.requested_at)) for request in requests),
             commit_authors={key: frozenset(pks) for key, pks in authors.items()},
+            co_authors={key: frozenset(pks) for key, pks in co_authors.items()},
+            roster_pks=None if roster is None else frozenset(row.authentik_user_pk for row in roster),
         )
 
     def project_pull_requests(self, project: ProjectContext) -> list[PullRequestRow]:
@@ -274,15 +320,20 @@ def collaborative_prs(
 ) -> Measurement:
     """Merged PRs in W that the member contributed to, with at least two contributors.
 
-    Contributors are the PR author and the resolved authors of the PR's commits.
-    Co-authored-by trailers are not read (a scoping decision for the pilot).
+    Contributors are the PR author, the resolved authors of the PR's commits and
+    the roster members named in its Co-authored-by trailers, limited to the
+    season roster.
     """
 
     collaborative = []
     for pr in data.project_pull_requests(project):
         if not (pr.merged and window.contains(pr.merged_at)):
             continue
-        contributors = {pr.author_pk, *data.commit_authors.get(pr.key, ())} - {None}
+        contributors = {
+            pr.author_pk, *data.commit_authors.get(pr.key, ()), *data.co_authors.get(pr.key, ())
+        } - {None}
+        if data.roster_pks is not None:
+            contributors &= data.roster_pks
         if member_pk in contributors and len(contributors) >= 2:
             collaborative.append(pr.label)
     return Measurement(len(collaborative), evidence={"pull_requests": collaborative})
