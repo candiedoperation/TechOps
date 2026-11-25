@@ -61,3 +61,19 @@ def use_transport(monkeypatch, handler):
         return real_client(transport=httpx.MockTransport(handler), **kwargs)
 
     monkeypatch.setattr(resources_module.httpx, "Client", client)
+
+
+PR = {
+    "number": 4,
+    "title": "Add login",
+    "body": None,
+    "user": {"login": "JDoe"},
+    "state": "closed",
+    "merged": True,
+    "created_at": "2026-10-01T10:00:00Z",
+    "merged_at": "2026-10-02T10:00:00-04:00",
+    "closed_at": "2026-10-02T14:00:00Z",
+    "base": {"ref": "main"},
+    "head": {"ref": "feat/login"},
+    "html_url": "https://git.example/Atlas/app/pulls/4",
+}
