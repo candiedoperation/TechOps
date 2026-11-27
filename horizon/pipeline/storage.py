@@ -18,6 +18,7 @@ from .ownership import FileOwnership, MemberOwnership, MemberRepositoryOwnership
 from .pull_requests import MemberPRReviewCount, PRLinkedCommitMessage
 
 if TYPE_CHECKING:
+    from .project_sources import ProjectRepositoryRow, ProjectSources, PullRequestSources
     from .ownership import EligibleFileOwnership, EngineeringContribution
     from .identity import IdentityCluster
     from .blame_parser import BlameRecord
@@ -730,6 +731,234 @@ class PostgresResource(ConfigurableResource):
                         values,
                     )
         return len(values)
+
+    def write_project_sources(
+        self,
+        sources: ProjectSources,
+        repositories: Sequence[ProjectRepositoryRow],
+        pull_requests: PullRequestSources,
+        *,
+        dagster_run_id: str,
+    ) -> dict[str, int]:
+        """Upsert the six T1.1 latest-state tables in one transaction.
+
+        Rows are upserted by primary key, so re-running changes only
+        retrieved_at and rows whose values changed. Members and repositories
+        that left a project in this snapshot are removed for that project, so
+        the roster never keeps people who are no longer on the team.
+        """
+
+        def ensure_unique(label: str, values: Sequence[tuple]) -> None:
+            if len(set(values)) != len(values):
+                raise ValueError(f"T1.1 snapshot contains duplicate {label} keys.")
+
+        ensure_unique("project", [(project.project_pk,) for project in sources.projects])
+        ensure_unique(
+            "project member",
+            [(member.project_pk, member.authentik_user_pk) for member in sources.members],
+        )
+        ensure_unique("repository", [(repo.organization, repo.repository) for repo in repositories])
+        ensure_unique(
+            "pull request",
+            [(row.organization, row.repository, row.number) for row in pull_requests.pull_requests],
+        )
+        ensure_unique(
+            "PR review",
+            [(row.organization, row.repository, row.pr_number, row.review_id) for row in pull_requests.reviews],
+        )
+        ensure_unique(
+            "PR review request",
+            [(row.organization, row.repository, row.pr_number, row.event_id) for row in pull_requests.review_requests],
+        )
+
+        at = sources.retrieved_at
+        pr_at = pull_requests.retrieved_at or at
+        project_pks = [project.project_pk for project in sources.projects]
+        with self.connect() as connection, connection.cursor() as cursor:
+            cursor.executemany(
+                """
+                INSERT INTO horizon_gt_features.projects (
+                    project_pk, season_type, season_year, name, gitea_org,
+                    friendly_name, window_start, window_end, archived, retrieved_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (project_pk) DO UPDATE SET
+                    season_type = EXCLUDED.season_type, season_year = EXCLUDED.season_year,
+                    name = EXCLUDED.name, gitea_org = EXCLUDED.gitea_org,
+                    friendly_name = EXCLUDED.friendly_name,
+                    window_start = EXCLUDED.window_start, window_end = EXCLUDED.window_end,
+                    archived = EXCLUDED.archived, retrieved_at = EXCLUDED.retrieved_at
+                """,
+                [
+                    (p.project_pk, p.season_type, p.season_year, p.name, p.gitea_org,
+                     p.friendly_name, p.window_start, p.window_end, p.archived, at)
+                    for p in sources.projects
+                ],
+            )
+            member_keys = [(m.project_pk, m.authentik_user_pk) for m in sources.members]
+            cursor.execute(
+                """
+                DELETE FROM horizon_gt_features.project_members
+                WHERE project_pk = ANY(%s)
+                  AND (project_pk, authentik_user_pk) NOT IN (
+                      SELECT * FROM unnest(%s::text[], %s::text[]))
+                """,
+                (project_pks, [k[0] for k in member_keys], [k[1] for k in member_keys]),
+            )
+            cursor.executemany(
+                """
+                INSERT INTO horizon_gt_features.project_members (
+                    project_pk, authentik_user_pk, username, email, display_name, roles,
+                    role_titles, tenure_semesters, role_mapping_version, retrieved_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (project_pk, authentik_user_pk) DO UPDATE SET
+                    username = EXCLUDED.username, email = EXCLUDED.email,
+                    display_name = EXCLUDED.display_name, roles = EXCLUDED.roles,
+                    role_titles = EXCLUDED.role_titles,
+                    tenure_semesters = EXCLUDED.tenure_semesters,
+                    role_mapping_version = EXCLUDED.role_mapping_version,
+                    retrieved_at = EXCLUDED.retrieved_at
+                """,
+                [
+                    (m.project_pk, m.authentik_user_pk, m.username, m.email, m.display_name,
+                     list(m.roles), Jsonb(m.role_titles), m.tenure_semesters,
+                     m.role_mapping_version, at)
+                    for m in sources.members
+                ],
+            )
+            repo_keys = [(r.organization, r.repository) for r in repositories]
+            cursor.execute(
+                """
+                DELETE FROM horizon_gt_features.project_repositories
+                WHERE project_pk = ANY(%s)
+                  AND (organization, repository) NOT IN (
+                      SELECT * FROM unnest(%s::text[], %s::text[]))
+                """,
+                (project_pks, [k[0] for k in repo_keys], [k[1] for k in repo_keys]),
+            )
+            cursor.executemany(
+                """
+                INSERT INTO horizon_gt_features.project_repositories (
+                    project_pk, organization, repository, default_branch, retrieved_at
+                ) VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (organization, repository) DO UPDATE SET
+                    project_pk = EXCLUDED.project_pk,
+                    default_branch = EXCLUDED.default_branch,
+                    retrieved_at = EXCLUDED.retrieved_at
+                """,
+                [(r.project_pk, r.organization, r.repository, r.default_branch, at)
+                 for r in repositories],
+            )
+            cursor.executemany(
+                """
+                INSERT INTO horizon_gt_features.gitea_pull_requests (
+                    organization, repository, number, title, body, author_login,
+                    author_pk, state, merged, created_at, merged_at, closed_at,
+                    base_branch, head_branch, html_url, retrieved_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (organization, repository, number) DO UPDATE SET
+                    title = EXCLUDED.title, body = EXCLUDED.body,
+                    author_login = EXCLUDED.author_login, author_pk = EXCLUDED.author_pk,
+                    state = EXCLUDED.state, merged = EXCLUDED.merged,
+                    created_at = EXCLUDED.created_at, merged_at = EXCLUDED.merged_at,
+                    closed_at = EXCLUDED.closed_at, base_branch = EXCLUDED.base_branch,
+                    head_branch = EXCLUDED.head_branch, html_url = EXCLUDED.html_url,
+                    retrieved_at = EXCLUDED.retrieved_at
+                """,
+                [
+                    (p.organization, p.repository, p.number, p.title, p.body, p.author_login,
+                     p.author_pk, p.state, p.merged, p.created_at, p.merged_at, p.closed_at,
+                     p.base_branch, p.head_branch, p.html_url, pr_at)
+                    for p in pull_requests.pull_requests
+                ],
+            )
+            cursor.executemany(
+                """
+                INSERT INTO horizon_gt_features.gitea_pr_reviews (
+                    organization, repository, pr_number, review_id, reviewer_login,
+                    reviewer_pk, state, submitted_at, retrieved_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (organization, repository, pr_number, review_id) DO UPDATE SET
+                    reviewer_login = EXCLUDED.reviewer_login,
+                    reviewer_pk = EXCLUDED.reviewer_pk, state = EXCLUDED.state,
+                    submitted_at = EXCLUDED.submitted_at, retrieved_at = EXCLUDED.retrieved_at
+                """,
+                [
+                    (r.organization, r.repository, r.pr_number, r.review_id, r.reviewer_login,
+                     r.reviewer_pk, r.state, r.submitted_at, pr_at)
+                    for r in pull_requests.reviews
+                ],
+            )
+            cursor.executemany(
+                """
+                INSERT INTO horizon_gt_features.gitea_pr_review_requests (
+                    organization, repository, pr_number, event_id, requested_login,
+                    requested_pk, requested_at, retrieved_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (organization, repository, pr_number, event_id) DO UPDATE SET
+                    requested_login = EXCLUDED.requested_login,
+                    requested_pk = EXCLUDED.requested_pk,
+                    requested_at = EXCLUDED.requested_at, retrieved_at = EXCLUDED.retrieved_at
+                """,
+                [
+                    (r.organization, r.repository, r.pr_number, r.event_id, r.requested_login,
+                     r.requested_pk, r.requested_at, pr_at)
+                    for r in pull_requests.review_requests
+                ],
+            )
+            repo_orgs = [org for org, _ in repo_keys]
+            repo_names = [repo for _, repo in repo_keys]
+            def persisted_count(table: str, predicate: str, params: tuple) -> int:
+                cursor.execute(
+                    f"SELECT count(*) FROM horizon_gt_features.{table} WHERE {predicate}",
+                    params,
+                )
+                return cursor.fetchone()[0]
+
+            repo_predicate = (
+                "(organization, repository) IN "
+                "(SELECT * FROM unnest(%s::text[], %s::text[]))"
+            )
+            counts = {
+                "projects": persisted_count("projects", "project_pk = ANY(%s)", (project_pks,)),
+                "project_members": persisted_count("project_members", "project_pk = ANY(%s)", (project_pks,)),
+                "project_repositories": persisted_count("project_repositories", "project_pk = ANY(%s)", (project_pks,)),
+                "gitea_pull_requests": persisted_count("gitea_pull_requests", repo_predicate, (repo_orgs, repo_names)),
+                "gitea_pr_reviews": persisted_count("gitea_pr_reviews", repo_predicate, (repo_orgs, repo_names)),
+                "gitea_pr_review_requests": persisted_count("gitea_pr_review_requests", repo_predicate, (repo_orgs, repo_names)),
+            }
+            cursor.execute(
+                """
+                INSERT INTO horizon_gt_features.project_source_runs (
+                    dagster_run_id, season_type, season_year, status, started_at,
+                    completed_at, persisted_counts
+                ) VALUES (%s, %s, %s, 'complete', %s,
+                          CURRENT_TIMESTAMP, %s)
+                ON CONFLICT (dagster_run_id) DO UPDATE SET
+                    completed_at = EXCLUDED.completed_at,
+                    persisted_counts = EXCLUDED.persisted_counts
+                """,
+                (dagster_run_id, sources.season_type, sources.season_year,
+                 sources.retrieved_at, Jsonb(counts)),
+            )
+        return counts
+
+    def read_project_repositories(
+        self, season_type: str, season_year: int
+    ) -> list[tuple[str, str]]:
+        """(organization, repository) of the season's non-archived projects."""
+
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT r.organization, r.repository
+                FROM horizon_gt_features.project_repositories AS r
+                JOIN horizon_gt_features.projects AS p USING (project_pk)
+                WHERE p.season_type = %s AND p.season_year = %s AND NOT p.archived
+                ORDER BY r.organization, r.repository
+                """,
+                (season_type, season_year),
+            ).fetchall()
+        return [(row[0], row[1]) for row in rows]
 
     def _require_database_url(self) -> str:
         if not (self.database_url or "").strip():

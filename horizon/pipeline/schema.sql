@@ -4,6 +4,20 @@
 
 CREATE SCHEMA IF NOT EXISTS horizon_gt_features;
 
+-- T1.1 season-wide source ingestion has no repository pipeline_runs row. Keep
+-- its Dagster run and completeness counts in a separate additive manifest.
+CREATE TABLE IF NOT EXISTS horizon_gt_features.project_source_runs (
+    dagster_run_id TEXT PRIMARY KEY,
+    season_type TEXT NOT NULL,
+    season_year INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK (status = 'complete'),
+    started_at TIMESTAMPTZ NOT NULL,
+    completed_at TIMESTAMPTZ NOT NULL,
+    persisted_counts JSONB NOT NULL,
+    CONSTRAINT project_source_runs_status_completion_check
+        CHECK (completed_at IS NOT NULL)
+);
+
 CREATE TABLE IF NOT EXISTS horizon_gt_features.pipeline_runs (
     run_id TEXT PRIMARY KEY,
     status TEXT NOT NULL,
@@ -547,4 +561,55 @@ CREATE TABLE IF NOT EXISTS horizon_api.ranking_member_detail (
     project_pk TEXT NOT NULL,
     document JSONB NOT NULL,
     PRIMARY KEY (ranking_run_id, authentik_user_pk, project_pk)
+);
+
+-- T1.1: project roster and Gitea pull request source tables. Latest-state:
+-- upserted by primary key on every ingest, never appended.
+CREATE TABLE IF NOT EXISTS horizon_gt_features.projects (
+    project_pk TEXT PRIMARY KEY, season_type TEXT NOT NULL, season_year INT NOT NULL,
+    name TEXT NOT NULL, gitea_org TEXT NOT NULL, friendly_name TEXT NOT NULL,
+    window_start DATE NOT NULL, window_end DATE NOT NULL, archived BOOLEAN NOT NULL,
+    retrieved_at TIMESTAMPTZ NOT NULL
+);
+CREATE INDEX IF NOT EXISTS projects_season_idx
+    ON horizon_gt_features.projects (season_type, season_year);
+
+CREATE TABLE IF NOT EXISTS horizon_gt_features.project_members (
+    project_pk TEXT REFERENCES horizon_gt_features.projects, authentik_user_pk TEXT,
+    username TEXT, email TEXT, display_name TEXT, roles TEXT[] NOT NULL,
+    role_titles JSONB NOT NULL, tenure_semesters INT NOT NULL, role_mapping_version TEXT NOT NULL,
+    retrieved_at TIMESTAMPTZ NOT NULL, PRIMARY KEY (project_pk, authentik_user_pk)
+);
+CREATE INDEX IF NOT EXISTS project_members_member_idx
+    ON horizon_gt_features.project_members (authentik_user_pk);
+
+CREATE TABLE IF NOT EXISTS horizon_gt_features.project_repositories (
+    project_pk TEXT, organization TEXT, repository TEXT, default_branch TEXT,
+    retrieved_at TIMESTAMPTZ, PRIMARY KEY (organization, repository)
+);
+CREATE INDEX IF NOT EXISTS project_repositories_project_idx
+    ON horizon_gt_features.project_repositories (project_pk);
+
+CREATE TABLE IF NOT EXISTS horizon_gt_features.gitea_pull_requests (
+    organization TEXT, repository TEXT, number BIGINT, title TEXT NOT NULL, body TEXT NOT NULL,
+    author_login TEXT NOT NULL, author_pk TEXT, state TEXT NOT NULL CHECK (state IN ('open','closed')),
+    merged BOOLEAN NOT NULL, created_at TIMESTAMPTZ NOT NULL, merged_at TIMESTAMPTZ, closed_at TIMESTAMPTZ,
+    base_branch TEXT, head_branch TEXT, html_url TEXT NOT NULL, retrieved_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (organization, repository, number)
+);
+CREATE INDEX IF NOT EXISTS gitea_pull_requests_author_idx
+    ON horizon_gt_features.gitea_pull_requests (author_pk) WHERE author_pk IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS horizon_gt_features.gitea_pr_reviews (
+    organization TEXT, repository TEXT, pr_number BIGINT, review_id BIGINT,
+    reviewer_login TEXT NOT NULL, reviewer_pk TEXT, state TEXT NOT NULL, submitted_at TIMESTAMPTZ,
+    retrieved_at TIMESTAMPTZ NOT NULL, PRIMARY KEY (organization, repository, pr_number, review_id)
+);
+CREATE INDEX IF NOT EXISTS gitea_pr_reviews_reviewer_idx
+    ON horizon_gt_features.gitea_pr_reviews (reviewer_pk) WHERE reviewer_pk IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS horizon_gt_features.gitea_pr_review_requests (
+    organization TEXT, repository TEXT, pr_number BIGINT, event_id BIGINT,
+    requested_login TEXT NOT NULL, requested_pk TEXT, requested_at TIMESTAMPTZ NOT NULL,
+    retrieved_at TIMESTAMPTZ NOT NULL, PRIMARY KEY (organization, repository, pr_number, event_id)
 );

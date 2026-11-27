@@ -14,6 +14,8 @@ is.
 
 import os
 
+_LOCAL_TEST_DATABASE_URL = os.environ.get("HORIZON_TEST_DATABASE_URL")
+
 # Unprefixed aliases accepted by pipeline.config.PipelineSettings. The
 # PHI_/HORIZON_ forms are covered by the prefix sweep below.
 _UNPREFIXED_SETTING_NAMES = frozenset()
@@ -29,3 +31,8 @@ os.environ["HORIZON_ENV_FILE"] = ""
 
 # Shared Postgres fixtures for the Track 4 database tests (skipped without TEST_POSTGRES_URL).
 pytest_plugins = ["ranking_db"]
+
+# Database acceptance tests need their explicitly supplied local Postgres. The
+# test itself rejects non-loopback targets before it connects.
+if _LOCAL_TEST_DATABASE_URL:
+    os.environ["HORIZON_TEST_DATABASE_URL"] = _LOCAL_TEST_DATABASE_URL
