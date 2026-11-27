@@ -258,6 +258,10 @@ class GiteaClient(ConfigurableResource):
     base_url: str | None = None
     api_token: str | None = None
     timeout_seconds: float = 30.0
+    # Past-season backfill only (HORIZON_INCLUDE_ARCHIVED): a finished team's
+    # repositories are archived in Gitea afterwards, but were live during the
+    # season being backfilled. The weekly run leaves this off.
+    include_archived: bool = False
 
     def get_repository(self, org: str, name: str) -> Repository:
         """Describe one repository. Exactly one API call."""
@@ -557,7 +561,7 @@ class GiteaClient(ConfigurableResource):
                     org=str(owner.get("login") or org),
                     name=name,
                     default_branch=str(payload.get("default_branch") or ""),
-                    archived=bool(payload.get("archived", False)),
+                    archived=bool(payload.get("archived", False)) and not self.include_archived,
                     empty=bool(payload.get("empty", False)),
                 )
             )
@@ -1234,6 +1238,23 @@ def _path_safe(value: str) -> str:
     return "".join(char if char.isalnum() or char in "._-" else "_" for char in value)
 
 
+def _roster_resource(resolved: PipelineSettings) -> ConfigurableResource:
+    """People Portal's T3.1 API by default; Authentik directly when HORIZON_ROSTER_SOURCE=authentik."""
+    source = (resolved.roster_source or "peopleportal").strip().lower()
+    if source == "authentik":
+        from .authentik_roster import AuthentikRosterClient  # local import: it subclasses PeoplePortalClient
+
+        return AuthentikRosterClient(authentik_url=resolved.authentik_url,
+                                     authentik_token=resolved.authentik_api_token,
+                                     include_archived=resolved.include_archived)
+    if source != "peopleportal":
+        raise PipelineConfigError("HORIZON_ROSTER_SOURCE must be 'peopleportal' or 'authentik'.")
+    return PeoplePortalClient(
+        base_url=resolved.peopleportal_base_url,
+        service_token=resolved.peopleportal_service_token,
+    )
+
+
 def build_resources(
     settings: PipelineSettings | None = None,
 ) -> dict[str, ConfigurableResource]:
@@ -1249,15 +1270,13 @@ def build_resources(
         "gitea": GiteaClient(
             base_url=resolved.gitea_url,
             api_token=resolved.gitea_api_token,
+            include_archived=resolved.include_archived,
         ),
         "authentik": AuthentikClient(
             base_url=resolved.authentik_url,
             api_token=resolved.authentik_api_token,
         ),
-        "peopleportal": PeoplePortalClient(
-            base_url=resolved.peopleportal_base_url,
-            service_token=resolved.peopleportal_service_token,
-        ),
+        "peopleportal": _roster_resource(resolved),
         "workspace": GitWorkspace(),
         "postgres": PostgresResource(database_url=resolved.database_url),
     }

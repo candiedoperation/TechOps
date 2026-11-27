@@ -99,6 +99,18 @@ class PipelineSettings(BaseSettings):
         description="Model for T4.6 ranking explanations.",
     )
 
+    include_archived: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("HORIZON_INCLUDE_ARCHIVED"),
+        description=("Past-season backfill only: treat the season's archived projects and archived "
+                     "Gitea repositories as active. Leave unset for the weekly run."),
+    )
+    roster_source: str = Field(
+        default="peopleportal",
+        validation_alias=AliasChoices("HORIZON_ROSTER_SOURCE"),
+        description=("Where project rosters come from: 'peopleportal' (the T3.1 service API) or "
+                     "'authentik' (read the same groups from Authentik until T3.1 is deployed)."),
+    )
     peopleportal_base_url: str | None = Field(
         default=None,
         validation_alias=AliasChoices("HORIZON_PEOPLEPORTAL_BASE_URL"),
