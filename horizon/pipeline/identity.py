@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
+from typing import Protocol
 
 from .blame_parser import BlameRecord
 from .resources import AuthentikRoster, PullRequestCommit
@@ -87,3 +88,31 @@ def resolve_git_identities(
             )
         )
     return clusters
+
+
+class _RosterMember(Protocol):
+    authentik_user_pk: str
+    username: str
+
+
+def resolve_gitea_login(
+    login: str | None,
+    roster: AuthentikRoster | Iterable[_RosterMember],
+) -> str | None:
+    """Resolve a Gitea login to an Authentik pk: username equals login, case-insensitively.
+
+    The one place Gitea logins are resolved (T1.1). Returns None when the login
+    is blank, unknown, or matches more than one member: an ambiguous match is
+    never guessed. T1.3 adds manual aliases inside this helper.
+    """
+
+    key = (login or "").strip().casefold()
+    if not key:
+        return None
+    members = roster.users if isinstance(roster, AuthentikRoster) else roster
+    candidates = {
+        member.authentik_user_pk
+        for member in members
+        if (member.username or "").strip().casefold() == key
+    }
+    return next(iter(candidates)) if len(candidates) == 1 else None

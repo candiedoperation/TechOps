@@ -99,6 +99,30 @@ class PipelineSettings(BaseSettings):
         description="Model for T4.6 ranking explanations.",
     )
 
+    peopleportal_base_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HORIZON_PEOPLEPORTAL_BASE_URL"),
+        description="People Portal base URL for the Horizon service API (T3.1).",
+    )
+    peopleportal_service_token: str | None = Field(
+        default=None,
+        repr=False,
+        validation_alias=AliasChoices(
+            "HORIZON_PEOPLEPORTAL_SERVICE_TOKEN", "HORIZON_SERVICE_TOKEN"
+        ),
+        description="Shared secret matching People Portal's HORIZON_SERVICE_TOKEN.",
+    )
+    season_type: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HORIZON_SEASON_TYPE"),
+        description="Semester to ingest: FALL or SPRING.",
+    )
+    season_year: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HORIZON_SEASON_YEAR"),
+        description="Semester year to ingest, e.g. 2026.",
+    )
+
     def require_gitea_url(self) -> str:
         return _required(self.gitea_url, "HORIZON_GITEA_URL")
 
