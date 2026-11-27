@@ -14,6 +14,9 @@ from dagster import AssetCheckResult, AssetCheckSeverity, AssetIn, asset_check
 
 from .assets import (
     BlameCapture,
+    gitea_pull_requests,
+    peopleportal_projects,
+    project_repositories,
     authentik_users,
     blame_capture,
     blame_records,
@@ -23,6 +26,7 @@ from .assets import (
 from .blame_parser import BlameRecord
 from .identity import IdentityCluster
 from .pull_requests import PullRequestReviewCounts
+from .project_sources import ProjectRepositoryRow, ProjectSources, PullRequestSources
 from .resources import AuthentikRoster
 
 
@@ -299,4 +303,85 @@ def records_parse_completely(
             "missing_paths": sorted(missing_paths)[:20],
             "unexpected_paths": sorted(unexpected_paths)[:20],
         },
+    )
+
+
+@asset_check(
+    asset=peopleportal_projects,
+    blocking=True,
+    description="People Portal returned at least one project for the semester (T1.1).",
+)
+def projects_are_non_empty(peopleportal_projects: ProjectSources) -> AssetCheckResult:
+    count = len(peopleportal_projects.projects)
+    return AssetCheckResult(
+        passed=count > 0,
+        severity=AssetCheckSeverity.ERROR,
+        description=(
+            f"{count} project(s) for {peopleportal_projects.season_type} "
+            f"{peopleportal_projects.season_year}."
+            if count
+            else "People Portal returned zero projects; refusing to treat this as a real semester."
+        ),
+        metadata={"projects": count, "members": len(peopleportal_projects.members)},
+    )
+
+
+@asset_check(
+    asset=project_repositories,
+    blocking=True,
+    additional_ins={"peopleportal_projects": AssetIn("peopleportal_projects")},
+    description=(
+        "Every non-archived project organization has at least one usable repository (T1.1)."
+    ),
+)
+def project_orgs_have_repositories(
+    project_repositories: list[ProjectRepositoryRow],
+    peopleportal_projects: ProjectSources,
+) -> AssetCheckResult:
+    with_repos = {row.project_pk for row in project_repositories}
+    missing = sorted(
+        project.gitea_org
+        for project in peopleportal_projects.projects
+        if not project.archived
+        and project.project_pk not in with_repos
+    )
+    # A team that has not created a repository yet is real data, not a broken
+    # source: report it (WARN) but let the week run, so the other projects still
+    # publish. Such projects simply get no code metrics.
+    return AssetCheckResult(
+        passed=not missing,
+        severity=AssetCheckSeverity.WARN,
+        description=(
+            "Every non-archived project organization has repositories."
+            if not missing
+            else f"{len(missing)} non-archived project org(s) have no usable repository yet."
+        ),
+        metadata={"orgs_without_repositories": missing, "repositories": len(project_repositories)},
+    )
+
+
+@asset_check(
+    asset=gitea_pull_requests,
+    blocking=True,
+    description=(
+        "For every repository, the PRs fetched match the total Gitea reported (T1.1)."
+    ),
+)
+def pull_request_pages_are_complete(
+    gitea_pull_requests: PullRequestSources,
+) -> AssetCheckResult:
+    mismatched = {
+        slug: {"reported": reported, "fetched": fetched}
+        for slug, (reported, fetched) in gitea_pull_requests.pull_request_totals.items()
+        if reported != fetched
+    }
+    return AssetCheckResult(
+        passed=not mismatched,
+        severity=AssetCheckSeverity.ERROR,
+        description=(
+            "PR page counts match for every repository."
+            if not mismatched
+            else f"PR count mismatch in {len(mismatched)} repositories."
+        ),
+        metadata={"mismatched": mismatched, "repositories": len(gitea_pull_requests.pull_request_totals)},
     )

@@ -55,6 +55,9 @@ from .checks import (
     records_carry_every_field,
     records_parse_completely,
     pr_reviewers_resolve_or_need_review,
+    project_orgs_have_repositories,
+    projects_are_non_empty,
+    pull_request_pages_are_complete,
 )
 from .resources import build_resources
 
@@ -136,6 +139,9 @@ defs = Definitions(
         pr_reviewers_resolve_or_need_review,
         member_scores_integrity,
         publish_ranking_integrity,
+        projects_are_non_empty,
+        project_orgs_have_repositories,
+        pull_request_pages_are_complete,
     ],
     resources=build_resources(),
 )
