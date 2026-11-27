@@ -61,6 +61,16 @@
         "command": "mkdir -p .dagster && DAGSTER_HOME=\"$PWD/.dagster\" .venv/bin/dagster dev -m pipeline.definitions",
         "cwd": "{projectRoot}"
       }
+    },
+    "fixture": {
+      "executor": "nx:run-commands",
+      "dependsOn": [
+        "install-deps"
+      ],
+      "options": {
+        "command": "mkdir -p .dagster && DAGSTER_HOME=\"$PWD/.dagster\" .venv/bin/python scripts/run_t1_1_fixture.py",
+        "cwd": "{projectRoot}"
+      }
     }
   }
 }
