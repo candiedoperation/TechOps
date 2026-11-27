@@ -12,6 +12,7 @@ assets.
 from __future__ import annotations
 
 import os
+import logging
 import re
 import shutil
 import subprocess
@@ -29,6 +30,9 @@ from dagster import ConfigurableResource
 
 from .config import PipelineConfigError, PipelineSettings, get_pipeline_settings
 from .project_sources import (
+    GiteaPRReviewRequestRow,
+    GiteaPRReviewRow,
+    GiteaPullRequestRow,
     PeoplePortalPayloadError,
     ProjectSources,
     parse_project_sources,
@@ -57,11 +61,16 @@ _GIT_ENV = {
 _LS_FILES_TIMEOUT_SECONDS = 120.0
 _PEOPLEPORTAL_USER_PATH = "peopleportal.atheesh.org/onboardeduser"
 _GITEA_PAGE_SIZE = 50
+_GITEA_LOG = logging.getLogger("horizon.gitea")
 _GITEA_MAX_PAGES = 10_000
 
 
 class GiteaError(RuntimeError):
     """Gitea answered, but not with what was asked for."""
+
+
+class GiteaRevisionUnavailable(GiteaError):
+    """Gitea cannot resolve a PR's revision range (its source branch is gone)."""
 
 
 class AuthentikError(RuntimeError):
@@ -70,6 +79,27 @@ class AuthentikError(RuntimeError):
 
 class PeoplePortalError(RuntimeError):
     """People Portal answered, but not with a usable projects payload."""
+
+
+@dataclass(frozen=True)
+class OrgRepository:
+    """One repository listed for a project's Gitea organization (T1.1)."""
+
+    org: str
+    name: str
+    default_branch: str
+    archived: bool
+    empty: bool
+
+
+@dataclass(frozen=True)
+class RepositoryPullRequests:
+    """Every PR, review and user review request of one repository (T1.1)."""
+
+    pull_requests: list[GiteaPullRequestRow]
+    reviews: list[GiteaPRReviewRow]
+    review_requests: list[GiteaPRReviewRequestRow]
+    pull_request_total: int
 
 
 class GitCommandError(RuntimeError):
@@ -299,6 +329,8 @@ class GiteaClient(ConfigurableResource):
                         f"{api_path}/pulls/{pull_request.number}/reviews",
                     )
                     for payload in review_payloads:
+                        if self._is_team_review_request(payload):
+                            continue
                         review = self._parse_pull_request_review(
                             pull_request.number,
                             payload,
@@ -352,14 +384,26 @@ class GiteaClient(ConfigurableResource):
                     raise GiteaError(
                         f"Gitea returned duplicate pull request numbers for {repository.slug}."
                     )
+                open_numbers = {item.get("number") for item in pull_payloads if item.get("state") == "open"}
 
                 for pull_request in pull_requests:
-                    commit_payloads = self._get_paginated_list(
-                        client,
-                        api_base,
-                        f"{api_path}/pulls/{pull_request.number}/commits",
-                        params={"verification": "false", "files": "false"},
-                    )
+                    try:
+                        commit_payloads = self._get_paginated_list(
+                            client,
+                            api_base,
+                            f"{api_path}/pulls/{pull_request.number}/commits",
+                            params={"verification": "false", "files": "false"},
+                        )
+                    except GiteaRevisionUnavailable:
+                        # A closed PR whose source branch was deleted: Gitea itself
+                        # can no longer list its commits. Skip that PR's commit
+                        # messages rather than the whole repository; an open PR
+                        # with the same error still fails.
+                        if pull_request.number in open_numbers:
+                            raise
+                        _GITEA_LOG.warning("Skipping commit messages of %s PR %s: revision unavailable in Gitea.",
+                                           repository.slug, pull_request.number)
+                        continue
                     for payload in commit_payloads:
                         commit = self._parse_pull_request_commit(
                             repository,
@@ -388,6 +432,7 @@ class GiteaClient(ConfigurableResource):
         path: str,
         *,
         params: dict[str, str] | None = None,
+        expected_total_out: list[int] | None = None,
     ) -> list[dict]:
         """Fetch a complete Gitea list using its count and Link pagination contract.
 
@@ -411,6 +456,11 @@ class GiteaClient(ConfigurableResource):
             except httpx.HTTPError:
                 raise
 
+            if response.status_code == 500 and "bad revision" in response.text:
+                raise GiteaRevisionUnavailable(
+                    f"GET {url} page {page}: Gitea cannot resolve the revision range "
+                    f"({response.text[:200]})"
+                )
             if response.status_code >= 400:
                 raise GiteaError(
                     f"GET {url} page {page} returned {response.status_code}: "
@@ -445,6 +495,8 @@ class GiteaClient(ConfigurableResource):
                 )
             if expected_total is None:
                 expected_total = total
+                if expected_total_out is not None:
+                    expected_total_out.append(total)
             elif total != expected_total:
                 raise GiteaError(
                     f"Gitea result count changed while retrieving {path}; "
@@ -477,6 +529,205 @@ class GiteaClient(ConfigurableResource):
                 )
             page = next_page
 
+    def list_org_repositories(self, org: str) -> list[OrgRepository]:
+        """Every repository of a Gitea organization (paginated, completeness-checked)."""
+
+        api_base = self._api_base()
+        path = f"/orgs/{quote(org, safe='')}/repos"
+        try:
+            with httpx.Client(
+                timeout=self.timeout_seconds,
+                headers=self._headers(),
+                follow_redirects=True,
+            ) as client:
+                payloads = self._get_paginated_list(client, api_base, path)
+        except httpx.HTTPError as exc:
+            raise GiteaError(
+                f"Gitea repository list for {org} failed: {type(exc).__name__}."
+            ) from exc
+
+        repositories = []
+        for payload in payloads:
+            name = payload.get("name")
+            if not isinstance(name, str) or not name.strip():
+                raise GiteaError(f"Gitea listed a repository without a name in {org}.")
+            owner = payload.get("owner") or {}
+            repositories.append(
+                OrgRepository(
+                    org=str(owner.get("login") or org),
+                    name=name,
+                    default_branch=str(payload.get("default_branch") or ""),
+                    archived=bool(payload.get("archived", False)),
+                    empty=bool(payload.get("empty", False)),
+                )
+            )
+        if len({repo.name.casefold() for repo in repositories}) != len(repositories):
+            raise GiteaError(f"Gitea listed duplicate repositories in {org}.")
+        return repositories
+
+    def get_repository_pull_requests(
+        self, org: str, name: str
+    ) -> RepositoryPullRequests:
+        """All PRs of one repository with their reviews and user review requests."""
+
+        api_base = self._api_base()
+        api_path = f"/repos/{quote(org, safe='')}/{quote(name, safe='')}"
+        slug = f"{org}/{name}"
+        pulls: list[GiteaPullRequestRow] = []
+        reviews: list[GiteaPRReviewRow] = []
+        requests: list[GiteaPRReviewRequestRow] = []
+        try:
+            with httpx.Client(
+                timeout=self.timeout_seconds,
+                headers=self._headers(),
+                follow_redirects=True,
+            ) as client:
+                reported_total: list[int] = []
+                pull_payloads = self._get_paginated_list(
+                    client, api_base, f"{api_path}/pulls", params={"state": "all"},
+                    expected_total_out=reported_total,
+                )
+                for payload in pull_payloads:
+                    pulls.append(self._parse_pull_request_row(org, name, payload))
+                if len({pull.number for pull in pulls}) != len(pulls):
+                    raise GiteaError(f"Gitea returned duplicate PR numbers for {slug}.")
+
+                for pull in pulls:
+                    seen_reviews: set[int] = set()
+                    for payload in self._get_paginated_list(
+                        client, api_base, f"{api_path}/pulls/{pull.number}/reviews"
+                    ):
+                        if self._is_team_review_request(payload):
+                            continue
+                        review = self._parse_pull_request_review(pull.number, payload, slug)
+                        if review.review_id in seen_reviews:
+                            raise GiteaError(
+                                f"Gitea returned duplicate review IDs for PR {pull.number} in {slug}."
+                            )
+                        seen_reviews.add(review.review_id)
+                        reviews.append(
+                            GiteaPRReviewRow(
+                                organization=org,
+                                repository=name,
+                                pr_number=pull.number,
+                                review_id=review.review_id,
+                                reviewer_login=review.reviewer_login,
+                                reviewer_pk=None,
+                                state=review.state,
+                                submitted_at=review.submitted_at,
+                            )
+                        )
+                    requests.extend(
+                        self._review_requests(client, api_base, api_path, org, name, pull.number)
+                    )
+        except httpx.HTTPError as exc:
+            raise GiteaError(
+                f"Gitea pull request request for {slug} failed: {type(exc).__name__}."
+            ) from exc
+
+        return RepositoryPullRequests(
+            pull_requests=pulls,
+            reviews=reviews,
+            review_requests=requests,
+            pull_request_total=reported_total[0],
+        )
+
+    def _review_requests(
+        self,
+        client: httpx.Client,
+        api_base: str,
+        api_path: str,
+        org: str,
+        name: str,
+        number: int,
+    ) -> list[GiteaPRReviewRequestRow]:
+        """review_request events from the PR's issue timeline.
+
+        Only requests to a user are kept: team requests have no login to
+        resolve, and removed requests (removed_assignee) are not requests.
+        """
+
+        rows = []
+        seen: set[int] = set()
+        for event in self._get_paginated_list(
+            client, api_base, f"{api_path}/issues/{number}/timeline"
+        ):
+            if event.get("type") != "review_request" or event.get("removed_assignee"):
+                continue
+            assignee = event.get("assignee")
+            if not isinstance(assignee, dict):
+                continue
+            event_id = event.get("id")
+            login = assignee.get("login")
+            if isinstance(event_id, bool) or not isinstance(event_id, int) or event_id <= 0:
+                raise GiteaError(f"Gitea timeline event for PR {number} in {org}/{name} has an invalid ID.")
+            if not isinstance(login, str) or not login.strip():
+                raise GiteaError(f"Gitea review request {event_id} in {org}/{name} has no login.")
+            if event_id in seen:
+                raise GiteaError(f"Gitea returned timeline event {event_id} twice for PR {number}.")
+            seen.add(event_id)
+            rows.append(
+                GiteaPRReviewRequestRow(
+                    organization=org,
+                    repository=name,
+                    pr_number=number,
+                    event_id=event_id,
+                    requested_login=login,
+                    requested_pk=None,
+                    requested_at=self._parse_aware_datetime(
+                        event.get("created_at"), f"Gitea review request {event_id} created_at"
+                    ),
+                )
+            )
+        return rows
+
+    @classmethod
+    def _parse_pull_request_row(cls, org: str, name: str, payload: dict) -> GiteaPullRequestRow:
+        number = cls._parse_pull_request(payload).number
+        label = f"Gitea PR {number} in {org}/{name}"
+        user = payload.get("user")
+        login = user.get("login") if isinstance(user, dict) else None
+        if not isinstance(login, str) or not login.strip():
+            raise GiteaError(f"{label} has no author login.")
+        state = payload.get("state")
+        if state not in ("open", "closed"):
+            raise GiteaError(f"{label} has an invalid state.")
+        merged = payload.get("merged")
+        if not isinstance(merged, bool):
+            raise GiteaError(f"{label} has no boolean merged field.")
+        html_url = payload.get("html_url")
+        if not isinstance(html_url, str) or not html_url:
+            raise GiteaError(f"{label} has no html_url.")
+
+        def optional_time(field_name: str) -> datetime | None:
+            value = payload.get(field_name)
+            return None if value in (None, "") else cls._parse_aware_datetime(value, f"{label} {field_name}")
+
+        def ref(side: str) -> str | None:
+            value = payload.get(side)
+            return value.get("ref") if isinstance(value, dict) and isinstance(value.get("ref"), str) else None
+
+        merged_at = optional_time("merged_at")
+        if merged and merged_at is None:
+            raise GiteaError(f"{label} is merged but has no merged_at.")
+        return GiteaPullRequestRow(
+            organization=org,
+            repository=name,
+            number=number,
+            title=str(payload.get("title") or ""),
+            body=str(payload.get("body") or ""),
+            author_login=login,
+            author_pk=None,
+            state=state,
+            merged=merged,
+            created_at=cls._parse_aware_datetime(payload.get("created_at"), f"{label} created_at"),
+            merged_at=merged_at,
+            closed_at=optional_time("closed_at"),
+            base_branch=ref("base"),
+            head_branch=ref("head"),
+            html_url=html_url,
+        )
+
     @staticmethod
     def _next_page(link_header: str) -> int | None:
         """Read the next page number from a Gitea Link response header."""
@@ -500,6 +751,17 @@ class GiteaClient(ConfigurableResource):
         if isinstance(number, bool) or not isinstance(number, int) or number <= 0:
             raise GiteaError("Gitea pull request list contains an invalid PR number.")
         return PullRequest(number=number)
+
+    @staticmethod
+    def _is_team_review_request(payload: dict) -> bool:
+        """A review requested from a whole team: Gitea lists it with no user.
+
+        It is a request, not a review (requests come from the PR timeline), so it
+        is skipped rather than failing the PR. A user-less row in any other state
+        is still rejected by the parser.
+        """
+        return (isinstance(payload, dict) and payload.get("state") == "REQUEST_REVIEW"
+                and payload.get("user") is None)
 
     @classmethod
     def _parse_pull_request_review(
